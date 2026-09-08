@@ -2,8 +2,9 @@ import type { MapDataset, MapPoint } from '../data/types'
 
 export type ScreenPoint = { x: number; y: number }
 export type View = { mode: '2d' | 'iso'; zoom: number; pan: ScreenPoint }
+export type Projector = { point(point: MapPoint): ScreenPoint; height(metres: number): number; scale: number }
 
-export function createProjector(area: MapDataset, width: number, height: number, view: View) {
+export function createProjector(area: MapDataset, width: number, height: number, view: View): Projector {
   const { minX, minY, maxX, maxY } = area.bounds
   const spanX = maxX - minX
   const spanY = maxY - minY

@@ -5,7 +5,7 @@ export type Bounds = { minX: number; minY: number; maxX: number; maxY: number }
 export type SurfaceFeature = { id: string; kind: 'green' | 'water'; rings: MapPoint[][] }
 export type BuildingFeature = { id: string; rings: MapPoint[][]; height: number; name?: string }
 export type RouteFeature = { id: string; kind: 'major' | 'street' | 'local' | 'path'; points: MapPoint[] }
-export type SportFeature = { id: string; name?: string; sport: string; rings: MapPoint[][] }
+export type SportFeature = { id: string; name?: string; sport: string; facilityType?: string; rings: MapPoint[][] }
 
 export type MapDataset = {
   name: string
@@ -27,6 +27,7 @@ export type GeoJsonFeature = {
     sport?: string
     height?: number
     routeKind?: 'major' | 'street' | 'local'
+    osmTags?: { leisure?: string; sport?: string }
   }
   geometry:
     | { type: 'Point'; coordinates: GeoPoint }

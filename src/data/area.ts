@@ -41,7 +41,7 @@ export const area: MapDataset = {
   }),
   sports: geojson.features.flatMap((feature) => {
     if (feature.properties.category !== 'sport' || feature.geometry.type !== 'Polygon') return []
-    return [{ id: feature.id ?? 'sport', name: feature.properties.name, sport: feature.properties.sport ?? 'multi', rings: feature.geometry.coordinates.map((ring) => ring.map(toLocalMetres)) }]
+    return [{ id: feature.id ?? 'sport', name: feature.properties.name, sport: feature.properties.sport ?? 'multi', facilityType: feature.properties.osmTags?.leisure, rings: feature.geometry.coordinates.map((ring) => ring.map(toLocalMetres)) }]
   }),
   trees: geojson.features.flatMap((feature) => feature.properties.category === 'tree' && feature.geometry.type === 'Point' ? [toLocalMetres(feature.geometry.coordinates)] : []),
   attribution: geojson.attribution,

@@ -1,6 +1,8 @@
 import type { BuildingFeature, MapDataset, MapPoint, SportFeature } from '../data/types'
 import { createProjector, type ScreenPoint, type View } from './projection'
-import { editorialTheme as theme, sportStyle } from './theme'
+import type { LandmarkRenderer } from './landmarks/types'
+import { drawSport } from './sportRenderer'
+import { editorialTheme as theme } from './theme'
 
 function traceRing(ctx: CanvasRenderingContext2D, points: ScreenPoint[]) {
   points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y))
@@ -22,18 +24,20 @@ function centroid(points: ScreenPoint[]) {
   return points.reduce((result, point) => ({ x: result.x + point.x / points.length, y: result.y + point.y / points.length }), { x: 0, y: 0 })
 }
 
-function drawSport(ctx: CanvasRenderingContext2D, feature: SportFeature, rings: ScreenPoint[][]) {
-  const style = sportStyle(feature.sport)
-  traceRings(ctx, rings); ctx.fillStyle = style.fill; ctx.fill('evenodd'); ctx.strokeStyle = style.stroke; ctx.lineWidth = 2; ctx.stroke()
-  const outline = rings[0]; if (!outline?.length) return
-  const middle = centroid(outline)
-  const xs = outline.map((point) => point.x); const ys = outline.map((point) => point.y)
-  const width = Math.max(...xs) - Math.min(...xs); const height = Math.max(...ys) - Math.min(...ys)
-  if (width < 12 || height < 8) return
-  ctx.save(); ctx.strokeStyle = style.marking; ctx.lineWidth = 1
-  if (['athletics', 'running'].includes(feature.sport)) { ctx.beginPath(); ctx.ellipse(middle.x, middle.y, Math.max(5, width * .34), Math.max(3, height * .3), 0, 0, Math.PI * 2); ctx.stroke() }
-  else { ctx.beginPath(); ctx.moveTo(middle.x - width * .22, middle.y); ctx.lineTo(middle.x + width * .22, middle.y); ctx.stroke(); ctx.beginPath(); ctx.arc(middle.x, middle.y, Math.min(4, Math.max(1.5, Math.min(width, height) * .08)), 0, Math.PI * 2); ctx.stroke() }
-  ctx.restore()
+function pointInScreenRing(point: ScreenPoint, ring: ScreenPoint[]) {
+  let inside = false
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const a = ring[index]; const b = ring[previous]
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside
+  }
+  return inside
+}
+
+function ringArea(ring: ScreenPoint[]) {
+  return Math.abs(ring.reduce((area, point, index) => {
+    const next = ring[(index + 1) % ring.length]
+    return area + point.x * next.y - next.x * point.y
+  }, 0) / 2)
 }
 
 function drawBuilding(ctx: CanvasRenderingContext2D, building: BuildingFeature, bottomRings: ScreenPoint[][], elevation: number, view: View) {
@@ -57,7 +61,25 @@ function drawTree(ctx: CanvasRenderingContext2D, point: ScreenPoint, index: numb
   ctx.beginPath(); ctx.ellipse(point.x, point.y - size * .7, size, size * .8, 0, 0, Math.PI * 2); ctx.fillStyle = index % 2 ? theme.tree : theme.treeLight; ctx.fill()
 }
 
-export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: View) {
+export type MapVisualState = {
+  visibleSportIds?: ReadonlySet<string>
+  selectedSportIds?: ReadonlySet<string>
+}
+
+export function pickSportFeature(canvas: HTMLCanvasElement, area: MapDataset, view: View, point: ScreenPoint, landmarkRenderers: LandmarkRenderer[] = [], visibleSportIds?: ReadonlySet<string>) {
+  const rect = canvas.getBoundingClientRect()
+  const projector = createProjector(area, rect.width, rect.height, view)
+  const candidates = area.sports.filter(({ id }) => !visibleSportIds || visibleSportIds.has(id)).flatMap((feature) => {
+    const landmark = landmarkRenderers.find((renderer) => renderer.select([feature]).length)
+    const elevation = projector.height(landmark?.selectionHeight ?? 0)
+    const rings = feature.rings.map((ring) => ring.map((mapPoint) => { const screen = projector.point(mapPoint); return { x: screen.x, y: screen.y - elevation } }))
+    const hit = pointInScreenRing(point, rings[0]) && rings.slice(1).every((ring) => !pointInScreenRing(point, ring))
+    return hit ? [{ feature, area: ringArea(rings[0]) }] : []
+  })
+  return candidates.sort((a, b) => a.area - b.area)[0]?.feature
+}
+
+export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: View, landmarkRenderers: LandmarkRenderer[] = [], visualState: MapVisualState = {}) {
   const dpr = window.devicePixelRatio || 1
   const rect = canvas.getBoundingClientRect()
   const targetWidth = Math.round(rect.width * dpr)
@@ -68,6 +90,9 @@ export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: Vie
   const { width, height } = rect
   const projector = createProjector(area, width, height, view)
   const projectRing = (ring: MapPoint[]) => ring.map(projector.point)
+  const visibleSports = area.sports.filter(({ id }) => !visualState.visibleSportIds || visualState.visibleSportIds.has(id))
+  const selectedIds = visualState.selectedSportIds ?? new Set<string>()
+  const hasSelection = selectedIds.size > 0
 
   ctx.clearRect(0, 0, width, height)
   ctx.fillStyle = theme.ground; ctx.fillRect(0, 0, width, height)
@@ -75,22 +100,49 @@ export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: Vie
   for (let x = -height; x < width + height; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + height, height); ctx.stroke() }
   ctx.restore()
 
-  area.surfaces.filter((feature) => feature.kind === 'water').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
-  area.surfaces.filter((feature) => feature.kind === 'green').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .7; ctx.stroke() })
-  area.sports.forEach((feature) => drawSport(ctx, feature, feature.rings.map(projectRing)))
+  ctx.save(); ctx.globalAlpha = hasSelection ? .48 : .78
+  area.surfaces.filter((feature) => feature.kind === 'water').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = .8; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'green').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
+  ctx.restore()
+  const landmarks = landmarkRenderers
+    .map((renderer) => ({ renderer, features: renderer.select(visibleSports) }))
+    .filter(({ features }) => features.length)
+  const landmarkFeatureIds = new Set(landmarks.flatMap(({ features }) => features.map(({ id }) => id)))
 
+  ctx.save(); ctx.globalAlpha = hasSelection ? .34 : view.mode === '2d' ? .58 : .72
   area.routes.forEach((route) => {
     const points = route.points.map(projector.point); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = 1.05; ctx.setLineDash([3, 3]); strokeLine(ctx, points); ctx.setLineDash([]); return }
-    const widthByKind = route.kind === 'major' ? [8, 5.5] : route.kind === 'street' ? [5.5, 3.4] : [3.5, 2]
+    if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); strokeLine(ctx, points); ctx.setLineDash([]); return }
+    const widthByKind = route.kind === 'major' ? [6.5, 4.4] : route.kind === 'street' ? [4.5, 2.8] : [2.8, 1.5]
     ctx.strokeStyle = theme.roadEdge; ctx.lineWidth = widthByKind[0]; strokeLine(ctx, points); ctx.strokeStyle = theme.road; ctx.lineWidth = widthByKind[1]; strokeLine(ctx, points)
   })
+  ctx.restore()
 
-  const buildings = area.buildings.map((building) => ({ building, rings: building.rings.map(projectRing) })).sort((a, b) => centroid(a.rings[0]).y - centroid(b.rings[0]).y)
+  ctx.save(); ctx.globalAlpha = hasSelection ? .3 : view.mode === '2d' ? .48 : .68
+  const buildings = area.buildings
+    .filter((building) => !landmarks.some(({ renderer, features }) => renderer.suppressBuilding?.(building, features)))
+    .map((building) => ({ building, rings: building.rings.map(projectRing) }))
+    .sort((a, b) => centroid(a.rings[0]).y - centroid(b.rings[0]).y)
   buildings.forEach(({ building, rings }) => drawBuilding(ctx, building, rings, projector.height(building.height), view))
-  area.trees.map(projector.point).sort((a, b) => a.y - b.y).forEach((point, index) => drawTree(ctx, point, index, view))
+  ctx.restore()
 
-  const landmarkNames = ['Helsingin olympiastadion', 'Bolt Arena', 'Helsingin jäähalli']
-  const landmarks = [...new Map(area.sports.filter((feature) => feature.name && landmarkNames.includes(feature.name)).map((feature) => [feature.name, feature])).values()]
-  landmarks.forEach((feature) => { const point = centroid(feature.rings[0].map(projector.point)); ctx.font = '500 8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(237,232,223,.9)'; ctx.strokeText(feature.name!, point.x, point.y - 9); ctx.fillStyle = theme.ink; ctx.fillText(feature.name!, point.x, point.y - 9) })
+  ctx.save(); ctx.globalAlpha = hasSelection ? .35 : .64
+  area.trees.map(projector.point).sort((a, b) => a.y - b.y).forEach((point, index) => drawTree(ctx, point, index, view))
+  ctx.restore()
+
+  visibleSports.filter(({ id }) => !landmarkFeatureIds.has(id)).forEach((feature) => drawSport(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default'))
+  landmarks.forEach(({ renderer, features }) => {
+    const selected = features.some(({ id }) => selectedIds.has(id))
+    ctx.save(); ctx.globalAlpha = hasSelection && !selected ? .2 : 1
+    renderer.render({ ctx, area, features, projector, view }); ctx.restore()
+  })
+
+  if (hasSelection) {
+    const landmarkHeights = new Map(landmarks.flatMap(({ renderer, features }) => features.map(({ id }) => [id, renderer.selectionHeight ?? 0] as const)))
+    visibleSports.filter(({ id }) => selectedIds.has(id)).forEach((feature) => {
+      const elevation = projector.height(landmarkHeights.get(feature.id) ?? 0)
+      const rings = feature.rings.map((ring) => ring.map((mapPoint) => { const point = projector.point(mapPoint); return { x: point.x, y: point.y - elevation } }))
+      ctx.save(); ctx.shadowColor = 'rgba(150,62,42,.68)'; ctx.shadowBlur = 13; traceRings(ctx, rings); ctx.fillStyle = 'rgba(196,95,70,.12)'; ctx.fill('evenodd'); ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore()
+    })
+  }
 }

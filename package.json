@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "check:data": "node tools/check-study-area.mjs"
+    "check:data": "node tools/check-study-area.mjs",
+    "check:landmarks": "node tools/check-landmarks.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

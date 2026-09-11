@@ -1,6 +1,6 @@
 import { createChunkedAreaLoader } from '../data/area'
 import type { MapChunkManifest, MapDataset, MapLabel, MapViewport, StudyAreaGeoJson } from '../data/types'
-import { olympicAreaLandmarks } from '../renderer/landmarks/olympicArea'
+import { mapLandmarks } from './mapLandmarks'
 import type { LandmarkRenderer } from '../renderer/landmarks/types'
 
 export type CityConfig = {
@@ -30,7 +30,7 @@ const helsinki: CityConfig = {
   areaLabel: 'Helsinki / central and northern districts',
   loadDataset: helsinkiDataLoader.loadDataset,
   loadDatasetForViewport: helsinkiDataLoader.loadDatasetForViewport,
-  landmarks: olympicAreaLandmarks,
+  landmarks: mapLandmarks,
   mapLabels: [
     { text: 'TÖÖLÖ', coordinates: [24.918, 60.1858], tone: 'primary', offset: { x: -42, y: 0 } },
     { text: 'MEILAHTI', coordinates: [24.913, 60.1915], tone: 'primary', offset: { x: -48, y: 0 } },

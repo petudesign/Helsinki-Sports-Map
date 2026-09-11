@@ -1,18 +1,8 @@
 import { accessProfileForUrl, createLipasFeatures, findLipasVenue } from './lipas'
 import type { Bounds, GeoJsonFeature, GeoPoint, MapChunkManifest, MapDataset, MapPoint, MapViewport, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
-import { createProjector } from '../renderer/projection'
+import { createProjector, toLocalMetres } from '../renderer/projection'
 import { venueProfile } from './venueLinks'
 import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
-
-const metresPerDegreeLat = 111_320
-
-export function toLocalMetres([longitude, latitude]: GeoPoint, [centerLon, centerLat]: GeoPoint): MapPoint {
-  const metresPerDegreeLon = metresPerDegreeLat * Math.cos(centerLat * Math.PI / 180)
-  return {
-    x: (longitude - centerLon) * metresPerDegreeLon,
-    y: (latitude - centerLat) * metresPerDegreeLat,
-  }
-}
 
 function estimatedHeight(id: string, explicitHeight?: number) {
   if (explicitHeight) return Math.max(5, Math.min(explicitHeight, 48))
@@ -131,6 +121,19 @@ export type ChunkedMapSource = {
 
 export function createChunkedAreaLoader(source: ChunkedMapSource) {
   const chunkCache = new Map<string, Promise<StudyAreaGeoJson>>()
+  const datasetCache = new Map<string, Promise<MapDataset>>()
+  const datasetFor = (key: string, chunks: () => Promise<StudyAreaGeoJson[]>) => {
+    const cached = datasetCache.get(key)
+    if (cached) return cached
+    const pending = chunks().then(createAreaFromChunks).catch((error) => {
+      datasetCache.delete(key)
+      throw error
+    })
+    datasetCache.set(key, pending)
+    // Bound retained geometry while reusing recent viewport combinations.
+    if (datasetCache.size > 4) datasetCache.delete(datasetCache.keys().next().value!)
+    return pending
+  }
   let overviewCache: Promise<StudyAreaGeoJson> | undefined
   let manifestCache: Promise<MapChunkManifest> | undefined
   const loadManifest = () => { manifestCache ??= source.loadManifest(); return manifestCache }
@@ -138,18 +141,18 @@ export function createChunkedAreaLoader(source: ChunkedMapSource) {
   const loadChunk = (file: string) => {
     const cached = chunkCache.get(file)
     if (cached) return cached
-    const promise = source.loadChunk(file)
+    const promise = source.loadChunk(file).catch((error) => { chunkCache.delete(file); throw error })
     chunkCache.set(file, promise)
     return promise
   }
   return {
-    loadDataset: async () => createAreaFromChunks([await loadOverview()]),
+    loadDataset: () => datasetFor('overview', async () => [await loadOverview()]),
     loadDatasetForViewport: async (viewport: MapViewport) => {
-      if (viewport.zoom < 1.45) return createAreaFromChunks([await loadOverview()])
+      if (viewport.zoom < 1.45) return datasetFor('overview', async () => [await loadOverview()])
       const manifest = await loadManifest()
       const visible = manifest.chunks.filter((chunk) => chunkIsVisible(chunk, manifest, viewport))
-      const selected = visible.length > 0 ? visible : manifest.chunks
-      return createAreaFromChunks(await Promise.all(selected.map(({ file }) => loadChunk(file))))
+      if (!visible.length) return datasetFor('overview', async () => [await loadOverview()])
+      return datasetFor(visible.map(({ file }) => file).join('|'), () => Promise.all(visible.map(({ file }) => loadChunk(file))))
     },
   }
 }

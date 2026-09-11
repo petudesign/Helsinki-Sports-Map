@@ -3,6 +3,7 @@ import type { MapDataset, MapViewport, SportFeature, SportsVenue } from './data/
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
 import { pickSportFeature, renderMap } from './renderer/mapRenderer'
+import { createBackgroundRenderer } from './renderer/backgroundRenderer'
 import { extraText, sportText, text, type Locale } from './i18n'
 import { geocodeAddress, reverseGeocode, routeByMode, searchAddresses, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
 import { getAnalyticsConsent, setAnalyticsConsent, type AnalyticsConsent } from './privacy'
@@ -63,7 +64,7 @@ function App() {
   const [, setAnalyticsConsentState] = useState<AnalyticsConsent>()
   const [consentVisible, setConsentVisible] = useState(false)
   const cameraRef = useRef<Camera>({ zoom: 1, pan: { x: 0, y: 0 } })
-  const renderedCameraRef = useRef<Camera>({ zoom: 1, pan: { x: 0, y: 0 } })
+  const backgroundRef = useRef<ReturnType<typeof createBackgroundRenderer>>(undefined)
   const draggingRef = useRef(false)
   const scheduleDrawRef = useRef<(() => void) | null>(null)
   const drag = useRef<{ x: number; y: number; startX: number; startY: number; moved: boolean } | null>(null)
@@ -99,14 +100,15 @@ function App() {
   const scheduleViewportLoad = (viewport: MapViewport) => {
     const loader = activeCity.loadDatasetForViewport
     if (!loader) return
+    const requestId = ++viewportLoadRequestRef.current
     if (viewportLoadTimerRef.current) window.clearTimeout(viewportLoadTimerRef.current)
     viewportLoadTimerRef.current = window.setTimeout(() => {
-      const requestId = ++viewportLoadRequestRef.current
       loader(viewport).then((nextArea) => { if (requestId === viewportLoadRequestRef.current) setMapArea(nextArea) }).catch(() => undefined)
     }, 140)
   }
 
   useEffect(() => () => { if (viewportLoadTimerRef.current) window.clearTimeout(viewportLoadTimerRef.current); if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current); viewportLoadRequestRef.current += 1; locationRequestRef.current += 1 }, [])
+  useEffect(() => () => { backgroundRef.current?.dispose(); backgroundRef.current = undefined }, [])
 
   useEffect(() => {
     const query = startingPoint.trim()
@@ -121,6 +123,7 @@ function App() {
   useLayoutEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !mapArea) return
+    backgroundRef.current ??= createBackgroundRenderer(() => scheduleDrawRef.current?.())
     let frame = 0
     const draw = () => {
       if (frame) return
@@ -129,11 +132,9 @@ function App() {
         const currentVisibleIds = new Set(visibleSports.map(({ id }) => id))
         const currentSelectedIds = new Set(selected ? mapArea.sports.filter((feature) => selected.name ? feature.name === selected.name : feature.id === selected.id).map(({ id }) => id) : [])
         const currentCamera = cameraRef.current
-        const renderedCamera = renderedCameraRef.current
-        const previewing = draggingRef.current && currentCamera.zoom === renderedCamera.zoom
-        const transform = previewing ? { scale: currentCamera.zoom / renderedCamera.zoom, panDelta: { x: currentCamera.pan.x - renderedCamera.pan.x, y: currentCamera.pan.y - renderedCamera.pan.y } } : undefined
-        renderMap(canvas, mapArea, { mode, zoom: currentCamera.zoom, pan: currentCamera.pan }, activeCity.landmarks, { visibleSportIds: currentVisibleIds, selectedSportIds: currentSelectedIds, trendingEnabled, trendingSignals }, { transform, mapLabels: activeCity.mapLabels, route })
-        if (!previewing) renderedCameraRef.current = { ...currentCamera, pan: { ...currentCamera.pan } }
+        const view = { mode, zoom: currentCamera.zoom, pan: currentCamera.pan }
+        const background = backgroundRef.current?.update(mapArea, view, canvas.clientWidth, canvas.clientHeight, [...currentSelectedIds])
+        renderMap(canvas, mapArea, view, activeCity.landmarks, { visibleSportIds: currentVisibleIds, selectedSportIds: currentSelectedIds, trendingEnabled, trendingSignals }, { background, mapLabels: activeCity.mapLabels, route })
       })
     }
     scheduleDrawRef.current = draw

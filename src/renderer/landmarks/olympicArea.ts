@@ -1,4 +1,4 @@
-import { toLocalMetres } from '../../data/area'
+import { toLocalMetres } from '../projection'
 import type { BuildingFeature, SportFeature } from '../../data/types'
 import { editorialTheme as theme, sportStyle } from '../theme'
 import { buildingCenter, ellipseRing, frameFromRing, framePoint, pointInRing, rectangleRing, type OrientedFrame } from './geometry'

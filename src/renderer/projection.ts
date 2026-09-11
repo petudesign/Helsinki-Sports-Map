@@ -1,4 +1,8 @@
-import type { MapDataset, MapPoint } from '../data/types'
+import type { GeoPoint, MapDataset, MapPoint } from '../data/types'
+
+export function toLocalMetres([longitude, latitude]: GeoPoint, [centerLon, centerLat]: GeoPoint): MapPoint {
+  return { x: (longitude - centerLon) * 111_320 * Math.cos(centerLat * Math.PI / 180), y: (latitude - centerLat) * 111_320 }
+}
 
 export type ScreenPoint = { x: number; y: number }
 export type View = { mode: '2d' | 'iso'; zoom: number; pan: ScreenPoint }

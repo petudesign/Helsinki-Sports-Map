@@ -224,3 +224,23 @@ The non-interactive “Practical overview” label and decorative status dot are
 ### Why
 
 The label repeated information already communicated by the view toggle, while the dot did not represent a real application state. Removing both gives the header a clearer hierarchy and avoids implying functionality that does not exist.
+
+## 2026-09-12 — Separate expensive map backgrounds from immediate interaction
+
+### Decision
+
+Keep the existing cursor-anchored zoom mathematics and requestAnimationFrame camera updates. Render roads, surfaces and buildings in an OffscreenCanvas worker, then transform the last completed bitmap during gestures. Facility markers, district labels, selection and routes remain on the main canvas at their current map coordinates and native display resolution.
+
+The worker runs one job at a time, retains only the latest pending camera, and waits for 120 ms of camera inactivity before refreshing an existing background. Background resolution is capped at 1.5 device pixels per CSS pixel; overlays retain native resolution. A software-backed worker canvas avoids competing with the visible canvas for GPU drawing. Frames have an extra 160 px border, and a previously rendered overview is retained per mode to cover exposed areas while detail catches up. This is not a guarantee of complete coverage after arbitrary large jumps.
+
+Only changed datasets are sent to the worker. City landmark configuration is imported separately so the worker does not bundle the city datasets. Unsupported or failed workers fall back to synchronous rendering. Replaced bitmaps are explicitly released.
+
+Viewport loading shares normalization for concurrent identical requests and caches four recent chunk combinations. Empty coverage uses the overview instead of fetching every detail chunk. Superseded viewport results cannot replace a newer requested view.
+
+### Why and verification
+
+Redrawing all background geometry during every zoom frame was substantially more expensive than reusing a raster during drag. Adding zoom easing would change the interaction the user preferred without removing this cost.
+
+A synthetic headless Edge comparison at 1600 x 1000 and DPR 2 measured main-thread draw medians of approximately 28–58 ms for 2D before the change and 3–4 ms with background reuse in both modes. These are draw-cost measurements, not physical display FPS or a guarantee for mobile hardware. New chunk normalization still runs on the main thread and may warrant further profiling. Large data-bundle warnings also remain.
+
+Regression checks: `node tools/check-background-renderer.mjs`, `node tools/check-viewport-cache.mjs`, and `npm run build`. The worker test checks latest-request coalescing, data reuse, bitmap lifetime, overview retention and synchronous fallback after failure.

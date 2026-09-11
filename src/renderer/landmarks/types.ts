@@ -11,6 +11,7 @@ export type LandmarkRenderContext = {
 
 export type LandmarkRenderer = {
   id: string
+  renderPriority?: number
   selectionHeight?: number
   select(features: SportFeature[]): SportFeature[]
   suppressBuilding?(building: BuildingFeature, features: SportFeature[]): boolean

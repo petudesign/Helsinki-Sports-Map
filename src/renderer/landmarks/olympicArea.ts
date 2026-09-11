@@ -17,9 +17,19 @@ function largest(features: SportFeature[]) {
   return [...features].sort((a, b) => frameFromRing(b.rings[0]).halfLong * frameFromRing(b.rings[0]).halfShort - frameFromRing(a.rings[0]).halfLong * frameFromRing(a.rings[0]).halfShort)[0]
 }
 
+// Containment depends on loaded geometry, never on pan, zoom or projection.
+const containment = new WeakMap<BuildingFeature, WeakMap<SportFeature, boolean>>()
 function suppressInside(building: BuildingFeature, features: SportFeature[]) {
-  const center = buildingCenter(building.rings)
-  return features.some((feature) => pointInRing(center, feature.rings[0]))
+  let results = containment.get(building)
+  if (!results) { results = new WeakMap(); containment.set(building, results) }
+  return features.some((feature) => {
+    let inside = results.get(feature)
+    if (inside === undefined) {
+      inside = pointInRing(buildingCenter(building.rings), feature.rings[0])
+      results.set(feature, inside)
+    }
+    return inside
+  })
 }
 
 function subFrame(frame: OrientedFrame, along: number, across: number, longScale: number, shortScale: number): OrientedFrame {
@@ -36,32 +46,39 @@ function drawFootballField(context: LandmarkRenderContext, frame: OrientedFrame,
 
 const olympicStadium: LandmarkRenderer = {
   id: 'olympic-stadium',
+  renderPriority: 20,
   selectionHeight: 16,
   select: named('Helsingin olympiastadion'),
   suppressBuilding: suppressInside,
   render(context) {
     const feature = largest(context.features); if (!feature) return
     const { ctx, projector, view } = context; const frame = frameFromRing(feature.rings[0]); const elevation = projector.height(16)
-    drawVolume(ctx, ellipseRing(frame, .94, .9), 16, projector, view, landmarkVolume)
-    fillMapRing(ctx, ellipseRing(frame, .78, .72), projector, '#b96f5b', theme.buildingOutline, elevation, .8)
-    fillMapRing(ctx, ellipseRing(frame, .6, .5), projector, sportStyle('soccer').fill, undefined, elevation)
-    ;[[.88, .83], [.83, .77]].forEach(([long, short]) => strokeMapLine(ctx, ellipseRing(frame, long, short), projector, 'rgba(73,65,59,.34)', .7, elevation))
+    // The source stadium polygon is the useful footprint here. A scaled ellipse
+    // made the landmark visibly larger than the mapped venue it represents.
+    drawVolume(ctx, feature.rings[0], 16, projector, view, landmarkVolume)
+    fillMapRing(ctx, ellipseRing(frame, .76, .68), projector, sportStyle('athletics').fill, theme.buildingOutline, elevation, .8)
+    fillMapRing(ctx, ellipseRing(frame, .57, .45), projector, sportStyle('soccer').fill, undefined, elevation)
     drawFootballField(context, frame, elevation)
+    // Track lanes sit above the field, so the pitch no longer visually cuts
+    // through the stadium's outer running-track geometry.
+    ;[[.9, .84], [.82, .74], [.76, .68]].forEach(([long, short]) => strokeMapLine(ctx, ellipseRing(frame, long, short), projector, 'rgba(73,65,59,.34)', .7, elevation))
 
-    const towerCenter = toLocalMetres([24.92604, 60.18633])
+    const towerCenter = toLocalMetres([24.92604, 60.18633], [24.93275, 60.1875])
     const podiumFrame = { ...frame, center: towerCenter, halfLong: 8, halfShort: 7 }
-    const towerFrame = { ...frame, center: towerCenter, halfLong: 5.8, halfShort: 4.8 }
+    const towerFrame = { ...frame, center: towerCenter, halfLong: 10, halfShort: 7 }
     drawVolume(ctx, rectangleRing(podiumFrame), 8, projector, view, { ...landmarkVolume, top: '#c8b9aa' })
-    drawVolume(ctx, rectangleRing(towerFrame), 112, projector, view, { ...landmarkVolume, top: '#eee7dc', side: '#a99b8d', sideDark: '#887b70' })
-    const towerTop = projector.point(towerCenter); towerTop.y -= projector.height(112)
-    ctx.beginPath(); ctx.moveTo(towerTop.x, towerTop.y); ctx.lineTo(towerTop.x, towerTop.y - (view.mode === 'iso' ? 8 : 5)); ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.1; ctx.stroke()
-    ctx.beginPath(); ctx.arc(towerTop.x, towerTop.y - (view.mode === 'iso' ? 8 : 5), 1.6, 0, Math.PI * 2); ctx.fillStyle = theme.accent; ctx.fill()
-    drawMapLabel(ctx, frame.center, projector, 'OLYMPIASTADION', elevation + 11)
+    const towerHeight = 360
+    drawVolume(ctx, rectangleRing(towerFrame), towerHeight, projector, view, { ...landmarkVolume, top: '#eee7dc', side: '#a99b8d', sideDark: '#887b70' })
+    const towerTop = projector.point(towerCenter); towerTop.y -= projector.height(towerHeight)
+    ctx.beginPath(); ctx.moveTo(towerTop.x, towerTop.y); ctx.lineTo(towerTop.x, towerTop.y - (view.mode === 'iso' ? 18 : 7)); ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.3; ctx.stroke()
+    ctx.beginPath(); ctx.arc(towerTop.x, towerTop.y - (view.mode === 'iso' ? 18 : 7), 2, 0, Math.PI * 2); ctx.fillStyle = theme.accent; ctx.fill()
+    if (view.zoom >= 1.4) drawMapLabel(ctx, frame.center, projector, 'OLYMPIASTADION', elevation + 11)
   },
 }
 
 const boltArena: LandmarkRenderer = {
   id: 'bolt-arena',
+  renderPriority: 5,
   selectionHeight: 12,
   select: named('Bolt Arena'),
   suppressBuilding: suppressInside,
@@ -71,12 +88,13 @@ const boltArena: LandmarkRenderer = {
     drawVolume(ctx, rectangleRing(frame, .94, .88), 12, projector, view, { ...landmarkVolume, top: '#d1c7b9' })
     drawFootballField(context, frame, elevation)
     ;[-.77, .77].forEach((across) => fillMapRing(ctx, rectangleRing(subFrame(frame, 0, across, .72, .1)), projector, '#b4a79a', theme.buildingOutline, elevation, .6))
-    drawMapLabel(ctx, frame.center, projector, 'BOLT ARENA', elevation + 9)
+    if (view.zoom >= 1.4) drawMapLabel(ctx, frame.center, projector, 'BOLT ARENA', elevation + 9)
   },
 }
 
 const iceHall: LandmarkRenderer = {
   id: 'helsinki-ice-hall',
+  renderPriority: 5,
   selectionHeight: 22,
   select: named('Helsingin jäähalli'),
   suppressBuilding: suppressInside,
@@ -85,12 +103,13 @@ const iceHall: LandmarkRenderer = {
     const { ctx, projector, view } = context; const frame = frameFromRing(feature.rings[0]); const elevation = projector.height(22)
     drawVolume(ctx, rectangleRing(frame, .92, .86), 22, projector, view, { ...landmarkVolume, top: '#d8d7d0' })
     ;[-.38, 0, .38].forEach((across) => strokeMapLine(ctx, [framePoint(frame, -.78, across), framePoint(frame, .78, across)], projector, 'rgba(69,76,74,.26)', .9, elevation))
-    drawMapLabel(ctx, frame.center, projector, 'HELSINGIN JÄÄHALLI', elevation + 9)
+    if (view.zoom >= 1.4) drawMapLabel(ctx, frame.center, projector, 'HELSINGIN JÄÄHALLI', elevation + 9)
   },
 }
 
 const swimmingStadium: LandmarkRenderer = {
   id: 'swimming-stadium',
+  renderPriority: 5,
   selectionHeight: 4,
   select: named('Uimastadion'),
   suppressBuilding: suppressInside,
@@ -104,7 +123,7 @@ const swimmingStadium: LandmarkRenderer = {
       ;[-.5, -.25, 0, .25, .5].forEach((across) => strokeMapLine(ctx, [framePoint(pool, -.88, across), framePoint(pool, .88, across)], projector, 'rgba(241,239,228,.72)', .55, elevation))
     })
     fillMapRing(ctx, ellipseRing(subFrame(frame, .52, -.4, .16, .16), 1, 1, 28), projector, theme.water, theme.waterLine, elevation, .8)
-    drawMapLabel(ctx, frame.center, projector, 'UIMASTADION', elevation + 9)
+    if (view.zoom >= 1.4) drawMapLabel(ctx, frame.center, projector, 'UIMASTADION', elevation + 9)
   },
 }
 

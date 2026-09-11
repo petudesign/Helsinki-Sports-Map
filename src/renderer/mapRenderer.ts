@@ -1,8 +1,11 @@
-import type { BuildingFeature, MapDataset, MapPoint, SportFeature } from '../data/types'
+import type { Bounds, BuildingFeature, MapDataset, MapPoint, MapLabel, SportFeature } from '../data/types'
+import { toLocalMetres } from '../data/area'
 import { createProjector, type ScreenPoint, type View } from './projection'
 import type { LandmarkRenderer } from './landmarks/types'
-import { drawSport } from './sportRenderer'
+import { drawSport, drawVenueMarker } from './sportRenderer'
 import { editorialTheme as theme } from './theme'
+import type { TrendingSignal } from '../data/trending'
+import type { RouteResult } from '../routing'
 
 function traceRing(ctx: CanvasRenderingContext2D, points: ScreenPoint[]) {
   points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y))
@@ -40,6 +43,23 @@ function ringArea(ring: ScreenPoint[]) {
   }, 0) / 2)
 }
 
+function projectedBounds(bounds: Bounds, projector: ReturnType<typeof createProjector>) {
+  return [
+    projector.point({ x: bounds.minX, y: bounds.minY }),
+    projector.point({ x: bounds.minX, y: bounds.maxY }),
+    projector.point({ x: bounds.maxX, y: bounds.minY }),
+    projector.point({ x: bounds.maxX, y: bounds.maxY }),
+  ]
+}
+
+function isBoundsVisible(bounds: Bounds | undefined, projector: ReturnType<typeof createProjector>, width: number, height: number, margin = 160) {
+  if (!bounds) return true
+  const points = projectedBounds(bounds, projector)
+  const minX = Math.min(...points.map(({ x }) => x)); const maxX = Math.max(...points.map(({ x }) => x))
+  const minY = Math.min(...points.map(({ y }) => y)); const maxY = Math.max(...points.map(({ y }) => y))
+  return maxX >= -margin && minX <= width + margin && maxY >= -margin && minY <= height + margin
+}
+
 function drawBuilding(ctx: CanvasRenderingContext2D, building: BuildingFeature, bottomRings: ScreenPoint[][], elevation: number, view: View) {
   const bottom = bottomRings[0]; if (!bottom?.length) return
   if (view.mode === '2d') { traceRings(ctx, bottomRings); ctx.fillStyle = theme.buildingTop; ctx.fill('evenodd'); ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .7; ctx.stroke(); return }
@@ -61,36 +81,82 @@ function drawTree(ctx: CanvasRenderingContext2D, point: ScreenPoint, index: numb
   ctx.beginPath(); ctx.ellipse(point.x, point.y - size * .7, size, size * .8, 0, 0, Math.PI * 2); ctx.fillStyle = index % 2 ? theme.tree : theme.treeLight; ctx.fill()
 }
 
+function drawMapLabels(ctx: CanvasRenderingContext2D, labels: MapLabel[], projector: ReturnType<typeof createProjector>, area: MapDataset, visibleSports: SportFeature[], width: number, height: number, hasSelection: boolean, view: View) {
+  if (!labels.length) return
+  ctx.save()
+  ctx.globalAlpha = hasSelection ? .62 : .92
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  labels
+    .filter((label) => view.zoom >= (label.minZoom ?? 0))
+    .sort((a, b) => (a.tone === 'secondary' ? 1 : 0) - (b.tone === 'secondary' ? 1 : 0))
+    .forEach((label) => {
+    const secondary = label.tone === 'secondary'
+    ctx.font = secondary ? '600 7px DM Mono, monospace' : '600 9px DM Mono, monospace'
+    const anchor = projector.point(toLocalMetres(label.coordinates, area.center))
+    if (anchor.x < -100 || anchor.x > width + 100 || anchor.y < -60 || anchor.y > height + 60) return
+    const textWidth = ctx.measureText(label.text).width
+    const baseBox = { width: textWidth + (secondary ? 8 : 10), height: secondary ? 15 : 18 }
+    const offset = label.offset ?? { x: 0, y: 0 }
+    const box = { x: anchor.x + offset.x - baseBox.width / 2, y: anchor.y + offset.y - baseBox.height / 2, ...baseBox }
+    if (box.x < 4 || box.x + box.width > width - 4 || box.y < 4 || box.y + box.height > height - 4) return
+    if (offset.x || offset.y) { ctx.strokeStyle = 'rgba(117,109,101,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(anchor.x + offset.x, anchor.y + offset.y); ctx.stroke() }
+    ctx.fillStyle = secondary ? 'rgba(242,238,230,.72)' : 'rgba(242,238,230,.9)'; ctx.fillRect(box.x, box.y, box.width, box.height)
+    ctx.strokeStyle = secondary ? 'rgba(117,109,101,.22)' : 'rgba(117,109,101,.35)'; ctx.lineWidth = .6; ctx.strokeRect(box.x, box.y, box.width, box.height)
+    ctx.fillStyle = secondary ? '#747b82' : '#5c6670'; ctx.fillText(label.text, anchor.x + offset.x, anchor.y + offset.y)
+  })
+  ctx.restore()
+}
+
 export type MapVisualState = {
   visibleSportIds?: ReadonlySet<string>
   selectedSportIds?: ReadonlySet<string>
+  trendingEnabled?: boolean
+  trendingSignals?: ReadonlyMap<string, TrendingSignal>
 }
+
+type MapRenderOptions = { transform?: { scale: number; panDelta: ScreenPoint }; mapLabels?: MapLabel[]; route?: RouteResult }
+const rasterCache = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>()
 
 export function pickSportFeature(canvas: HTMLCanvasElement, area: MapDataset, view: View, point: ScreenPoint, landmarkRenderers: LandmarkRenderer[] = [], visibleSportIds?: ReadonlySet<string>) {
   const rect = canvas.getBoundingClientRect()
   const projector = createProjector(area, rect.width, rect.height, view)
-  const candidates = area.sports.filter(({ id }) => !visibleSportIds || visibleSportIds.has(id)).flatMap((feature) => {
+  const candidates = area.sports.filter(({ id, bounds }) => (!visibleSportIds || visibleSportIds.has(id)) && isBoundsVisible(bounds, projector, rect.width, rect.height, 0)).flatMap((feature) => {
     const landmark = landmarkRenderers.find((renderer) => renderer.select([feature]).length)
     const elevation = projector.height(landmark?.selectionHeight ?? 0)
     const rings = feature.rings.map((ring) => ring.map((mapPoint) => { const screen = projector.point(mapPoint); return { x: screen.x, y: screen.y - elevation } }))
-    const hit = pointInScreenRing(point, rings[0]) && rings.slice(1).every((ring) => !pointInScreenRing(point, ring))
+    const center = centroid(rings[0])
+    const markerHit = Boolean(feature.icon) && Math.hypot(point.x - center.x, point.y - center.y) <= 24
+    const hit = markerHit || (pointInScreenRing(point, rings[0]) && rings.slice(1).every((ring) => !pointInScreenRing(point, ring)))
     return hit ? [{ feature, area: ringArea(rings[0]) }] : []
   })
   return candidates.sort((a, b) => a.area - b.area)[0]?.feature
 }
 
-export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: View, landmarkRenderers: LandmarkRenderer[] = [], visualState: MapVisualState = {}) {
+export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: View, landmarkRenderers: LandmarkRenderer[] = [], visualState: MapVisualState = {}, options: MapRenderOptions = {}) {
   const dpr = window.devicePixelRatio || 1
   const rect = canvas.getBoundingClientRect()
   const targetWidth = Math.round(rect.width * dpr)
   const targetHeight = Math.round(rect.height * dpr)
   if (canvas.width !== targetWidth) canvas.width = targetWidth
   if (canvas.height !== targetHeight) canvas.height = targetHeight
-  const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   const { width, height } = rect
+  const cache = rasterCache.get(canvas)
+  if (options.transform && cache?.width === targetWidth && cache.height === targetHeight) {
+    const previewContext = canvas.getContext('2d')!
+    previewContext.setTransform(1, 0, 0, 1, 0, 0)
+    previewContext.clearRect(0, 0, targetWidth, targetHeight)
+    previewContext.translate((width / 2 + options.transform.panDelta.x) * dpr, (height / 2 + options.transform.panDelta.y) * dpr)
+    previewContext.scale(options.transform.scale, options.transform.scale)
+    previewContext.translate(-width / 2 * dpr, -height / 2 * dpr)
+    previewContext.drawImage(cache, 0, 0)
+    previewContext.setTransform(dpr, 0, 0, dpr, 0, 0)
+    return
+  }
+  const ctx = canvas.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   const projector = createProjector(area, width, height, view)
   const projectRing = (ring: MapPoint[]) => ring.map(projector.point)
-  const visibleSports = area.sports.filter(({ id }) => !visualState.visibleSportIds || visualState.visibleSportIds.has(id))
+  const visibleSports = area.sports.filter(({ id, bounds }) => (!visualState.visibleSportIds || visualState.visibleSportIds.has(id)) && isBoundsVisible(bounds, projector, width, height))
   const selectedIds = visualState.selectedSportIds ?? new Set<string>()
   const hasSelection = selectedIds.size > 0
 
@@ -100,29 +166,38 @@ export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: Vie
   for (let x = -height; x < width + height; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + height, height); ctx.stroke() }
   ctx.restore()
 
-  ctx.save(); ctx.globalAlpha = hasSelection ? .48 : .78
-  area.surfaces.filter((feature) => feature.kind === 'water').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = .8; ctx.stroke() })
-  area.surfaces.filter((feature) => feature.kind === 'green').forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
+  ctx.save(); ctx.globalAlpha = hasSelection ? .6 : 1
+  area.surfaces.filter((feature) => feature.kind === 'water' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
+  ctx.globalAlpha = hasSelection ? .52 : .82
+  area.surfaces.filter((feature) => feature.kind === 'urban' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.urban; ctx.fill('evenodd'); ctx.strokeStyle = theme.urbanEdge; ctx.lineWidth = .45; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'green' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
   ctx.restore()
+  const landmarkSource = area.osmSports ?? area.sports
   const landmarks = landmarkRenderers
-    .map((renderer) => ({ renderer, features: renderer.select(visibleSports) }))
+    .map((renderer) => ({ renderer, features: renderer.select(landmarkSource.filter(({ bounds }) => isBoundsVisible(bounds, projector, width, height))) }))
     .filter(({ features }) => features.length)
+    .sort((a, b) => (a.renderer.renderPriority ?? 0) - (b.renderer.renderPriority ?? 0))
   const landmarkFeatureIds = new Set(landmarks.flatMap(({ features }) => features.map(({ id }) => id)))
 
   ctx.save(); ctx.globalAlpha = hasSelection ? .34 : view.mode === '2d' ? .58 : .72
-  area.routes.forEach((route) => {
+  area.routes.filter((route) => isBoundsVisible(route.bounds, projector, width, height)).forEach((route) => {
     const points = route.points.map(projector.point); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    if (route.kind === 'rail') { ctx.strokeStyle = theme.rail; ctx.lineWidth = view.mode === '2d' ? 2.2 : 2.8; strokeLine(ctx, points); ctx.strokeStyle = theme.railTie; ctx.lineWidth = .8; ctx.setLineDash([1, 7]); strokeLine(ctx, points); ctx.setLineDash([]); return }
+    if (route.kind === 'waterline') { ctx.strokeStyle = theme.waterline; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); strokeLine(ctx, points); ctx.setLineDash([]); return }
     if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); strokeLine(ctx, points); ctx.setLineDash([]); return }
     const widthByKind = route.kind === 'major' ? [6.5, 4.4] : route.kind === 'street' ? [4.5, 2.8] : [2.8, 1.5]
     ctx.strokeStyle = theme.roadEdge; ctx.lineWidth = widthByKind[0]; strokeLine(ctx, points); ctx.strokeStyle = theme.road; ctx.lineWidth = widthByKind[1]; strokeLine(ctx, points)
   })
   ctx.restore()
 
-  ctx.save(); ctx.globalAlpha = hasSelection ? .3 : view.mode === '2d' ? .48 : .68
+  ctx.save(); ctx.globalAlpha = hasSelection ? .28 : view.mode === '2d' ? .52 : .62
   const buildings = area.buildings
-    .filter((building) => !landmarks.some(({ renderer, features }) => renderer.suppressBuilding?.(building, features)))
-    .map((building) => ({ building, rings: building.rings.map(projectRing) }))
-    .sort((a, b) => centroid(a.rings[0]).y - centroid(b.rings[0]).y)
+    .filter((building) => isBoundsVisible(building.bounds, projector, width, height) && !landmarks.some(({ renderer, features }) => renderer.suppressBuilding?.(building, features)))
+    .map((building) => {
+      const rings = building.rings.map(projectRing)
+      return { building, rings, depth: centroid(rings[0]).y }
+    })
+    .sort((a, b) => a.depth - b.depth)
   buildings.forEach(({ building, rings }) => drawBuilding(ctx, building, rings, projector.height(building.height), view))
   ctx.restore()
 
@@ -130,12 +205,49 @@ export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: Vie
   area.trees.map(projector.point).sort((a, b) => a.y - b.y).forEach((point, index) => drawTree(ctx, point, index, view))
   ctx.restore()
 
-  visibleSports.filter(({ id }) => !landmarkFeatureIds.has(id)).forEach((feature) => drawSport(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default'))
   landmarks.forEach(({ renderer, features }) => {
     const selected = features.some(({ id }) => selectedIds.has(id))
-    ctx.save(); ctx.globalAlpha = hasSelection && !selected ? .2 : 1
+    ctx.save(); ctx.globalAlpha = hasSelection && !selected ? .52 : 1
     renderer.render({ ctx, area, features, projector, view }); ctx.restore()
   })
+  drawMapLabels(ctx, options.mapLabels ?? [], projector, area, visibleSports, width, height, hasSelection, view)
+  // LIPAS venue markers are interactive points, so keep them above landmark art.
+  visibleSports.filter(({ id }) => !landmarkFeatureIds.has(id)).forEach((feature) => (feature.icon ? drawVenueMarker : drawSport)(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default'))
+
+  if (visualState.trendingEnabled) {
+    const trending = visibleSports
+      .map((feature) => ({ feature, signal: visualState.trendingSignals?.get(feature.id) }))
+      .filter((item): item is { feature: SportFeature; signal: TrendingSignal } => Boolean(item.signal))
+      .sort((a, b) => b.signal.interestScore - a.signal.interestScore)
+      .slice(0, 8)
+    trending.forEach(({ feature, signal }) => {
+      const point = centroid(feature.rings[0].map(projector.point))
+      const radius = 6 + (signal.interestScore - 46) * .11
+      const color = signal.stage === 'new' ? '#4b8fa3' : signal.stage === 'rising' ? '#d58a42' : '#b9543e'
+      ctx.save()
+      ctx.globalAlpha = .18
+      ctx.fillStyle = color
+      ctx.beginPath(); ctx.arc(point.x, point.y, radius * 2.25, 0, Math.PI * 2); ctx.fill()
+      ctx.globalAlpha = .84
+      ctx.fillStyle = color
+      ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, Math.PI * 2); ctx.fill()
+      ctx.globalAlpha = 1
+      ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 1.5
+      ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, Math.PI * 2); ctx.stroke()
+      ctx.restore()
+    })
+  }
+
+  if (options.route) {
+    const routePoints = options.route.coordinates.map((coordinate) => projector.point(toLocalMetres(coordinate, area.center)))
+    const routeColor = options.route.mode === 'bike' ? '#4b8fa3' : options.route.mode === 'car' ? '#756d65' : '#b9543e'
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(255,248,237,.92)'; ctx.lineWidth = 6; strokeLine(ctx, routePoints); ctx.strokeStyle = routeColor; ctx.lineWidth = 3; strokeLine(ctx, routePoints)
+    const origin = projector.point(toLocalMetres(options.route.origin, area.center)); const destination = projector.point(toLocalMetres(options.route.destination, area.center))
+    ctx.fillStyle = '#f9f5ed'; ctx.strokeStyle = '#b9543e'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.arc(origin.x, origin.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.beginPath(); ctx.arc(destination.x, destination.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.restore()
+  }
 
   if (hasSelection) {
     const landmarkHeights = new Map(landmarks.flatMap(({ renderer, features }) => features.map(({ id }) => [id, renderer.selectionHeight ?? 0] as const)))
@@ -145,4 +257,11 @@ export function renderMap(canvas: HTMLCanvasElement, area: MapDataset, view: Vie
       ctx.save(); ctx.shadowColor = 'rgba(150,62,42,.68)'; ctx.shadowBlur = 13; traceRings(ctx, rings); ctx.fillStyle = 'rgba(196,95,70,.12)'; ctx.fill('evenodd'); ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore()
     })
   }
+
+  const nextCache = cache ?? document.createElement('canvas')
+  if (nextCache.width !== targetWidth) nextCache.width = targetWidth
+  if (nextCache.height !== targetHeight) nextCache.height = targetHeight
+  nextCache.getContext('2d')!.setTransform(1, 0, 0, 1, 0, 0)
+  nextCache.getContext('2d')!.drawImage(canvas, 0, 0)
+  rasterCache.set(canvas, nextCache)
 }

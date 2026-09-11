@@ -1,12 +1,13 @@
-import studyArea from './olympic-area.json'
-import type { GeoPoint, MapDataset, MapPoint, StudyAreaGeoJson } from './types'
+import { accessProfileForUrl, createLipasFeatures, findLipasVenue } from './lipas'
+import type { Bounds, GeoJsonFeature, GeoPoint, MapChunkManifest, MapDataset, MapPoint, MapViewport, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
+import { createProjector } from '../renderer/projection'
+import { venueProfile } from './venueLinks'
+import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
 
-const geojson = studyArea as unknown as StudyAreaGeoJson
-const [centerLon, centerLat] = geojson.center
 const metresPerDegreeLat = 111_320
-const metresPerDegreeLon = metresPerDegreeLat * Math.cos(centerLat * Math.PI / 180)
 
-export function toLocalMetres([longitude, latitude]: GeoPoint): MapPoint {
+export function toLocalMetres([longitude, latitude]: GeoPoint, [centerLon, centerLat]: GeoPoint): MapPoint {
+  const metresPerDegreeLon = metresPerDegreeLat * Math.cos(centerLat * Math.PI / 180)
   return {
     x: (longitude - centerLon) * metresPerDegreeLon,
     y: (latitude - centerLat) * metresPerDegreeLat,
@@ -19,31 +20,136 @@ function estimatedHeight(id: string, explicitHeight?: number) {
   return 9 + (hash % 5) * 2.4
 }
 
-const [west, south, east, north] = geojson.bbox
-const southWest = toLocalMetres([west, south])
-const northEast = toLocalMetres([east, north])
+function boundsOf(points: MapPoint[]): Bounds {
+  return points.reduce((bounds, point) => ({
+    minX: Math.min(bounds.minX, point.x), minY: Math.min(bounds.minY, point.y),
+    maxX: Math.max(bounds.maxX, point.x), maxY: Math.max(bounds.maxY, point.y),
+  }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
+}
 
-export const area: MapDataset = {
+function boundsOfRings(rings: MapPoint[][]) {
+  return boundsOf(rings.flat())
+}
+
+function centerOfGeoRing(ring: GeoPoint[]): GeoPoint {
+  const points = ring.slice(0, -1)
+  const total = points.reduce(([longitude, latitude], [pointLongitude, pointLatitude]) => [longitude + pointLongitude, latitude + pointLatitude], [0, 0] as GeoPoint)
+  return [total[0] / Math.max(points.length, 1), total[1] / Math.max(points.length, 1)]
+}
+
+export function createArea(geojson: StudyAreaGeoJson): MapDataset {
+  const [west, south, east, north] = geojson.bbox
+  const project = (point: GeoPoint) => toLocalMetres(point, geojson.center)
+  const southWest = project([west, south])
+  const northEast = project([east, north])
+  const sports: SportFeature[] = geojson.features.flatMap((feature) => {
+    if (feature.properties.category !== 'sport' || feature.geometry.type !== 'Polygon') return []
+    const facilityType = feature.properties.osmTags?.leisure
+    const sourceSports = feature.properties.osmTags?.sport?.split(';').map((value) => value.trim()).filter((value) => value && !['multi', 'sports_centre'].includes(value)) ?? []
+    const rawSport = feature.properties.sport && !['multi', 'sports_centre'].includes(feature.properties.sport) ? feature.properties.sport : undefined
+    const sport = rawSport ?? sourceSports[0] ?? (facilityType === 'pitch' ? 'multi' : facilityType === 'fitness_station' ? 'outdoor_fitness' : 'multi')
+    const rings = feature.geometry.coordinates.map((ring) => ring.map(project))
+    return [{ id: feature.id ?? 'sport', name: feature.properties.name, sport, sports: sourceSports.length > 0 ? sourceSports : sport === 'multi' ? [] : [sport], facilityType, rings, bounds: boundsOfRings(rings), center: centerOfGeoRing(feature.geometry.coordinates[0]) }]
+  })
+  const osmVenues: SportsVenue[] = sports.map((feature) => {
+    const profile = venueProfile(feature.id)
+    return {
+      id: feature.id,
+      name: feature.name,
+      sports: profile?.sports ?? feature.sports ?? (feature.sport === 'multi' ? [] : [feature.sport]),
+      facilityType: feature.facilityType,
+      geometry: { rings: feature.rings, bounds: feature.bounds ?? boundsOfRings(feature.rings) },
+      source: { provider: 'openstreetmap', id: feature.id },
+      officialUrl: profile?.officialUrl ?? (feature.center ? findLipasVenue(feature.name, feature.center)?.website : undefined),
+      sourceUrl: `https://www.openstreetmap.org/${feature.id}`,
+      lipas: feature.center ? findLipasVenue(feature.name, feature.center) : undefined,
+      serviceMap: serviceMapForUnit(profile?.serviceMapId ?? (feature.center ? findLipasVenue(feature.name, feature.center)?.id : undefined)),
+    }
+  })
+  const lipas = createLipasFeatures(project)
+  const venues: SportsVenue[] = [...osmVenues, ...lipas.venues.map(({ id, venue }) => ({
+    id, name: venue.name, sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [], facilityType: venue.typeName, geometry: { rings: [], bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }, source: { provider: 'lipas', id: String(venue.id) }, officialUrl: venue.website, sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, lipas: { ...venue, ...accessProfileForUrl(venue.website) }, serviceMap: serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id),
+  }))]
+  return {
   name: geojson.name,
+  center: geojson.center,
   bounds: { minX: southWest.x, minY: southWest.y, maxX: northEast.x, maxY: northEast.y },
   surfaces: geojson.features.flatMap((feature) => {
-    if (!['green', 'water'].includes(feature.properties.category) || feature.geometry.type !== 'Polygon') return []
-    return [{ id: feature.id ?? 'surface', kind: feature.properties.category as 'green' | 'water', rings: feature.geometry.coordinates.map((ring) => ring.map(toLocalMetres)) }]
+    if (!['green', 'urban', 'water'].includes(feature.properties.category) || feature.geometry.type !== 'Polygon') return []
+    const rings = feature.geometry.coordinates.map((ring) => ring.map(project))
+    return [{ id: feature.id ?? 'surface', kind: feature.properties.category as 'green' | 'urban' | 'water', rings, bounds: boundsOfRings(rings) }]
   }),
   buildings: geojson.features.flatMap((feature) => {
     if (feature.properties.category !== 'building' || feature.geometry.type !== 'Polygon') return []
     const id = feature.id ?? 'building'
-    return [{ id, name: feature.properties.name, height: estimatedHeight(id, feature.properties.height), rings: feature.geometry.coordinates.map((ring) => ring.map(toLocalMetres)) }]
+    const rings = feature.geometry.coordinates.map((ring) => ring.map(project))
+    return [{ id, name: feature.properties.name, height: estimatedHeight(id, feature.properties.height), rings, bounds: boundsOfRings(rings) }]
   }),
   routes: geojson.features.flatMap((feature) => {
-    if (!['road', 'path'].includes(feature.properties.category) || feature.geometry.type !== 'LineString') return []
-    return [{ id: feature.id ?? 'route', kind: feature.properties.category === 'path' ? 'path' as const : feature.properties.routeKind ?? 'local', points: feature.geometry.coordinates.map(toLocalMetres) }]
+    if (!['road', 'path', 'rail', 'waterline'].includes(feature.properties.category) || feature.geometry.type !== 'LineString') return []
+    const points = feature.geometry.coordinates.map(project)
+    return [{ id: feature.id ?? 'route', kind: feature.properties.category === 'path' ? 'path' as const : feature.properties.routeKind ?? 'local', points, bounds: boundsOf(points) }]
   }),
-  sports: geojson.features.flatMap((feature) => {
-    if (feature.properties.category !== 'sport' || feature.geometry.type !== 'Polygon') return []
-    return [{ id: feature.id ?? 'sport', name: feature.properties.name, sport: feature.properties.sport ?? 'multi', facilityType: feature.properties.osmTags?.leisure, rings: feature.geometry.coordinates.map((ring) => ring.map(toLocalMetres)) }]
-  }),
-  trees: geojson.features.flatMap((feature) => feature.properties.category === 'tree' && feature.geometry.type === 'Point' ? [toLocalMetres(feature.geometry.coordinates)] : []),
+  sports: lipas.features,
+  osmSports: sports,
+  venues,
+  trees: geojson.features.flatMap((feature) => feature.properties.category === 'tree' && feature.geometry.type === 'Point' ? [project(feature.geometry.coordinates)] : []),
   attribution: geojson.attribution,
   source: geojson.source,
+  }
+}
+
+function areaBoundsFromBbox(bbox: [number, number, number, number], center: GeoPoint): Bounds {
+  const southWest = toLocalMetres([bbox[0], bbox[1]], center)
+  const northEast = toLocalMetres([bbox[2], bbox[3]], center)
+  return { minX: southWest.x, minY: southWest.y, maxX: northEast.x, maxY: northEast.y }
+}
+
+function chunkIsVisible(chunk: MapChunkManifest['chunks'][number], manifest: MapChunkManifest, viewport: MapViewport) {
+  const area = { bounds: areaBoundsFromBbox(manifest.bbox, manifest.center) } as MapDataset
+  const projector = createProjector(area, viewport.width, viewport.height, viewport)
+  const [west, south, east, north] = chunk.bbox
+  const points = [[west, south], [west, north], [east, south], [east, north]].map((coordinate) => projector.point(toLocalMetres(coordinate as GeoPoint, manifest.center)))
+  const minX = Math.min(...points.map(({ x }) => x)); const maxX = Math.max(...points.map(({ x }) => x))
+  const minY = Math.min(...points.map(({ y }) => y)); const maxY = Math.max(...points.map(({ y }) => y))
+  const margin = 220
+  return maxX >= -margin && minX <= viewport.width + margin && maxY >= -margin && minY <= viewport.height + margin
+}
+
+async function createAreaFromChunks(chunks: StudyAreaGeoJson[]) {
+  const firstChunk = chunks[0]
+  const uniqueFeatures = new Map<string, GeoJsonFeature>()
+  chunks.flatMap(({ features }) => features).forEach((feature, index) => uniqueFeatures.set(feature.id ?? `${feature.properties.category}-${index}-${JSON.stringify(feature.geometry)}`, feature))
+  return createArea({ ...firstChunk, features: [...uniqueFeatures.values()] })
+}
+
+export type ChunkedMapSource = {
+  loadManifest: () => Promise<MapChunkManifest>
+  loadOverview: () => Promise<StudyAreaGeoJson>
+  loadChunk: (file: string) => Promise<StudyAreaGeoJson>
+}
+
+export function createChunkedAreaLoader(source: ChunkedMapSource) {
+  const chunkCache = new Map<string, Promise<StudyAreaGeoJson>>()
+  let overviewCache: Promise<StudyAreaGeoJson> | undefined
+  let manifestCache: Promise<MapChunkManifest> | undefined
+  const loadManifest = () => { manifestCache ??= source.loadManifest(); return manifestCache }
+  const loadOverview = () => { overviewCache ??= source.loadOverview(); return overviewCache }
+  const loadChunk = (file: string) => {
+    const cached = chunkCache.get(file)
+    if (cached) return cached
+    const promise = source.loadChunk(file)
+    chunkCache.set(file, promise)
+    return promise
+  }
+  return {
+    loadDataset: async () => createAreaFromChunks([await loadOverview()]),
+    loadDatasetForViewport: async (viewport: MapViewport) => {
+      if (viewport.zoom < 1.45) return createAreaFromChunks([await loadOverview()])
+      const manifest = await loadManifest()
+      const visible = manifest.chunks.filter((chunk) => chunkIsVisible(chunk, manifest, viewport))
+      const selected = visible.length > 0 ? visible : manifest.chunks
+      return createAreaFromChunks(await Promise.all(selected.map(({ file }) => loadChunk(file))))
+    },
+  }
 }

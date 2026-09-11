@@ -4,11 +4,17 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 4180",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check:data": "node tools/check-study-area.mjs",
-    "check:landmarks": "node tools/check-landmarks.mjs"
+    "check:expanded-map": "node tools/check-expanded-map.mjs",
+    "check:venues": "node tools/check-venue-data.mjs",
+    "check:lipas": "node tools/check-lipas-data.mjs",
+    "check:lipas:classification": "node tools/check-lipas-classification.mjs",
+    "data:lipas": "node tools/import-lipas.mjs",
+    "check:landmarks": "node tools/check-landmarks.mjs",
+    "data:split-map": "node tools/split-map-data.mjs --source src/data/central-helsinki.json --output src/data/map-chunks/central-helsinki"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

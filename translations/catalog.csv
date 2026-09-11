@@ -1,0 +1,70 @@
+key,en,fi,zh-Hans,context,notes
+practicalOverview,Practical overview,Käytännön näkymä,,,Top-level view mode label
+spatialExploration,Spatial exploration,Tilallinen tutkiminen,,,Isometric view mode label
+sportsMap,Sports Map,Liikuntakartta,,,Product title
+search,Search,Haku,,,Search label
+searchPlaceholder,Search by place or sport,Hae paikan tai lajin nimellä,,,Search field placeholder
+clearSearch,Clear search,Tyhjennä haku,,,Search clear button
+selectResult,Select result,Valitse tulos,,,Single search result action
+compass,Compass showing north,"Kompassi, pohjoinen ylös",,,Accessible description
+startingPoint,Starting point,Lähtöpaikka,,,Route origin field
+startingPointPlaceholder,Address or place in Helsinki,Helsingin osoite tai paikka,,,Route origin placeholder
+addressSuggestions,Address suggestions,Osoite-ehdotukset,,,Suggestion list label
+routeHere,Route here,Reitti tänne,,,Route action
+routing,Finding walking route…,Haetaan kävelyreittiä…,,,Loading state
+routeError,"Could not find a route. Check the address and try again.","Reittiä ei löytynyt. Tarkista osoite ja yritä uudelleen.",,,Error state
+walkingRoute,Walking route,Kävelyreitti,,,Route result label
+minutes,min,min,,,Unit; keep short
+sport,Sport,Laji,,,Filter label
+all,All,Kaikki,,,Filter option
+football,Football,Jalkapallo,,,Sport name
+athletics,Athletics,Yleisurheilu,,,Sport name
+swimming,Swimming,Uinti,,,Sport name
+iceHockey,Ice hockey,Jääkiekko,,,Sport name
+basketball,Basketball,Koripallo,,,Sport name
+tennis,Tennis,Tennis,,,Sport name
+padel,Padel,Padel,,,Sport name
+outdoorFitness,Outdoor gym,Ulkokuntosali,,,Sport name
+trending,Trending,Trendit,,,Filter toggle
+areas,areas,aluetta,,,Result count unit
+sportsAreas,sports areas,liikunta-aluetta,,,Footer result count unit
+loading,Loading {city} sports area,Ladataan kaupungin {city} liikuntapaikkoja,,,Preserve {city}
+preparing,Preparing the map geometry.,Valmistellaan karttageometriaa.,,,Loading state
+findFacility,Find a facility,Löydä liikuntapaikka,,,2D helper text
+exploreDistrict,Explore the district,Tutki aluetta,,,Isometric helper text
+selectHighlighted,Select any highlighted sports area.,Valitse korostettu liikuntapaikka.,,,2D helper text
+spatialContext,Sports places in spatial context.,Liikuntapaikat osana ympäristöä.,,,Isometric helper text
+selectedFacility,Selected facility,Valittu liikuntapaikka,,,Facility card label
+clear,Clear,Tyhjennä,,,Clear selection
+whatCanYouDo,What can you do here?,Mitä täällä voi tehdä?,,,Facility card question
+missingSports,Specific sports are not listed in the source data yet.,Tarkkoja lajitietoja ei ole vielä lähdedatassa.,,,Fallback facility text
+openOfficial,Open official details,Avaa viralliset tiedot,,,Facility link
+viewSource,View source details,Avaa lähdetiedot,,,Facility link
+selectArea,Select a sports area,Valitse liikuntapaikka,,,Legend
+contextMap,Context map,Ympäröivä kartta,,,Legend
+water,Water,Vesi,,,Legend
+newOnList,New on the list,Uusi listalla,,,Trending legend
+risingInterest,Rising interest,Kasvava kiinnostus,,,Trending legend
+popularNow,Popular now,Suosittu nyt,,,Trending legend
+trendingNote,"Trending shows product interest, not visitor counts.","Trendit kuvaavat kiinnostusta, eivät kävijämääriä.",,,Trending disclaimer
+reset,Reset,Nollaa,,,Map control
+overview,overview,yleiskuva,,,Footer mode label
+spatialModel,spatial model,tilallinen malli,,,Footer mode label
+language,Language,Kieli,,,Language toggle label
+areaLabel,Töölö / Olympic Stadium + adjacent area,Töölö / Olympiastadion + ympäröivä alue,,,Study area label; keep place names recognizable
+twoDOverview,2D OVERVIEW,2D-YLEISKUVA,,,Map note kicker
+isometricView,ISOMETRIC VIEW,ISOMETRINEN NÄKYMÄ,,,Map note kicker
+mode2d,2D,2D,,,Mode button
+modeIso,ISOMETRIC,ISOMETRINEN,,,Mode button
+mapProjection,Map projection,Karttanäkymä,,,Mode control label
+filterFacilities,Filter sports facilities,Suodata liikuntapaikkoja,,,Filter navigation label
+interactiveMap,"Interactive sports map. Select a sports area for details.","Interaktiivinen liikuntakartta. Valitse liikuntapaikka nähdäksesi sen tiedot.",,,Canvas accessibility label
+volleyball,Volleyball,Lentopallo,,,Sport name
+badminton,Badminton,Sulkapallo,,,Sport name
+table_tennis,Table tennis,Pöytätennis,,,Sport name
+karate,Karate,Karate,,,Sport name
+golf,Golf,Golf,,,Sport name
+canoe,Canoeing,Melonta,,,Sport name
+canoe_polo,Canoe polo,Kanoottipallo,,,Sport name
+skateboard,Skateboarding,Rullalautailu,,,Sport name
+beachvolleyball,Beach volleyball,Rantalentopallo,,,Sport name

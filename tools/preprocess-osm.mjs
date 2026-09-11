@@ -1,8 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
-const [inputPath = 'tmp/olympic-area-osm.json', outputPath = 'src/data/olympic-area.json'] = process.argv.slice(2)
+const [inputPath = 'tmp/olympic-area-osm.json', outputPath = 'src/data/olympic-area.json', westArg = '24.9105', southArg = '60.1770', eastArg = '24.9550', northArg = '60.1980'] = process.argv.slice(2)
+const bbox = [westArg, southArg, eastArg, northArg].map(Number)
+const [west, south, east, north] = bbox
 const source = JSON.parse(await readFile(inputPath, 'utf8'))
-const center = [24.92725, 60.18725]
+const center = [(west + east) / 2, (south + north) / 2]
 const metresPerLon = 111_320 * Math.cos(center[1] * Math.PI / 180)
 const metresPerLat = 111_320
 
@@ -32,11 +34,14 @@ const number = (value) => { const parsed = Number.parseFloat(value); return Numb
 const height = (tags) => number(tags.height) ?? (number(tags['building:levels']) ? number(tags['building:levels']) * 3.2 : undefined)
 const sport = (tags) => tags.sport?.split(';')[0] ?? (tags.leisure === 'pitch' ? 'multi' : tags.leisure)
 const category = (tags, closed) => {
-  if (closed && (tags.sport || ['pitch', 'stadium', 'track', 'sports_centre'].includes(tags.leisure))) return 'sport'
+  if (closed && (tags.sport || ['pitch', 'stadium', 'track', 'sports_centre', 'sports_hall', 'fitness_station', 'swimming_pool'].includes(tags.leisure))) return 'sport'
   if (closed && tags.building) return 'building'
-  if (closed && (tags.natural === 'water' || tags.waterway === 'riverbank')) return 'water'
+  if (closed && (tags.natural === 'water' || tags.waterway === 'riverbank' || tags.water)) return 'water'
+  if (closed && tags.landuse === 'residential') return 'urban'
   if (closed && (['park', 'garden'].includes(tags.leisure) || ['grass', 'meadow', 'recreation_ground'].includes(tags.landuse) || tags.natural === 'wood')) return 'green'
   if (tags.highway) return ['pedestrian', 'footway', 'cycleway', 'path'].includes(tags.highway) ? 'path' : 'road'
+  if (tags.railway && ['rail', 'light_rail', 'tram'].includes(tags.railway)) return 'rail'
+  if (tags.natural === 'coastline') return 'waterline'
   return undefined
 }
 const routeKind = (highway) => ['primary', 'secondary'].includes(highway) ? 'major' : highway === 'tertiary' ? 'street' : 'local'
@@ -48,15 +53,15 @@ const addGeometry = (element, geometry, suffix = '') => {
   const closed = isClosed(coordinates)
   const kind = category(element.tags ?? {}, closed)
   if (!kind) return
-  const tolerance = kind === 'sport' ? 0.75 : kind === 'building' ? 1.1 : kind === 'path' ? 3.5 : 2
+  const tolerance = kind === 'sport' ? 0.75 : kind === 'building' ? 1.1 : kind === 'path' ? 3.5 : kind === 'rail' ? 1.5 : kind === 'waterline' ? 2 : 2
   const simplified = simplify(coordinates, tolerance)
   const polygonArea = closed ? area(simplified) : 0
   const lineLength = closed ? 0 : length(simplified)
-  if ((kind === 'building' && polygonArea < 110) || (kind === 'green' && polygonArea < 600) || (kind === 'path' && lineLength < 90) || (kind === 'road' && element.tags?.highway === 'service' && lineLength < 70) || (closed && simplified.length < 4)) return
+  if ((kind === 'building' && polygonArea < 110) || (['green', 'urban'].includes(kind) && polygonArea < 600) || (kind === 'path' && lineLength < 90) || (kind === 'rail' && lineLength < 90) || (kind === 'waterline' && lineLength < 90) || (kind === 'road' && element.tags?.highway === 'service' && lineLength < 70) || (closed && simplified.length < 4)) return
   features.push({
     type: 'Feature',
     id: `${element.type}/${element.id}${suffix}`,
-    properties: { category: kind, name: element.tags?.name, sport: kind === 'sport' ? sport(element.tags ?? {}) : undefined, height: kind === 'building' ? height(element.tags ?? {}) : undefined, routeKind: ['road', 'path'].includes(kind) ? routeKind(element.tags?.highway) : undefined, osmTags: kind === 'sport' ? { leisure: element.tags?.leisure, sport: element.tags?.sport } : undefined },
+    properties: { category: kind, name: element.tags?.name, sport: kind === 'sport' ? sport(element.tags ?? {}) : undefined, height: kind === 'building' ? height(element.tags ?? {}) : undefined, routeKind: kind === 'rail' ? 'rail' : kind === 'waterline' ? 'waterline' : ['road', 'path'].includes(kind) ? routeKind(element.tags?.highway) : undefined, osmTags: kind === 'sport' ? { leisure: element.tags?.leisure, sport: element.tags?.sport } : undefined },
     geometry: { type: closed ? 'Polygon' : 'LineString', coordinates: closed ? [simplified] : simplified },
   })
 }
@@ -72,7 +77,7 @@ const keptTrees = []
 for (const tree of trees) { const point = toMetres([tree.lon, tree.lat]); if (keptTrees.every((kept) => Math.hypot(point[0] - kept.metres[0], point[1] - kept.metres[1]) > 32)) keptTrees.push({ tree, metres: point }) }
 keptTrees.slice(0, 36).forEach(({ tree }) => features.push({ type: 'Feature', id: `node/${tree.id}`, properties: { category: 'tree' }, geometry: { type: 'Point', coordinates: [tree.lon, tree.lat] } }))
 
-const collection = { type: 'FeatureCollection', name: 'Töölö Olympic Stadium study area', attribution: '© OpenStreetMap contributors', license: 'ODbL 1.0', source: 'https://www.openstreetmap.org/copyright', center, bbox: [24.9175, 60.1825, 24.9370, 60.1920], generatedAt: new Date().toISOString(), features }
+const collection = { type: 'FeatureCollection', name: 'Helsinki sports map study area', attribution: '© OpenStreetMap contributors', license: 'ODbL 1.0', source: 'https://www.openstreetmap.org/copyright', center, bbox, generatedAt: new Date().toISOString(), features }
 await writeFile(outputPath, `${JSON.stringify(collection, null, 2)}\n`)
 const counts = features.reduce((result, feature) => ({ ...result, [feature.properties.category]: (result[feature.properties.category] ?? 0) + 1 }), {})
 console.log(JSON.stringify(counts, null, 2))

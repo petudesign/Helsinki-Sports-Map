@@ -14,7 +14,11 @@ function openRing(ring: MapPoint[]) {
   return ring
 }
 
+// Loaded map geometry is immutable; camera changes do not change these frames.
+const frames = new WeakMap<MapPoint[], OrientedFrame>()
 export function frameFromRing(source: MapPoint[]): OrientedFrame {
+  const cached = frames.get(source)
+  if (cached) return cached
   const ring = openRing(source)
   const mean = ring.reduce((sum, point) => ({ x: sum.x + point.x / ring.length, y: sum.y + point.y / ring.length }), { x: 0, y: 0 })
   const covariance = ring.reduce((sum, point) => {
@@ -33,13 +37,15 @@ export function frameFromRing(source: MapPoint[]): OrientedFrame {
   const longMin = Math.min(...longValues); const longMax = Math.max(...longValues)
   const shortMin = Math.min(...shortValues); const shortMax = Math.max(...shortValues)
   const longOffset = (longMin + longMax) / 2; const shortOffset = (shortMin + shortMax) / 2
-  return {
+  const frame = {
     center: { x: mean.x + longAxis.x * longOffset + shortAxis.x * shortOffset, y: mean.y + longAxis.y * longOffset + shortAxis.y * shortOffset },
     longAxis,
     shortAxis,
     halfLong: (longMax - longMin) / 2,
     halfShort: (shortMax - shortMin) / 2,
   }
+  frames.set(source, frame)
+  return frame
 }
 
 export function framePoint(frame: OrientedFrame, along: number, across: number): MapPoint {

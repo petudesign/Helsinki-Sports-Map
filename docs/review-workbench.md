@@ -21,7 +21,7 @@ Each candidate must show:
 - validation checks and unresolved checks
 - a clear action: accept, edit, reject, or skip
 
-The prototype shows transparent check counts instead of a numerical confidence percentage. A future score must be based on measured review outcomes before it is presented as a probability.
+The prototype shows a rule-based evidence score as a percentage. It is deliberately not presented as a probability: each deterministic check has a visible weight, passed checks add their points, and unresolved checks hold their points back. The current weights are price format 35, venue match 30, source freshness 20, and cross-source verification 15. A record reaches 100% only when every check passes.
 
 The next backend version should persist the decision together with the source document hash, parser version, evidence location, reviewer identity, and timestamp.
 

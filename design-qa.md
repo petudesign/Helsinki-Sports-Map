@@ -14,7 +14,7 @@ passed
 
 ### Typography and copy
 
-The implementation keeps the compact editorial/operations-tool hierarchy: monospace metadata, stronger venue names, and larger primary review facts. Queue labels use ellipsis intentionally for dense records. The unsupported `92%` label was removed; pending records now show `3/4 checks`, which describes the current deterministic checks without pretending to be a calibrated probability.
+The implementation keeps the compact editorial/operations-tool hierarchy: monospace metadata, stronger venue names, and larger primary review facts. Queue labels use ellipsis intentionally for dense records. The percentage is visible again, but it is explicitly labeled an evidence score rather than a probability. The reviewer can see the exact contribution of every check in the `Why X%?` panel: passed checks show their added points, unresolved checks show the points held back. A record reaches 100% only when every deterministic check passes.
 
 ### Spacing and layout
 
@@ -36,6 +36,7 @@ Verified in the local browser:
 - `Edit` opens the correction form with price and note fields.
 - Keyboard shortcuts `A`, `E`, `R`, and `S` are wired for the corresponding actions.
 - The detail panel exposes evidence, provenance, and deterministic validation checks.
+- The score panel exposes the total, progress bar, scoring caveat, and every individual point contribution.
 
 ### Accessibility
 
@@ -45,9 +46,9 @@ Interactive controls are semantic buttons/links, focus-visible states are define
 
 No blocking visual or interaction findings for this MVP change.
 
-Known product limitation: the check count is not yet a probability. A numeric confidence score should only be introduced after accepted/rejected review outcomes are stored and evaluated against measured correctness.
+Known product limitation: the evidence score is deterministic and not a probability. A calibrated confidence model should only be introduced after accepted/rejected review outcomes are stored and evaluated against measured correctness.
 
 ## Comparison history
 
 - Initial review prototype: queue used a misleading fixed `92%` badge and the ID column was too close to the venue name.
-- Current pass: fixed check summary (`3/4 checks`) and widened desktop queue with an explicit ID column.
+- Current pass: restored a transparent percentage score with per-check contributions, plus the widened desktop queue with an explicit ID column.

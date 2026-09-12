@@ -2,6 +2,13 @@ import snapshot from '../data/service-map-helsinki.json'
 
 export type ReviewDecision = 'pending' | 'approved' | 'rejected' | 'skipped'
 
+export type ReviewCheck = {
+  label: string
+  detail: string
+  status: 'pass' | 'review'
+  weight: number
+}
+
 export type ReviewCandidate = {
   id: string
   venueName: string
@@ -12,7 +19,11 @@ export type ReviewCandidate = {
   sourceUrl: string
   sourceUpdatedAt?: string
   sourceText: string
-  checks: { label: string; detail: string; status: 'pass' | 'review' }[]
+  checks: ReviewCheck[]
+}
+
+export function confidenceScore(candidate: ReviewCandidate) {
+  return candidate.checks.reduce((total, check) => total + (check.status === 'pass' ? check.weight : 0), 0)
 }
 
 function firstPrice(value: string) {
@@ -43,10 +54,10 @@ export const reviewCandidates: ReviewCandidate[] = units
     const sourceText = unit.priceEn as string
     const mapped = unit.lipasId !== undefined
     const checks = [
-      { label: 'Price format', detail: 'Currency amount found', status: 'pass' as const },
-      { label: 'Venue match', detail: mapped ? 'Matches LIPAS venue' : 'Needs venue match', status: mapped ? 'pass' as const : 'review' as const },
-      { label: 'Source freshness', detail: unit.updatedAt ? `Source updated ${unit.updatedAt.slice(0, 10)}` : 'No update timestamp', status: unit.updatedAt ? 'pass' as const : 'review' as const },
-      { label: 'Cross-source check', detail: 'Not verified yet', status: 'review' as const },
+      { label: 'Price format', detail: 'Currency amount found', status: 'pass' as const, weight: 35 },
+      { label: 'Venue match', detail: mapped ? 'Matches LIPAS venue' : 'Needs venue match', status: mapped ? 'pass' as const : 'review' as const, weight: 30 },
+      { label: 'Source freshness', detail: unit.updatedAt ? `Source updated ${unit.updatedAt.slice(0, 10)}` : 'No update timestamp', status: unit.updatedAt ? 'pass' as const : 'review' as const, weight: 20 },
+      { label: 'Cross-source check', detail: 'Not verified yet', status: 'review' as const, weight: 15 },
     ]
     return {
       id: `service-map-${unit.serviceMapId}`,

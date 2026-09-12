@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { reviewCandidates, type ReviewCandidate, type ReviewDecision } from './reviewData'
+import { confidenceScore, reviewCandidates, type ReviewCandidate, type ReviewDecision } from './reviewData'
 
 type StoredReview = { decision: ReviewDecision; editedPrice?: string; note?: string }
 type StoredReviews = Record<string, StoredReview>
@@ -29,11 +29,15 @@ function checkSummary(candidate: ReviewCandidate) {
   return `${passed}/${candidate.checks.length} checks`
 }
 
+function checkPoints(check: ReviewCandidate['checks'][number]) {
+  return check.status === 'pass' ? `+${check.weight}` : '+0'
+}
+
 function ReviewQueueItem({ candidate, review, selected, onSelect }: { candidate: ReviewCandidate; review?: StoredReview; selected: boolean; onSelect: () => void }) {
   return <button type="button" className={`review-queue-item ${selected ? 'selected' : ''}`} onClick={onSelect}>
     <span className="review-queue-index">{candidate.id.split('-').pop()}</span>
     <span className="review-queue-copy"><strong>{candidate.venueName}</strong><small>{candidate.audience} · {review?.editedPrice ?? candidate.proposedPrice}</small></span>
-    <span className={`review-confidence review-confidence-${review?.decision ?? 'pending'}`}>{review?.decision ? decisionLabel(review.decision) : checkSummary(candidate)}</span>
+    <span className={`review-confidence review-confidence-${review?.decision ?? 'pending'}`}>{review?.decision ? decisionLabel(review.decision) : `${confidenceScore(candidate)}%`}</span>
   </button>
 }
 
@@ -118,7 +122,7 @@ export function ReviewWorkbench() {
 
       <section className="review-main" aria-live="polite">
         <div className="review-navigation"><button type="button" onClick={() => setSelectedIndex((selectedIndex - 1 + reviewCandidates.length) % reviewCandidates.length)}>← Previous</button><span>{selectedIndex + 1} of {reviewCandidates.length}</span><button type="button" onClick={() => setSelectedIndex((selectedIndex + 1) % reviewCandidates.length)}>Next →</button></div>
-        <div className="review-heading"><div><span className="review-kicker">Candidate proposal</span><h2>{current.venueName}</h2><p>Helsinki · {current.category}</p></div><span className="review-check-summary"><strong>{checkSummary(current)}</strong><small>transparent checks</small></span></div>
+        <div className="review-heading"><div><span className="review-kicker">Candidate proposal</span><h2>{current.venueName}</h2><p>Helsinki · {current.category}</p></div><span className="review-check-summary"><strong>{confidenceScore(current)}%</strong><small>evidence score</small><span>{checkSummary(current)} verified</span></span></div>
 
         <div className="review-facts"><div><span>Proposed price</span><strong>{currentReview?.editedPrice ?? current.proposedPrice}</strong></div><div><span>Audience</span><strong>{current.audience}</strong></div><div><span>Source</span><strong>{current.sourceLabel}</strong><small>{formatSourceDate(current.sourceUpdatedAt)}</small></div></div>
 
@@ -133,7 +137,7 @@ export function ReviewWorkbench() {
 
       <aside className="review-context">
         <section className="review-panel"><h3>Provenance</h3><dl><div><dt>Source</dt><dd>{current.sourceLabel}</dd></div><div><dt>Updated</dt><dd>{formatSourceDate(current.sourceUpdatedAt)}</dd></div><div><dt>Record ID</dt><dd>{current.id}</dd></div><div><dt>Extractor</dt><dd>service-map-v1</dd></div></dl></section>
-        <section className="review-panel"><h3>Validation</h3><ul className="review-checks">{current.checks.map((check) => <li key={check.label} className={check.status}><span>{check.status === 'pass' ? '✓' : '○'}</span><div><strong>{check.label}</strong><small>{check.detail}</small></div></li>)}</ul></section>
+        <section className="review-panel"><h3>Why {confidenceScore(current)}%?</h3><div className="review-score-explainer"><strong>{confidenceScore(current)} / 100</strong><div className="review-score-bar" role="progressbar" aria-label={`${confidenceScore(current)} percent evidence score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={confidenceScore(current)}><span style={{ width: `${confidenceScore(current)}%` }} /></div><p>Rule-based evidence score, not a probability. Verified checks add their points; unresolved checks add 0.</p></div><ul className="review-checks">{current.checks.map((check) => <li key={check.label} className={check.status}><span className={`review-check-points review-check-points-${check.status}`}>{checkPoints(check)}</span><div><strong>{check.label}</strong><small>{check.detail} · {check.status === 'pass' ? `${check.weight} points added` : `${check.weight} points held back`}</small></div></li>)}</ul></section>
         <section className="review-panel review-safety-note"><h3>Safety boundary</h3><p>This prototype only changes local review state. It cannot write to the public dataset, trigger syncs, or access secrets.</p></section>
       </aside>
     </div>

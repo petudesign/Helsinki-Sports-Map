@@ -41,6 +41,7 @@ Verified in the local browser:
 - The score panel exposes the total, progress bar, scoring caveat, and every individual point contribution.
 - The price review shows the full structured option set and states that `Accept` approves them together.
 - Approved, rejected, and skipped queue states use distinct semantic colors.
+- The header exposes the local approved-export action when approved records exist.
 
 ### Accessibility
 

@@ -21,9 +21,10 @@ Each candidate must show:
 - validation checks and unresolved checks
 - a clear action: accept, edit, reject, or skip
 
+The prototype shows transparent check counts instead of a numerical confidence percentage. A future score must be based on measured review outcomes before it is presented as a probability.
+
 The next backend version should persist the decision together with the source document hash, parser version, evidence location, reviewer identity, and timestamp.
 
 ## Safety invariant
 
 Raw and proposed extraction output must never be used as public canonical data. A future pipeline must publish only validated records and keep the last accepted dataset when an extraction run fails or a source layout changes.
-

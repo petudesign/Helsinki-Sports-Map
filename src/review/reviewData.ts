@@ -12,7 +12,6 @@ export type ReviewCandidate = {
   sourceUrl: string
   sourceUpdatedAt?: string
   sourceText: string
-  confidence: number
   checks: { label: string; detail: string; status: 'pass' | 'review' }[]
 }
 
@@ -43,6 +42,12 @@ export const reviewCandidates: ReviewCandidate[] = units
   .map((unit) => {
     const sourceText = unit.priceEn as string
     const mapped = unit.lipasId !== undefined
+    const checks = [
+      { label: 'Price format', detail: 'Currency amount found', status: 'pass' as const },
+      { label: 'Venue match', detail: mapped ? 'Matches LIPAS venue' : 'Needs venue match', status: mapped ? 'pass' as const : 'review' as const },
+      { label: 'Source freshness', detail: unit.updatedAt ? `Source updated ${unit.updatedAt.slice(0, 10)}` : 'No update timestamp', status: unit.updatedAt ? 'pass' as const : 'review' as const },
+      { label: 'Cross-source check', detail: 'Not verified yet', status: 'review' as const },
+    ]
     return {
       id: `service-map-${unit.serviceMapId}`,
       venueName: unit.nameFi ?? `Service Map unit ${unit.serviceMapId}`,
@@ -53,12 +58,6 @@ export const reviewCandidates: ReviewCandidate[] = units
       sourceUrl: unit.sourceUrl,
       sourceUpdatedAt: unit.updatedAt,
       sourceText,
-      confidence: mapped ? 92 : 78,
-      checks: [
-        { label: 'Price format', detail: 'Currency amount found', status: 'pass' },
-        { label: 'Venue match', detail: mapped ? 'Matches LIPAS venue' : 'Needs venue match', status: mapped ? 'pass' : 'review' },
-        { label: 'Source freshness', detail: unit.updatedAt ? `Source updated ${unit.updatedAt.slice(0, 10)}` : 'No update timestamp', status: unit.updatedAt ? 'pass' : 'review' },
-        { label: 'Cross-source check', detail: 'Not verified yet', status: 'review' },
-      ],
+      checks,
     }
   })

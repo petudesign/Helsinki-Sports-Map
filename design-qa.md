@@ -37,6 +37,7 @@ Verified in the local browser:
 - Keyboard shortcuts `A`, `E`, `R`, and `S` are wired for the corresponding actions.
 - The detail panel exposes evidence, provenance, and deterministic validation checks.
 - The score panel exposes the total, progress bar, scoring caveat, and every individual point contribution.
+- The price review shows the full structured option set and states that `Accept` approves them together.
 
 ### Accessibility
 

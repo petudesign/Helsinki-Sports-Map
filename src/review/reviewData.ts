@@ -9,6 +9,13 @@ export type ReviewCheck = {
   weight: number
 }
 
+export type PriceOption = {
+  label: string
+  audience: string
+  price: string
+  sourceLine: string
+}
+
 export type ReviewCandidate = {
   id: string
   venueName: string
@@ -20,6 +27,7 @@ export type ReviewCandidate = {
   sourceUpdatedAt?: string
   sourceText: string
   checks: ReviewCheck[]
+  priceOptions: PriceOption[]
 }
 
 export function confidenceScore(candidate: ReviewCandidate) {
@@ -38,6 +46,38 @@ function firstAudience(value: string) {
   return value.split('\n').map((line) => line.trim()).find(Boolean) ?? 'Audience needs review'
 }
 
+function parsePriceOptions(value: string): PriceOption[] {
+  let audience = firstAudience(value)
+  const options: PriceOption[] = []
+
+  for (const rawLine of value.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) continue
+    if (!line.startsWith('-')) {
+      audience = line
+      continue
+    }
+
+    const sourceLine = line.replace(/^-\s*/, '')
+    const pricePattern = /(free\s+(?:of\s+charge|entry)|maksuton|€\s*\d+(?:[,.]\d{1,2})?|\d+(?:[,.]\d{1,2})?\s*€)/gi
+    const matches = [...sourceLine.matchAll(pricePattern)]
+    for (const [index, match] of matches.entries()) {
+      if (match.index === undefined) continue
+      const previous = matches[index - 1]
+      const previousEnd = previous?.index === undefined ? 0 : previous.index + previous[0].length
+      const rawPrice = match[0].trim()
+      const price = /free|maksuton/i.test(rawPrice)
+        ? 'Free of charge'
+        : `${(rawPrice.match(/\d+(?:[,.]\d{1,2})?/)?.[0] ?? '').replace(',', '.')} €`
+      const label = sourceLine.slice(previousEnd, match.index).replace(/^\s*or\s+/i, '').replace(/[–—:-]\s*$/, '').trim() || 'Entry'
+      const optionAudience = /personal customer card/i.test(label) ? 'All customers' : audience
+      options.push({ label, audience: optionAudience, price, sourceLine })
+    }
+  }
+
+  return options
+}
+
 const units = (snapshot.units ?? []) as {
   serviceMapId: number
   lipasId?: number
@@ -52,6 +92,7 @@ export const reviewCandidates: ReviewCandidate[] = units
   .slice(0, 12)
   .map((unit) => {
     const sourceText = unit.priceEn as string
+    const priceOptions = parsePriceOptions(sourceText)
     const mapped = unit.lipasId !== undefined
     const checks = [
       { label: 'Price format', detail: 'Currency amount found', status: 'pass' as const, weight: 35 },
@@ -63,12 +104,13 @@ export const reviewCandidates: ReviewCandidate[] = units
       id: `service-map-${unit.serviceMapId}`,
       venueName: unit.nameFi ?? `Service Map unit ${unit.serviceMapId}`,
       category: 'PRICE connection',
-      proposedPrice: firstPrice(sourceText),
-      audience: firstAudience(sourceText),
+      proposedPrice: priceOptions[0]?.price ?? firstPrice(sourceText),
+      audience: priceOptions[0]?.audience ?? firstAudience(sourceText),
       sourceLabel: 'Helsinki Service Map · PRICE',
       sourceUrl: unit.sourceUrl,
       sourceUpdatedAt: unit.updatedAt,
       sourceText,
       checks,
+      priceOptions,
     }
   })

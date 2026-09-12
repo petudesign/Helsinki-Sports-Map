@@ -15,11 +15,13 @@ Open it locally with `?review=1`.
 
 Each candidate must show:
 
-- the proposed normalized value
+- the proposed primary value and all structured price options found in the source
 - the original source evidence
 - the source URL and update timestamp
 - validation checks and unresolved checks
 - a clear action: accept, edit, reject, or skip
+
+When a candidate contains several prices, `Accept` approves the complete detected price-option set together. The primary option is the compact card value; the remaining options stay available in the detailed venue view. `Edit` currently changes only the primary option and keeps the other detected options intact.
 
 The prototype shows a rule-based evidence score as a percentage. It is deliberately not presented as a probability: each deterministic check has a visible weight, passed checks add their points, and unresolved checks hold their points back. The current weights are price format 35, venue match 30, source freshness 20, and cross-source verification 15. A record reaches 100% only when every check passes.
 

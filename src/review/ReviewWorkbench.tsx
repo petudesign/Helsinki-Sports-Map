@@ -33,10 +33,11 @@ function checkPoints(check: ReviewCandidate['checks'][number]) {
   return check.status === 'pass' ? `+${check.weight}` : '+0'
 }
 
-function acceptedPriceOptions(candidate: ReviewCandidate, primaryPrice: string) {
-  return candidate.priceOptions.map((option, index) => index === 0
-    ? { ...option, price: primaryPrice.trim() || option.price }
-    : option)
+function acceptedPriceOptions(candidate: ReviewCandidate, prices: string[]) {
+  return candidate.priceOptions.map((option, index) => ({
+    ...option,
+    price: prices[index]?.trim() || option.price,
+  }))
 }
 
 function ReviewQueueItem({ candidate, review, selected, onSelect }: { candidate: ReviewCandidate; review?: StoredReview; selected: boolean; onSelect: () => void }) {
@@ -53,14 +54,15 @@ export function ReviewWorkbench() {
   const [reviews, setReviews] = useState<StoredReviews>(() => readReviews())
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [editing, setEditing] = useState(false)
-  const [editedPrice, setEditedPrice] = useState('')
+  const [editedPrices, setEditedPrices] = useState<string[]>([])
   const [note, setNote] = useState('')
 
   const current = reviewCandidates[selectedIndex]
   const currentReview = current ? reviews[current.id] : undefined
   const displayedPriceOptions = current?.priceOptions.map((option, index) => index === 0
-    ? { ...option, price: editing ? editedPrice : currentReview?.editedPrice ?? option.price }
-    : option) ?? []
+    ? { ...option, price: editing ? editedPrices[index] ?? option.price : currentReview?.acceptedPrices?.[index]?.price ?? currentReview?.editedPrice ?? option.price }
+    : editing ? { ...option, price: editedPrices[index] ?? option.price } : { ...option, price: currentReview?.acceptedPrices?.[index]?.price ?? option.price }
+  ) ?? []
   const pendingCount = useMemo(() => reviewCandidates.filter((candidate) => !reviews[candidate.id] || reviews[candidate.id].decision === 'pending').length, [reviews])
   const reviewedCount = reviewCandidates.length - pendingCount
 
@@ -71,10 +73,10 @@ export function ReviewWorkbench() {
 
   useEffect(() => {
     if (!current) return
-    setEditedPrice(currentReview?.editedPrice ?? current.proposedPrice)
+    setEditedPrices(current.priceOptions.map((option, index) => currentReview?.acceptedPrices?.[index]?.price ?? (index === 0 ? currentReview?.editedPrice ?? option.price : option.price)))
     setNote(currentReview?.note ?? '')
     setEditing(false)
-  }, [current, currentReview?.editedPrice, currentReview?.note])
+  }, [current, currentReview])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -104,15 +106,16 @@ export function ReviewWorkbench() {
 
   function decide(decision: Exclude<ReviewDecision, 'pending'>) {
     if (!current) return
-    persist({ ...reviews, [current.id]: { decision, editedPrice, note, ...(decision === 'approved' ? { acceptedPrices: acceptedPriceOptions(current, editedPrice) } : {}) } })
+    const prices = editedPrices.length ? editedPrices : current.priceOptions.map((option) => option.price)
+    persist({ ...reviews, [current.id]: { decision, editedPrice: prices[0], note, ...(decision === 'approved' ? { acceptedPrices: acceptedPriceOptions(current, prices) } : {}) } })
     setEditing(false)
     setSelectedIndex(nextPendingIndex(selectedIndex))
   }
 
   function saveEdit() {
     if (!current) return
-    const nextPrice = editedPrice.trim() || current.proposedPrice
-    persist({ ...reviews, [current.id]: { decision: 'approved', editedPrice: nextPrice, note, acceptedPrices: acceptedPriceOptions(current, nextPrice) } })
+    const prices = current.priceOptions.map((option, index) => editedPrices[index]?.trim() || option.price)
+    persist({ ...reviews, [current.id]: { decision: 'approved', editedPrice: prices[0] ?? current.proposedPrice, note, acceptedPrices: acceptedPriceOptions(current, prices) } })
     setEditing(false)
     setSelectedIndex(nextPendingIndex(selectedIndex))
   }
@@ -138,11 +141,11 @@ export function ReviewWorkbench() {
 
         <div className="review-facts"><div><span>Primary price</span><strong>{displayedPriceOptions[0]?.price ?? current.proposedPrice}</strong><small>{displayedPriceOptions[0]?.label ?? 'Needs review'} · {displayedPriceOptions[0]?.audience ?? current.audience}</small></div><div><span>Audience</span><strong>{current.audience}</strong></div><div><span>Source</span><strong>{current.sourceLabel}</strong><small>{formatSourceDate(current.sourceUpdatedAt)}</small></div></div>
 
-        <section className="review-price-summary" aria-labelledby="price-options-title"><div className="review-section-heading"><h3 id="price-options-title">Price options to approve</h3><span>{current.priceOptions.length} detected</span></div>{current.priceOptions.length > 0 ? <div className="review-price-list">{displayedPriceOptions.map((option) => <div className="review-price-row" key={`${option.audience}-${option.label}`}><div><strong>{option.label}</strong><small>{option.audience}</small></div><strong>{option.price}</strong></div>)}</div> : <p className="review-price-empty">No structured price options found yet.</p>}<p className="review-price-note">Accept approves all detected price options together. Edit changes the primary option only.</p></section>
+        <section className="review-price-summary" aria-labelledby="price-options-title"><div className="review-section-heading"><h3 id="price-options-title">Price options to approve</h3><span>{current.priceOptions.length} detected</span></div>{current.priceOptions.length > 0 ? <div className="review-price-list">{displayedPriceOptions.map((option, index) => <div className="review-price-row" key={`${option.audience}-${option.label}`}><div><strong>{option.label}</strong><small>{option.audience}</small></div>{editing ? <input form="review-edit-form" value={option.price} aria-label={`${option.label} price for ${option.audience}`} onChange={(event) => setEditedPrices((prices) => prices.map((price, priceIndex) => priceIndex === index ? event.target.value : price))} /> : <strong>{option.price}</strong>}</div>)}</div> : <p className="review-price-empty">No structured price options found yet.</p>}<p className="review-price-note">Accept approves all detected price options together. Edit opens every detected option for correction.</p></section>
 
         <div className="review-actions" aria-label="Review decision">
           {!editing && <><button type="button" className="review-action primary" onClick={() => decide('approved')}>✓ Accept <kbd>A</kbd></button><button type="button" className="review-action" onClick={() => setEditing(true)}>✎ Edit <kbd>E</kbd></button><button type="button" className="review-action" onClick={() => decide('rejected')}>× Reject <kbd>R</kbd></button><button type="button" className="review-action" onClick={() => decide('skipped')}>→ Skip <kbd>S</kbd></button></>}
-          {editing && <form className="review-edit-form" onSubmit={(event) => { event.preventDefault(); saveEdit() }}><label>Corrected price<input value={editedPrice} onChange={(event) => setEditedPrice(event.target.value)} autoFocus /></label><label>Note<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Why was this changed?" rows={2} /></label><div><button type="submit" className="review-action primary">Save & approve</button><button type="button" className="review-action" onClick={() => setEditing(false)}>Cancel</button></div></form>}
+          {editing && <form id="review-edit-form" className="review-edit-form" onSubmit={(event) => { event.preventDefault(); saveEdit() }}><label>Review note<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Why was this changed?" rows={2} /></label><div><button type="submit" className="review-action primary">Save & approve</button><button type="button" className="review-action" onClick={() => setEditing(false)}>Cancel</button></div></form>}
         </div>
 
         <div className="review-evidence"><div className="review-section-heading"><h3>Source evidence</h3><a href={current.sourceUrl} target="_blank" rel="noreferrer">Open source ↗</a></div><div className="review-source-card"><span className="review-source-label">{current.sourceLabel}</span><pre>{current.sourceText}</pre></div></div>

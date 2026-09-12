@@ -35,11 +35,12 @@ Borders, pale surfaces, teal provenance/check states, and red review actions rem
 Verified in the local browser:
 
 - `Accept` persists a local decision and advances the queue.
-- `Edit` opens the correction form with price and note fields.
+- `Edit` opens price inputs for every detected option plus a review note.
 - Keyboard shortcuts `A`, `E`, `R`, and `S` are wired for the corresponding actions.
 - The detail panel exposes evidence, provenance, and deterministic validation checks.
 - The score panel exposes the total, progress bar, scoring caveat, and every individual point contribution.
 - The price review shows the full structured option set and states that `Accept` approves them together.
+- Approved, rejected, and skipped queue states use distinct semantic colors.
 
 ### Accessibility
 

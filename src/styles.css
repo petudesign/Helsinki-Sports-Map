@@ -272,9 +272,9 @@ body { background: #f0ede6; }
 .review-queue-copy strong { overflow: hidden; font-size: .68rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .review-queue-copy small { overflow: hidden; color: #526b7b; font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
 .review-confidence { width: 74px; padding: 5px 4px; border-radius: 999px; background: #dceced; color: #15586a; font: 500 .52rem 'DM Mono', monospace; text-align: center; white-space: nowrap; }
-.review-confidence-approved { background: #dfeadf; color: #2f654f; }
-.review-confidence-rejected { background: #f2dcd7; color: #9a4838; }
-.review-confidence-skipped { background: #e6e2da; color: #6a625b; }
+.review-confidence-approved { background: #cfe6d2; border: 1px solid #9fc5a6; color: #205c39; }
+.review-confidence-rejected { background: #f3d3d0; border: 1px solid #d69b93; color: #963d32; }
+.review-confidence-skipped { background: #eee2c9; border: 1px solid #d5be8c; color: #816326; }
 .review-main { min-width: 0; max-height: 100%; overflow-y: auto; padding: 16px 18px 20px; scrollbar-gutter: stable; }
 .review-navigation { display: flex; align-items: center; justify-content: space-between; color: #526b7b; font: 500 .62rem 'DM Mono', monospace; }
 .review-navigation button { border: 1px solid #d4cabe; background: transparent; padding: 7px 9px; color: #18324a; font: inherit; cursor: pointer; }
@@ -299,6 +299,8 @@ body { background: #f0ede6; }
 .review-price-row div strong { color: #18324a; font-size: .68rem; }
 .review-price-row div small { margin-top: 3px; color: #526b7b; font: 500 .58rem 'DM Mono', monospace; }
 .review-price-row > strong { color: #b9543e; font: 700 .78rem 'DM Mono', monospace; white-space: nowrap; }
+.review-price-row > input { width: min(170px, 38%); border: 1px solid #9ab3b7; background: #fffdf9; padding: 8px 9px; color: #b9543e; font: 700 .72rem 'DM Mono', monospace; text-align: right; outline: none; }
+.review-price-row > input:focus { border-color: #176b7b; box-shadow: 0 0 0 2px rgba(23,107,123,.14); }
 .review-price-note, .review-price-empty { margin: 9px 0 0; color: #526b7b; font: 500 .61rem/1.4 'DM Mono', monospace; }
 .review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
 .review-action { flex: 1 1 120px; min-height: 42px; border: 1px solid #9ab3b7; background: #fffdf9; color: #18324a; font: 600 .7rem Manrope, sans-serif; cursor: pointer; }

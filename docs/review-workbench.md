@@ -21,7 +21,7 @@ Each candidate must show:
 - validation checks and unresolved checks
 - a clear action: accept, edit, reject, or skip
 
-When a candidate contains several prices, `Accept` approves the complete detected price-option set together. The primary option is the compact card value; the remaining options stay available in the detailed venue view. `Edit` currently changes only the primary option and keeps the other detected options intact.
+When a candidate contains several prices, `Accept` approves the complete detected price-option set together. The primary option is the compact card value; the remaining options stay available in the detailed venue view. `Edit` opens every detected price option for correction, and `Save & approve` stores the complete edited set together.
 
 On desktop, the center reviewer column is one continuous scroll region. The price list, source evidence, extracted text, and decision controls do not have separate nested scrollbars. The queue and context columns remain independent navigation/context regions.
 

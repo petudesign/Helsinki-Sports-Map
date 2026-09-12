@@ -254,6 +254,9 @@ body { background: #f0ede6; }
 .review-brand p, .review-heading p { margin: 5px 0 0; color: #526b7b; font-size: .76rem; }
 .review-top-actions { display: flex; align-items: center; gap: 18px; color: #526b7b; font: 500 .63rem 'DM Mono', monospace; }
 .review-top-actions a { color: #15586a; text-decoration: none; border-bottom: 1px solid #9eb9bd; }
+.review-export { border: 1px solid #9ab3b7; background: transparent; padding: 6px 9px; color: #15586a; font: inherit; cursor: pointer; }
+.review-export:hover, .review-export:focus-visible { background: #e7eff0; }
+.review-export:disabled { border-color: #d4cabe; color: #9d978f; cursor: not-allowed; }
 .review-local-status { display: inline-flex; align-items: center; gap: 8px; }
 .review-layout { display: grid; grid-template-columns: minmax(300px, 330px) minmax(0, 1fr) minmax(280px, 310px); gap: 18px; height: calc(100dvh - 118px); max-width: 1800px; margin: 0 auto; align-items: start; }
 .review-sidebar, .review-main, .review-panel { border: 1px solid #d4cabe; background: rgba(255,253,249,.82); box-shadow: 0 10px 26px rgba(76,61,49,.06); }

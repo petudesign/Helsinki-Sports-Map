@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { confidenceScore, reviewCandidates, type PriceOption, type ReviewCandidate, type ReviewDecision } from './reviewData'
+import { confidenceScore, reviewCandidates, type ApprovedReviewRecord, type PriceOption, type ReviewCandidate, type ReviewDecision } from './reviewData'
 
-type StoredReview = { decision: ReviewDecision; editedPrice?: string; note?: string; acceptedPrices?: PriceOption[] }
+type StoredReview = { decision: ReviewDecision; editedPrice?: string; note?: string; acceptedPrices?: PriceOption[]; reviewedAt?: string }
 type StoredReviews = Record<string, StoredReview>
 
 const storageKey = 'hsm-local-review-decisions-v1'
@@ -65,6 +65,7 @@ export function ReviewWorkbench() {
   ) ?? []
   const pendingCount = useMemo(() => reviewCandidates.filter((candidate) => !reviews[candidate.id] || reviews[candidate.id].decision === 'pending').length, [reviews])
   const reviewedCount = reviewCandidates.length - pendingCount
+  const approvedCount = useMemo(() => reviewCandidates.filter((candidate) => reviews[candidate.id]?.decision === 'approved').length, [reviews])
 
   useEffect(() => {
     document.title = 'HSM · Review queue'
@@ -107,7 +108,7 @@ export function ReviewWorkbench() {
   function decide(decision: Exclude<ReviewDecision, 'pending'>) {
     if (!current) return
     const prices = editedPrices.length ? editedPrices : current.priceOptions.map((option) => option.price)
-    persist({ ...reviews, [current.id]: { decision, editedPrice: prices[0], note, ...(decision === 'approved' ? { acceptedPrices: acceptedPriceOptions(current, prices) } : {}) } })
+    persist({ ...reviews, [current.id]: { decision, editedPrice: prices[0], note, reviewedAt: new Date().toISOString(), ...(decision === 'approved' ? { acceptedPrices: acceptedPriceOptions(current, prices) } : {}) } })
     setEditing(false)
     setSelectedIndex(nextPendingIndex(selectedIndex))
   }
@@ -115,9 +116,41 @@ export function ReviewWorkbench() {
   function saveEdit() {
     if (!current) return
     const prices = current.priceOptions.map((option, index) => editedPrices[index]?.trim() || option.price)
-    persist({ ...reviews, [current.id]: { decision: 'approved', editedPrice: prices[0] ?? current.proposedPrice, note, acceptedPrices: acceptedPriceOptions(current, prices) } })
+    persist({ ...reviews, [current.id]: { decision: 'approved', editedPrice: prices[0] ?? current.proposedPrice, note, reviewedAt: new Date().toISOString(), acceptedPrices: acceptedPriceOptions(current, prices) } })
     setEditing(false)
     setSelectedIndex(nextPendingIndex(selectedIndex))
+  }
+
+  function downloadApprovedExport() {
+    const records: ApprovedReviewRecord[] = reviewCandidates.flatMap((candidate) => {
+      const review = reviews[candidate.id]
+      if (review?.decision !== 'approved') return []
+      return [{
+        id: candidate.id,
+        venueName: candidate.venueName,
+        city: 'Helsinki',
+        prices: review.acceptedPrices ?? candidate.priceOptions,
+        provenance: {
+          sourceLabel: candidate.sourceLabel,
+          sourceUrl: candidate.sourceUrl,
+          sourceUpdatedAt: candidate.sourceUpdatedAt,
+          sourceText: candidate.sourceText,
+          extractor: 'service-map-price-v1',
+        },
+        review: {
+          decision: 'approved' as const,
+          note: review.note,
+          reviewedAt: review.reviewedAt ?? new Date().toISOString(),
+        },
+      }]
+    })
+    const payload = { schemaVersion: 1, exportedAt: new Date().toISOString(), city: 'Helsinki', records }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `hsm-approved-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   if (!current) return null
@@ -125,7 +158,7 @@ export function ReviewWorkbench() {
   return <main className="review-shell">
     <header className="review-topbar">
       <div className="review-brand"><span className="review-mark">HSM</span><div><h1>Review queue</h1><p>Validate extracted sports venue facts before they reach the map.</p></div></div>
-      <div className="review-top-actions"><span className="review-local-status"><span className="status-dot" /> Local only · nothing is published</span><a href={window.location.pathname}>Back to map</a></div>
+      <div className="review-top-actions"><span className="review-local-status"><span className="status-dot" /> Local only · nothing is published</span><button type="button" className="review-export" disabled={!approvedCount} onClick={downloadApprovedExport}>Export {approvedCount} approved</button><a href={window.location.pathname}>Back to map</a></div>
     </header>
 
     <div className="review-layout">

@@ -1,0 +1,867 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T07:53:58.530Z",
+  "city": "Helsinki",
+  "source": {
+    "provider": "Helsinki Service Map",
+    "url": "https://www.hel.fi/palvelukarttaws/rest/v4/unit/?arealcity=91&search=liikunta",
+    "importedAt": "2026-09-12T07:53:58.530Z"
+  },
+  "candidates": [
+    {
+      "id": "service-map-40075",
+      "venueName": "Maunulan liikuntahalli / Kuntosali",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40075",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-40259",
+      "venueName": "Oulunkylän liikuntapuisto / Kuntosali",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40259",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-40774",
+      "venueName": "Pirkkolan liikuntapuisto / Uimahalli",
+      "category": "PRICE connection",
+      "proposedPrice": "6 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40774",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €6\n- 10 visits or 1 month (30 days) €48\n- 4 months (120 days) €100\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nChildren (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €3.30\n- 10 visits or 1 month (30 days) €26\n- 4 months (120 days) €50\n\nChildren under 7 years, war veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\nSpecial swimming card\n- €62\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4\n- Towel €8\n- Swimsuit €8",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "6 €",
+          "sourceLine": "Single visit €6"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "48 €",
+          "sourceLine": "10 visits or 1 month (30 days) €48"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "100 €",
+          "sourceLine": "4 months (120 days) €100"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "3.30 €",
+          "sourceLine": "Single visit €3.30"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "26 €",
+          "sourceLine": "10 visits or 1 month (30 days) €26"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "50 €",
+          "sourceLine": "4 months (120 days) €50"
+        },
+        {
+          "label": "Entry",
+          "audience": "Children under 7 years, war veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Entry",
+          "audience": "Special swimming card",
+          "price": "62 €",
+          "sourceLine": "€62"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        },
+        {
+          "label": "Towel",
+          "audience": "Special swimming card",
+          "price": "8 €",
+          "sourceLine": "Towel €8"
+        },
+        {
+          "label": "Swimsuit",
+          "audience": "Special swimming card",
+          "price": "8 €",
+          "sourceLine": "Swimsuit €8"
+        }
+      ]
+    },
+    {
+      "id": "service-map-41211",
+      "venueName": "Pirkkolan liikuntapuisto / Kenttien kuntosali",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41211",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-41767",
+      "venueName": "Ruskeasuon liikuntapuisto / Voimailusali",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41767",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-41909",
+      "venueName": "Pirkkolan liikuntapuisto / Kenttien voimailusali",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41909",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-42185",
+      "venueName": "Käpylän liikuntapuisto / Tekojääkenttä",
+      "category": "PRICE connection",
+      "proposedPrice": "Free of charge",
+      "audience": "General access",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42185",
+      "sourceUpdatedAt": "2026-07-08T10:48:39",
+      "sourceText": "Free of charge",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-07-08",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Entry",
+          "audience": "General access",
+          "price": "Free of charge",
+          "sourceLine": "Free of charge"
+        }
+      ]
+    },
+    {
+      "id": "service-map-45900",
+      "venueName": "Pirkkolan liikuntapuisto / Uimahallin kuntosali",
+      "category": "PRICE connection",
+      "proposedPrice": "6 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45900",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €6\n- 10 visits or 1 month (30 days) €48\n- 4 months (120 days) €100\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nYoung people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €3,30\n- 10 visits or 1 month (30 days) €26\n- 4 months (120 days) €50\n\nWar veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "6 €",
+          "sourceLine": "Single visit €6"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "48 €",
+          "sourceLine": "10 visits or 1 month (30 days) €48"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "100 €",
+          "sourceLine": "4 months (120 days) €100"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "3.30 €",
+          "sourceLine": "Single visit €3,30"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "26 €",
+          "sourceLine": "10 visits or 1 month (30 days) €26"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Young people (15-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "50 €",
+          "sourceLine": "4 months (120 days) €50"
+        },
+        {
+          "label": "Entry",
+          "audience": "War veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    },
+    {
+      "id": "service-map-45932",
+      "venueName": "Maunulan liikuntahalli",
+      "category": "PRICE connection",
+      "proposedPrice": "3.60 €",
+      "audience": "Adults",
+      "sourceLabel": "Helsinki Service Map · PRICE",
+      "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45932",
+      "sourceUpdatedAt": "2026-09-07T16:15:31",
+      "sourceText": "Adults\n- Single visit €3.60\n- 10 visits or 1 month (30 days) €29\n- 4 months (120 days) €80\n\nWeekday product (same price for everyone, no concessions)\n- 6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)\n\nChildren (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)\n- Single visit €2.10\n- 10 visits or 1 month (30 days) €17\n- 4 months (120 days) €40\n\nChildren under 7 years, war veterans, members of Lotta Svärd and informal carers (proof of eligibility required)\n- Free entry\n\n- Personal customer card (multi-visit, one-month, four-month and weekday products) €4",
+      "checks": [
+        {
+          "label": "Price format",
+          "detail": "Currency amount found",
+          "status": "pass",
+          "weight": 35
+        },
+        {
+          "label": "Venue match",
+          "detail": "Matches LIPAS venue",
+          "status": "pass",
+          "weight": 30
+        },
+        {
+          "label": "Source freshness",
+          "detail": "Source updated 2026-09-07",
+          "status": "pass",
+          "weight": 20
+        },
+        {
+          "label": "Cross-source check",
+          "detail": "Not verified yet",
+          "status": "review",
+          "weight": 15
+        }
+      ],
+      "priceOptions": [
+        {
+          "label": "Single visit",
+          "audience": "Adults",
+          "price": "3.60 €",
+          "sourceLine": "Single visit €3.60"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Adults",
+          "price": "29 €",
+          "sourceLine": "10 visits or 1 month (30 days) €29"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Adults",
+          "price": "80 €",
+          "sourceLine": "4 months (120 days) €80"
+        },
+        {
+          "label": "6 months (182 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "60 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "12 months (365 days)",
+          "audience": "Weekday product (same price for everyone, no concessions)",
+          "price": "100 €",
+          "sourceLine": "6 months (182 days) €60 or 12 months (365 days) €100 (permits entry on weekdays between 11:00 and 15:00 for two hours)"
+        },
+        {
+          "label": "Single visit",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "2.10 €",
+          "sourceLine": "Single visit €2.10"
+        },
+        {
+          "label": "10 visits or 1 month (30 days)",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "17 €",
+          "sourceLine": "10 visits or 1 month (30 days) €17"
+        },
+        {
+          "label": "4 months (120 days)",
+          "audience": "Children (7-17 years) and others (students, unemployed people, retirees, conscripts, persons undergoing non-military service, people with disabilities, those who have applied for temporary protection and those who have already received their decision)",
+          "price": "40 €",
+          "sourceLine": "4 months (120 days) €40"
+        },
+        {
+          "label": "Entry",
+          "audience": "Children under 7 years, war veterans, members of Lotta Svärd and informal carers (proof of eligibility required)",
+          "price": "Free of charge",
+          "sourceLine": "Free entry"
+        },
+        {
+          "label": "Personal customer card (multi-visit, one-month, four-month and weekday products)",
+          "audience": "All customers",
+          "price": "4 €",
+          "sourceLine": "Personal customer card (multi-visit, one-month, four-month and weekday products) €4"
+        }
+      ]
+    }
+  ]
+}

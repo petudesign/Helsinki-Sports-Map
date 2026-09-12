@@ -11,10 +11,12 @@
     "check:expanded-map": "node tools/check-expanded-map.mjs",
     "check:venues": "node tools/check-venue-data.mjs",
     "check:service-map": "node tools/check-service-map.mjs",
+    "check:review-staging": "node tools/check-review-staging.mjs",
     "check:lipas": "node tools/check-lipas-data.mjs",
     "check:lipas:classification": "node tools/check-lipas-classification.mjs",
     "data:lipas": "node tools/import-lipas.mjs",
     "data:service-map": "node tools/import-service-map.mjs",
+    "data:review-staging": "node tools/build-review-staging.mjs",
     "check:landmarks": "node tools/check-landmarks.mjs",
     "data:split-map": "node tools/split-map-data.mjs --source src/data/central-helsinki.json --output src/data/map-chunks/central-helsinki"
   },

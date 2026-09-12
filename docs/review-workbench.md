@@ -29,6 +29,8 @@ The prototype shows a rule-based evidence score as a percentage. It is deliberat
 
 The next backend version should persist the decision together with the source document hash, parser version, evidence location, reviewer identity, and timestamp.
 
+The current local pipeline is documented in [Review pipeline](review-pipeline.md). It builds a checked-in staging snapshot from the Service Map source and lets the reviewer download approved records as JSON. This is a handoff artifact, not yet a production API or database write.
+
 ## Safety invariant
 
 Raw and proposed extraction output must never be used as public canonical data. A future pipeline must publish only validated records and keep the last accepted dataset when an extraction run fails or a source layout changes.

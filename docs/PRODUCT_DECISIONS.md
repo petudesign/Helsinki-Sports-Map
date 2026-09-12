@@ -244,3 +244,17 @@ Redrawing all background geometry during every zoom frame was substantially more
 A synthetic headless Edge comparison at 1600 x 1000 and DPR 2 measured main-thread draw medians of approximately 28–58 ms for 2D before the change and 3–4 ms with background reuse in both modes. These are draw-cost measurements, not physical display FPS or a guarantee for mobile hardware. New chunk normalization still runs on the main thread and may warrant further profiling. Large data-bundle warnings also remain.
 
 Regression checks: `node tools/check-background-renderer.mjs`, `node tools/check-viewport-cache.mjs`, and `npm run build`. The worker test checks latest-request coalescing, data reuse, bitmap lifetime, overview retention and synchronous fallback after failure.
+
+## 2026-09-12 — Price review uses a local staging-to-approved pipeline
+
+### Decision
+
+Price enrichment is processed in four explicit stages: public source snapshot, structured review staging, human review, and approved JSON export. The reviewer must approve the complete detected price-option set for a venue; the compact map value remains the primary option while the full set is retained for the detailed view.
+
+### Why
+
+The previous prototype read source data directly in the browser and stored only local decisions. Separating staging from presentation gives parser output a testable contract, preserves provenance, and creates a clean path to a future API without pretending that local browser state is a backend.
+
+### Current boundary
+
+The first adapter is a zero-cost local transformation of the Helsinki Service Map snapshot. It does not use AI/OCR or network calls during staging. A future city should provide a source snapshot/adapter that emits the same staging contract rather than add city-specific UI logic.

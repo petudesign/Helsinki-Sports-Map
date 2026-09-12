@@ -168,6 +168,7 @@ Potential future cities include Espoo, Vantaa, and other municipalities.
 
 - [Product decisions and implementation notes](docs/PRODUCT_DECISIONS.md)
 - [Reviewer workbench](docs/review-workbench.md)
+- [Review pipeline](docs/review-pipeline.md)
 - [Security model](docs/security-model.md)
 - [Translation workflow](translations/README.md)
 

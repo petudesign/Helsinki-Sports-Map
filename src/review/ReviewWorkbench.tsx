@@ -121,7 +121,7 @@ export function ReviewWorkbench() {
 
   return <main className="review-shell">
     <header className="review-topbar">
-      <div className="review-brand"><span className="review-mark">HSM</span><div><span className="review-kicker">Data workbench · local prototype</span><h1>Review queue</h1><p>Validate extracted sports venue facts before they reach the map.</p></div></div>
+      <div className="review-brand"><span className="review-mark">HSM</span><div><h1>Review queue</h1><p>Validate extracted sports venue facts before they reach the map.</p></div></div>
       <div className="review-top-actions"><span className="review-local-status"><span className="status-dot" /> Local only · nothing is published</span><a href={window.location.pathname}>Back to map</a></div>
     </header>
 
@@ -134,7 +134,7 @@ export function ReviewWorkbench() {
 
       <section className="review-main" aria-live="polite">
         <div className="review-navigation"><button type="button" onClick={() => setSelectedIndex((selectedIndex - 1 + reviewCandidates.length) % reviewCandidates.length)}>← Previous</button><span>{selectedIndex + 1} of {reviewCandidates.length}</span><button type="button" onClick={() => setSelectedIndex((selectedIndex + 1) % reviewCandidates.length)}>Next →</button></div>
-        <div className="review-heading"><div><span className="review-kicker">Candidate proposal</span><h2>{current.venueName}</h2><p>Helsinki · {current.category}</p></div><span className="review-check-summary"><strong>{confidenceScore(current)}%</strong><small>evidence score</small><span>{checkSummary(current)} verified</span></span></div>
+        <div className="review-heading"><div><h2>{current.venueName}</h2><p>Helsinki · {current.category}</p></div><span className="review-check-summary"><strong>{confidenceScore(current)}%</strong><small>evidence score</small><span>{checkSummary(current)} verified</span></span></div>
 
         <div className="review-facts"><div><span>Primary price</span><strong>{displayedPriceOptions[0]?.price ?? current.proposedPrice}</strong><small>{displayedPriceOptions[0]?.label ?? 'Needs review'} · {displayedPriceOptions[0]?.audience ?? current.audience}</small></div><div><span>Audience</span><strong>{current.audience}</strong></div><div><span>Source</span><strong>{current.sourceLabel}</strong><small>{formatSourceDate(current.sourceUpdatedAt)}</small></div></div>
 

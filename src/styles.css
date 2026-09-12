@@ -249,8 +249,7 @@ body { background: #f0ede6; }
 .review-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; max-width: 1600px; margin: 0 auto 22px; }
 .review-brand { display: flex; align-items: flex-start; gap: 13px; }
 .review-mark { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #b9543e; color: #b9543e; font: 700 .62rem 'DM Mono', monospace; letter-spacing: .05em; }
-.review-kicker { display: block; color: #526b7b; font: 500 .58rem 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
-.review-brand h1, .review-heading h2 { margin: 5px 0 0; letter-spacing: -.05em; }
+.review-brand h1, .review-heading h2 { margin: 0; letter-spacing: -.05em; }
 .review-brand h1 { font-size: clamp(1.45rem, 3vw, 2rem); }
 .review-brand p, .review-heading p { margin: 5px 0 0; color: #526b7b; font-size: .76rem; }
 .review-top-actions { display: flex; align-items: center; gap: 18px; color: #526b7b; font: 500 .63rem 'DM Mono', monospace; }
@@ -280,7 +279,7 @@ body { background: #f0ede6; }
 .review-navigation { display: flex; align-items: center; justify-content: space-between; color: #526b7b; font: 500 .62rem 'DM Mono', monospace; }
 .review-navigation button { border: 1px solid #d4cabe; background: transparent; padding: 7px 9px; color: #18324a; font: inherit; cursor: pointer; }
 .review-navigation button:hover, .review-navigation button:focus-visible { background: #f1dfc9; }
-.review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 28px 0 20px; }
+.review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 22px 0 20px; }
 .review-heading h2 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
 .review-check-summary { display: grid; gap: 2px; min-width: 132px; padding: 10px 11px; border: 1px solid #b9ccbb; background: #e6efe4; color: #2f654f; font: 700 .9rem 'DM Mono', monospace; text-align: center; }
 .review-check-summary small, .review-check-summary > span { color: #52735e; font: 500 .52rem 'DM Mono', monospace; text-transform: uppercase; }

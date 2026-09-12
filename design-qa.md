@@ -14,7 +14,7 @@ passed
 
 ### Typography and copy
 
-The implementation keeps the compact editorial/operations-tool hierarchy: monospace metadata, stronger venue names, and larger primary review facts. Queue labels use ellipsis intentionally for dense records. The percentage is visible again, but it is explicitly labeled an evidence score rather than a probability. The reviewer can see the exact contribution of every check in the `Why X%?` panel: passed checks show their added points, unresolved checks show the points held back. A record reaches 100% only when every deterministic check passes.
+The implementation keeps the compact editorial/operations-tool hierarchy: monospace metadata, stronger venue names, and larger primary review facts. Queue labels use ellipsis intentionally for dense records. The percentage is visible again, but it is explicitly labeled an evidence score rather than a probability. The reviewer can see the exact contribution of every check in the `Why X%?` panel: passed checks show their added points, unresolved checks show the points held back. A record reaches 100% only when every deterministic check passes. Unnecessary prototype labels were removed from the page header and candidate heading so the content begins earlier.
 
 ### Spacing and layout
 
@@ -54,4 +54,4 @@ Known product limitation: the evidence score is deterministic and not a probabil
 ## Comparison history
 
 - Initial review prototype: queue used a misleading fixed `92%` badge and the ID column was too close to the venue name.
-- Current pass: restored a transparent percentage score with per-check contributions, plus the widened desktop queue with an explicit ID column.
+- Current pass: restored a transparent percentage score with per-check contributions, widened the desktop queue with an explicit ID column, and removed redundant prototype labels.

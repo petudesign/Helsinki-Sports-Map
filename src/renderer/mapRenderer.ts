@@ -1,3 +1,4 @@
+import { drawVectorBackground } from './vectorBackground'
 import type { Bounds, BuildingFeature, MapDataset, MapPoint, MapLabel, SportFeature } from '../data/types'
 import { createProjector, toLocalMetres, type ScreenPoint, type View } from './projection'
 import type { LandmarkRenderer } from './landmarks/types'
@@ -252,25 +253,30 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
         (layer.height + layer.padding * 2) * ratio)
     }
   } else {
+  if (view.mode === '2d') {
+    drawVectorBackground(ctx, area, landmarkRenderers, projector, width, height, hasSelection)
+  } else {
   ctx.save(); ctx.globalAlpha = hasSelection ? .6 : 1
-  area.surfaces.filter((feature) => feature.kind === 'water' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'water' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
   ctx.globalAlpha = hasSelection ? .52 : .82
-  area.surfaces.filter((feature) => feature.kind === 'urban' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.urban; ctx.fill('evenodd'); ctx.strokeStyle = theme.urbanEdge; ctx.lineWidth = .45; ctx.stroke() })
-  area.surfaces.filter((feature) => feature.kind === 'green' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { const rings = feature.rings.map(projectRing); traceRings(ctx, rings); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'urban' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.urban; ctx.fill('evenodd'); ctx.strokeStyle = theme.urbanEdge; ctx.lineWidth = .45; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'green' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
   ctx.restore()
 
-  ctx.save(); ctx.globalAlpha = hasSelection ? .34 : view.mode === '2d' ? .58 : .72
+  ctx.save(); ctx.globalAlpha = hasSelection ? .34 : .72
   area.routes.filter((route) => isBoundsVisible(route.bounds, projector, width, height)).forEach((route) => {
-    const points = route.points.map(projector.point); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    if (route.kind === 'rail') { ctx.strokeStyle = theme.rail; ctx.lineWidth = view.mode === '2d' ? 2.2 : 2.8; strokeLine(ctx, points); ctx.strokeStyle = theme.railTie; ctx.lineWidth = .8; ctx.setLineDash([1, 7]); strokeLine(ctx, points); ctx.setLineDash([]); return }
-    if (route.kind === 'waterline') { ctx.strokeStyle = theme.waterline; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); strokeLine(ctx, points); ctx.setLineDash([]); return }
-    if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); strokeLine(ctx, points); ctx.setLineDash([]); return }
+    const points = route.points.map(projector.point)
+    const stroke = () => strokeLine(ctx, points)
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    if (route.kind === 'rail') { ctx.strokeStyle = theme.rail; ctx.lineWidth = 2.8; stroke(); ctx.strokeStyle = theme.railTie; ctx.lineWidth = .8; ctx.setLineDash([1, 7]); stroke(); ctx.setLineDash([]); return }
+    if (route.kind === 'waterline') { ctx.strokeStyle = theme.waterline; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); stroke(); ctx.setLineDash([]); return }
+    if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); stroke(); ctx.setLineDash([]); return }
     const widthByKind = route.kind === 'major' ? [6.5, 4.4] : route.kind === 'street' ? [4.5, 2.8] : [2.8, 1.5]
-    ctx.strokeStyle = theme.roadEdge; ctx.lineWidth = widthByKind[0]; strokeLine(ctx, points); ctx.strokeStyle = theme.road; ctx.lineWidth = widthByKind[1]; strokeLine(ctx, points)
+    ctx.strokeStyle = theme.roadEdge; ctx.lineWidth = widthByKind[0]; stroke(); ctx.strokeStyle = theme.road; ctx.lineWidth = widthByKind[1]; stroke()
   })
   ctx.restore()
 
-  ctx.save(); ctx.globalAlpha = hasSelection ? .28 : view.mode === '2d' ? .52 : .62
+  ctx.save(); ctx.globalAlpha = hasSelection ? .28 : .62
   const buildings = area.buildings
     .filter((building) => isBoundsVisible(building.bounds, projector, width, height) && !landmarks.some(({ renderer, features }) => renderer.suppressBuilding?.(building, features)))
     .map((building) => {
@@ -281,6 +287,7 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
   buildings.forEach(({ building, rings }) => drawBuilding(ctx, building, rings, projector.height(building.height), view))
   ctx.restore()
 
+  }
   ctx.save(); ctx.globalAlpha = hasSelection ? .35 : .64
   area.trees.map(projector.point).sort((a, b) => a.y - b.y).forEach((point, index) => drawTree(ctx, point, index, view))
   ctx.restore()

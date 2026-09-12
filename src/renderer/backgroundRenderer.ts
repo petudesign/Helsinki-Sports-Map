@@ -6,6 +6,10 @@ export type BackgroundRequest = {
   id: number; area?: MapDataset; view: View; width: number; height: number; dpr: number; selectedIds: string[]
 }
 
+export function isBackgroundAligned(frame: BackgroundFrame, view: View) {
+  return frame.mode === view.mode && frame.zoom === view.zoom && frame.view.pan.x === view.pan.x && frame.view.pan.y === view.pan.y
+}
+
 // Keep one render in flight and replace its successor with the latest camera.
 // Old bitmaps remain usable during gestures; their map coordinates stay fixed.
 export function createBackgroundRenderer(onFrame: () => void) {

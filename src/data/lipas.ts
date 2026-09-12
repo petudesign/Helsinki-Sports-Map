@@ -37,6 +37,10 @@ function distanceMetres(a: GeoPoint, b: GeoPoint) {
   return Math.sqrt(((a[0] - b[0]) * latitudeScale * 111_320) ** 2 + ((a[1] - b[1]) * 111_320) ** 2)
 }
 
+function addressKey(address: string | undefined) {
+  return address ? normalized(address) : undefined
+}
+
 const sites = (lipasSnapshot.sites as LipasSite[]).flatMap((site) => {
   const coordinate = firstCoordinate(site)
   return coordinate ? [{ site, coordinate, normalizedName: normalized(site.name) }] : []
@@ -186,9 +190,17 @@ function splitNearbyGroups(members: { site: LipasSite; coordinate: GeoPoint }[],
   if (shouldAlwaysGroup(groupName)) return [members]
   const groups: { site: LipasSite; coordinate: GeoPoint }[][] = []
   members.forEach((member) => {
-    const nearby = groups.find((group) => distanceMetres(member.coordinate, group[0].coordinate) <= 50)
-    if (nearby) nearby.push(member)
-    else groups.push([member])
+    const matching = groups.filter((group) => group.some((existing) => {
+      const sameAddress = addressKey(existing.site.address) && addressKey(existing.site.address) === addressKey(member.site.address)
+      return sameAddress || distanceMetres(member.coordinate, existing.coordinate) <= 80
+    }))
+    if (!matching.length) { groups.push([member]); return }
+    const target = matching[0]
+    target.push(member)
+    matching.slice(1).forEach((group) => {
+      target.push(...group)
+      groups.splice(groups.indexOf(group), 1)
+    })
   })
   return groups
 }

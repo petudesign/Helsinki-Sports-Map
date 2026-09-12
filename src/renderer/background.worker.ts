@@ -18,7 +18,7 @@ self.onmessage = (event: MessageEvent<BackgroundRequest>) => {
     })
     const projector = createProjector(area, width, height, view)
     const bitmap = canvas.transferToImageBitmap()
-    self.postMessage({ id, frame: { bitmap, origin: projector.point({ x: 0, y: 0 }), scale: projector.scale, width, height, padding, mode: view.mode, zoom: view.zoom } }, { transfer: [bitmap] })
+    self.postMessage({ id, frame: { bitmap, origin: projector.point({ x: 0, y: 0 }), scale: projector.scale, width, height, padding, mode: view.mode, zoom: view.zoom, view: { ...view, pan: { ...view.pan } } } }, { transfer: [bitmap] })
   } catch (error) {
     self.postMessage({ id, error: String(error) })
   }

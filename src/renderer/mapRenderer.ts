@@ -85,8 +85,8 @@ function drawMapLabels(ctx: CanvasRenderingContext2D, labels: MapLabel[], projec
   ctx.save()
   ctx.globalAlpha = hasSelection ? .62 : .92
   ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  labels
+  ctx.textBaseline = 'middle';
+  ([...labels])
     .filter((label) => view.zoom >= (label.minZoom ?? 0))
     .sort((a, b) => (a.tone === 'secondary' ? 1 : 0) - (b.tone === 'secondary' ? 1 : 0))
     .forEach((label) => {
@@ -114,7 +114,7 @@ export type MapVisualState = {
   trendingSignals?: ReadonlyMap<string, TrendingSignal>
 }
 
-export type BackgroundFrame = { bitmap: ImageBitmap; origin: ScreenPoint; scale: number; width: number; height: number; padding: number; mode: View['mode']; zoom: number; fallback?: BackgroundFrame }
+export type BackgroundFrame = { bitmap: ImageBitmap; origin: ScreenPoint; scale: number; width: number; height: number; padding: number; mode: View['mode']; zoom: number; view: View; fallback?: BackgroundFrame }
 type MapRenderOptions = {
   mapLabels?: MapLabel[]
   route?: RouteResult
@@ -123,9 +123,75 @@ type MapRenderOptions = {
   size?: { width: number; height: number; dpr: number; padding: number }
 }
 
-export function pickSportFeature(canvas: HTMLCanvasElement, area: MapDataset, view: View, point: ScreenPoint, landmarkRenderers: LandmarkRenderer[] = [], visibleSportIds?: ReadonlySet<string>) {
+type MarkerCluster = { features: SportFeature[]; point: ScreenPoint; mapPoint: MapPoint }
+
+function featureScreenCenter(feature: SportFeature, projector: ReturnType<typeof createProjector>) {
+  return centroid(feature.rings[0].map(projector.point))
+}
+
+function featureMapCenter(feature: SportFeature) {
+  return centroid(feature.rings[0])
+}
+
+function createMarkerClusters(features: SportFeature[], projector: ReturnType<typeof createProjector>, view: View, selectedIds: ReadonlySet<string> = new Set()) {
+  // Keep the marker layer readable at overview zoom without an O(n²) search.
+  const radius = view.zoom < 1.35 ? 28 : view.zoom < 2.2 ? 20 : 0
+  const clusters: MarkerCluster[] = []
+  const grid = new Map<string, MarkerCluster[]>()
+  // Index in map space, not screen space. A screen-space grid changes cluster
+  // membership whenever a pan crosses a cell boundary, which makes clusters
+  // appear to wobble even though all venues moved by the same amount.
+  const mapRadius = radius ? radius / Math.max(projector.scale, 0.0001) : 1
+  const cell = Math.max(mapRadius, 1)
+  const keyFor = (point: MapPoint) => `${Math.floor(point.x / cell)}:${Math.floor(point.y / cell)}`
+
+  features.forEach((feature) => {
+    const mapPoint = featureMapCenter(feature)
+    const point = featureScreenCenter(feature, projector)
+    if (!radius || selectedIds.has(feature.id)) { clusters.push({ features: [feature], point, mapPoint }); return }
+    const [column, row] = keyFor(mapPoint).split(':').map(Number)
+    let target: MarkerCluster | undefined
+    for (let y = row - 1; y <= row + 1 && !target; y++) for (let x = column - 1; x <= column + 1 && !target; x++) {
+      target = (grid.get(`${x}:${y}`) ?? []).find((candidate) => Math.hypot(candidate.mapPoint.x - mapPoint.x, candidate.mapPoint.y - mapPoint.y) <= mapRadius)
+    }
+    if (!target) {
+      target = { features: [feature], point, mapPoint }
+      clusters.push(target)
+      const gridKey = keyFor(mapPoint)
+      grid.set(gridKey, [...(grid.get(gridKey) ?? []), target])
+      return
+    }
+    target.features.push(feature)
+    target.mapPoint = {
+      x: target.mapPoint.x + (mapPoint.x - target.mapPoint.x) / target.features.length,
+      y: target.mapPoint.y + (mapPoint.y - target.mapPoint.y) / target.features.length,
+    }
+    target.point = {
+      x: target.point.x + (point.x - target.point.x) / target.features.length,
+      y: target.point.y + (point.y - target.point.y) / target.features.length,
+    }
+  })
+  return clusters
+}
+
+function drawMarkerCluster(ctx: CanvasRenderingContext2D, cluster: MarkerCluster, emphasis: 'default' | 'dimmed' = 'default') {
+  const count = cluster.features.length
+  const radius = Math.min(20, 10 + Math.log10(count) * 4)
+  ctx.save(); ctx.globalAlpha = emphasis === 'dimmed' ? .5 : 1
+  ctx.beginPath(); ctx.arc(cluster.point.x, cluster.point.y, radius + 3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(23,107,123,.14)'; ctx.fill()
+  ctx.beginPath(); ctx.arc(cluster.point.x, cluster.point.y, radius, 0, Math.PI * 2); ctx.fillStyle = '#176b7b'; ctx.fill(); ctx.strokeStyle = '#fffdf9'; ctx.lineWidth = 2; ctx.stroke()
+  ctx.fillStyle = '#fffdf9'; ctx.font = '700 10px Manrope, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count), cluster.point.x, cluster.point.y)
+  ctx.restore()
+}
+
+export type MapPick = { feature: SportFeature; cluster: boolean }
+
+export function pickMapTarget(canvas: HTMLCanvasElement, area: MapDataset, view: View, point: ScreenPoint, landmarkRenderers: LandmarkRenderer[] = [], visibleSportIds?: ReadonlySet<string>): MapPick | undefined {
   const rect = canvas.getBoundingClientRect()
   const projector = createProjector(area, rect.width, rect.height, view)
+  const markerFeatures = area.sports.filter((feature) => Boolean(feature.icon) && (!visibleSportIds || visibleSportIds.has(feature.id)))
+  const markerCluster = createMarkerClusters(markerFeatures, projector, view).find((cluster) => cluster.features.length > 1 && Math.hypot(point.x - cluster.point.x, point.y - cluster.point.y) <= 26)
+  if (markerCluster) return { feature: markerCluster.features[0], cluster: true }
   const candidates = area.sports.filter(({ id, bounds }) => (!visibleSportIds || visibleSportIds.has(id)) && isBoundsVisible(bounds, projector, rect.width, rect.height, 0)).flatMap((feature) => {
     const landmark = landmarkRenderers.find((renderer) => renderer.select([feature]).length)
     const elevation = projector.height(landmark?.selectionHeight ?? 0)
@@ -135,7 +201,12 @@ export function pickSportFeature(canvas: HTMLCanvasElement, area: MapDataset, vi
     const hit = markerHit || (pointInScreenRing(point, rings[0]) && rings.slice(1).every((ring) => !pointInScreenRing(point, ring)))
     return hit ? [{ feature, area: ringArea(rings[0]) }] : []
   })
-  return candidates.sort((a, b) => a.area - b.area)[0]?.feature
+  const feature = candidates.sort((a, b) => a.area - b.area)[0]?.feature
+  return feature ? { feature, cluster: false } : undefined
+}
+
+export function pickSportFeature(canvas: HTMLCanvasElement, area: MapDataset, view: View, point: ScreenPoint, landmarkRenderers: LandmarkRenderer[] = [], visibleSportIds?: ReadonlySet<string>) {
+  return pickMapTarget(canvas, area, view, point, landmarkRenderers, visibleSportIds)?.feature
 }
 
 export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: MapDataset, view: View, landmarkRenderers: LandmarkRenderer[] = [], visualState: MapVisualState = {}, options: MapRenderOptions = {}) {
@@ -223,7 +294,16 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
   if (options.backgroundOnly) return
   drawMapLabels(ctx, options.mapLabels ?? [], projector, area, visibleSports, width, height, hasSelection, view)
   // LIPAS venue markers are interactive points, so keep them above landmark art.
-  visibleSports.filter(({ id }) => !landmarkFeatureIds.has(id)).forEach((feature) => (feature.icon ? drawVenueMarker : drawSport)(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default'))
+  const markerClusters = createMarkerClusters(visibleSports.filter(({ id, icon }) => Boolean(icon) && !landmarkFeatureIds.has(id)), projector, view, selectedIds)
+  markerClusters.forEach((cluster) => {
+    if (cluster.features.length > 1) {
+      drawMarkerCluster(ctx, cluster, hasSelection ? 'dimmed' : 'default')
+      return
+    }
+    const feature = cluster.features[0]
+    drawVenueMarker(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default')
+  })
+  visibleSports.filter(({ id, icon }) => !icon && !landmarkFeatureIds.has(id)).forEach((feature) => drawSport(ctx, feature, projector, hasSelection ? selectedIds.has(feature.id) ? 'selected' : 'dimmed' : 'default'))
 
   if (visualState.trendingEnabled) {
     const trending = visibleSports

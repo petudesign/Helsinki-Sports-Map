@@ -34,7 +34,11 @@ export type SportsVenue = {
   facilityType?: string
   priceClass?: PriceClass
   geometry: { rings: MapPoint[][]; bounds: Bounds }
-  source: { provider: string; id: string }
+  source: { provider: string; id: string; url?: string }
+  provenance?: {
+    sources: { provider: string; id: string; url?: string; updatedAt?: string }[]
+    normalizedAt?: string
+  }
   officialUrl?: string
   sourceUrl: string
   lipas?: LipasVenue

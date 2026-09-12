@@ -183,15 +183,15 @@ The app remembers only the analytics consent choice in one first-party, `SameSit
 
 Location permission and analytics consent are different decisions and must not be bundled. The project is not yet sending analytics, so collecting extra identifiers or storing coordinates would add privacy cost without product value. The consent copy is intentionally explicit that optional analytics is only being prepared.
 
-## 2026-09-11 — Filter hierarchy stays visible without an extra filter drawer
+## 2026-09-12 — Filter hierarchy keeps only sport and search in the primary flow
 
 ### Decision
 
-Sport remains the primary filter row. Price is a separate, visually quieter secondary row, and Trending remains a distinct toggle because it describes a different kind of signal. On narrow screens the rows keep their group labels while their options scroll horizontally.
+Sport remains the primary filter row and search remains visible beside the map controls. Price, Trending, and future secondary filters live behind one compact Filters disclosure with an active-filter count. On narrow screens sport options continue to scroll horizontally and the disclosure panel stays inside the viewport.
 
 ### Why
 
-The first filter layout gave sport, price, trend, and result count too similar a visual weight. Hiding the controls inside another expandable panel would make the core task slower and repeat an interaction pattern that tested poorly in this product. Visible group labels and horizontal scrolling preserve discoverability without adding a new layer of UI.
+The first filter layout gave sport, price, trend, and result count too similar a visual weight. Sport is the discovery intent; price and trend refine that intent and do not need to compete with it on every visit. The active count keeps secondary state discoverable without making the default flow heavier.
 
 ## 2026-09-11 — Travel mode appears only when route planning has two endpoints
 

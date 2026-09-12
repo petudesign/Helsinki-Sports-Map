@@ -27,6 +27,28 @@ function centerOfGeoRing(ring: GeoPoint[]): GeoPoint {
   return [total[0] / Math.max(points.length, 1), total[1] / Math.max(points.length, 1)]
 }
 
+function normalizedVenueName(name: string | undefined) {
+  return (name ?? '').toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')
+}
+
+function mergeVenueSources(lipasVenues: SportsVenue[], osmVenues: SportsVenue[]) {
+  const venues = new Map<string, SportsVenue>()
+  lipasVenues.forEach((venue) => venues.set(normalizedVenueName(venue.name), venue))
+  osmVenues.forEach((venue) => {
+    const key = normalizedVenueName(venue.name)
+    const existing = venues.get(key)
+    if (!existing || !key) { venues.set(`${key}:${venue.id}`, venue); return }
+    venues.set(key, {
+      ...existing,
+      sports: [...new Set([...existing.sports, ...venue.sports])],
+      officialUrl: existing.officialUrl ?? venue.officialUrl,
+      serviceMap: existing.serviceMap ?? venue.serviceMap,
+      provenance: { sources: [...(existing.provenance?.sources ?? []), ...(venue.provenance?.sources ?? [])] },
+    })
+  })
+  return [...venues.values()]
+}
+
 export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   const [west, south, east, north] = geojson.bbox
   const project = (point: GeoPoint) => toLocalMetres(point, geojson.center)
@@ -43,23 +65,26 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   })
   const osmVenues: SportsVenue[] = sports.map((feature) => {
     const profile = venueProfile(feature.id)
+    const lipasMatch = feature.center ? findLipasVenue(feature.name, feature.center) : undefined
     return {
       id: feature.id,
       name: feature.name,
       sports: profile?.sports ?? feature.sports ?? (feature.sport === 'multi' ? [] : [feature.sport]),
       facilityType: feature.facilityType,
       geometry: { rings: feature.rings, bounds: feature.bounds ?? boundsOfRings(feature.rings) },
-      source: { provider: 'openstreetmap', id: feature.id },
-      officialUrl: profile?.officialUrl ?? (feature.center ? findLipasVenue(feature.name, feature.center)?.website : undefined),
+      source: { provider: 'openstreetmap', id: feature.id, url: `https://www.openstreetmap.org/${feature.id}` },
+      provenance: { sources: [{ provider: 'openstreetmap', id: feature.id, url: `https://www.openstreetmap.org/${feature.id}` }, ...(lipasMatch ? [{ provider: 'lipas', id: String(lipasMatch.id), url: `https://api.lipas.fi/v2/sports-sites/${lipasMatch.id}`, updatedAt: lipasMatch.updatedAt }] : [])] },
+      officialUrl: profile?.officialUrl ?? lipasMatch?.website,
       sourceUrl: `https://www.openstreetmap.org/${feature.id}`,
-      lipas: feature.center ? findLipasVenue(feature.name, feature.center) : undefined,
-      serviceMap: serviceMapForUnit(profile?.serviceMapId ?? (feature.center ? findLipasVenue(feature.name, feature.center)?.id : undefined)),
+      lipas: lipasMatch,
+      serviceMap: serviceMapForUnit(profile?.serviceMapId ?? lipasMatch?.id),
     }
   })
   const lipas = createLipasFeatures(project)
-  const venues: SportsVenue[] = [...osmVenues, ...lipas.venues.map(({ id, venue }) => ({
-    id, name: venue.name, sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [], facilityType: venue.typeName, geometry: { rings: [], bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } }, source: { provider: 'lipas', id: String(venue.id) }, officialUrl: venue.website, sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, lipas: { ...venue, ...accessProfileForUrl(venue.website) }, serviceMap: serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id),
-  }))]
+  const lipasVenues: SportsVenue[] = lipas.venues.map(({ id, venue }) => ({
+    id, name: venue.name, sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [], facilityType: venue.typeName, geometry: { rings: [], bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } }, source: { provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}` }, provenance: { sources: [{ provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, updatedAt: venue.updatedAt }] }, officialUrl: venue.website, sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, lipas: { ...venue, ...accessProfileForUrl(venue.website) }, serviceMap: serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id),
+  }))
+  const venues = mergeVenueSources(lipasVenues, osmVenues)
   return {
   name: geojson.name,
   center: geojson.center,

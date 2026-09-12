@@ -21,6 +21,11 @@ The first layer centralizes the current HSM palette and the repeated values used
 by the map and reviewer workbench. It is intentionally small. We will add
 component variants only when a real repeated pattern appears.
 
+The component and state preview is available locally at
+`http://localhost:4181/?design-system=1`. It is an implementation reference,
+not a second production route: interactive examples use the same state classes
+and semantic tokens as the real UI.
+
 To change the visual direction, edit the values in `tokens.css` first and then
 check the map and reviewer routes. The design system does not require Figma.
 

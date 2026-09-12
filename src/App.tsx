@@ -7,6 +7,7 @@ import { createBackgroundRenderer, isBackgroundAligned } from './renderer/backgr
 import { extraText, sportText, text, type Locale } from './i18n'
 import { geocodeAddress, reverseGeocode, routeByMode, searchAddresses, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
 import { getAnalyticsConsent, setAnalyticsConsent, type AnalyticsConsent } from './privacy'
+import { ReviewWorkbench } from './review/ReviewWorkbench'
 
 type Mode = '2d' | 'iso'
 type SportFilter = 'all' | 'football' | 'athletics' | 'swimming' | 'outdoor_swimming' | 'ice_hockey' | 'basketball' | 'tennis' | 'padel' | 'outdoor_fitness' | 'martial_arts' | 'skateboarding'
@@ -56,6 +57,7 @@ function venueActivityLabel(locale: Locale, sport: string) {
 }
 
 function App() {
+  const reviewMode = new URLSearchParams(window.location.search).get('review') === '1'
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [mapArea, setMapArea] = useState<MapDataset>()
   const [mode, setMode] = useState<Mode>('2d')
@@ -86,7 +88,7 @@ function App() {
   const viewportLoadRequestRef = useRef(0)
   const locationRequestRef = useRef(0)
   const locationTimeoutRef = useRef<number | undefined>(undefined)
-  useEffect(() => { activeCity.loadDataset().then(setMapArea) }, [])
+  useEffect(() => { if (!reviewMode) activeCity.loadDataset().then(setMapArea) }, [reviewMode])
   useEffect(() => { const stored = getAnalyticsConsent(); setAnalyticsConsentState(stored); setConsentVisible(stored === undefined) }, [])
   const venuesById = useMemo(() => new Map(mapArea?.venues.map((venue) => [venue.id, venue]) ?? []), [mapArea])
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase('fi-FI')
@@ -268,6 +270,7 @@ function App() {
     setConsentVisible(false)
   }
 
+  if (reviewMode) return <ReviewWorkbench />
   if (!mapArea) return <main className="app-shell loading-shell"><div className="loading-state"><span className="status-dot" /><strong>{text(locale, 'loading', { city: activeCity.displayName })}</strong><span>{text(locale, 'preparing')}</span></div></main>
 
   return <main className="app-shell">

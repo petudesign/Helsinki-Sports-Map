@@ -1,7 +1,9 @@
+import { hsmCanvasTheme } from '../design-system/canvasTheme'
+
 export const editorialTheme = {
-  ground: '#f0ede6',
-  grain: '#18324a',
-  water: '#acd8df',
+  ground: hsmCanvasTheme.page,
+  grain: hsmCanvasTheme.ink,
+  water: hsmCanvasTheme.mapWater,
   waterLine: '#5b9eae',
   rail: '#66767a',
   railTie: 'rgba(47, 51, 48, .34)',
@@ -18,18 +20,18 @@ export const editorialTheme = {
   road: '#c9ccca',
   roadEdge: '#879595',
   path: 'rgba(71, 101, 104, .42)',
-  accent: '#c45f46',
-  ink: '#18324a',
+  accent: hsmCanvasTheme.accent,
+  ink: hsmCanvasTheme.ink,
   tree: '#5f856e',
   treeLight: '#7ea184',
 }
 
 export const sportStyles: Record<string, { fill: string; stroke: string; marking: string }> = {
-  soccer: { fill: '#82966f', stroke: '#b95843', marking: 'rgba(239,235,224,.82)' },
-  football: { fill: '#82966f', stroke: '#b95843', marking: 'rgba(239,235,224,.82)' },
+  soccer: { fill: hsmCanvasTheme.mapSport, stroke: '#b95843', marking: 'rgba(239,235,224,.82)' },
+  football: { fill: hsmCanvasTheme.mapSport, stroke: '#b95843', marking: 'rgba(239,235,224,.82)' },
   athletics: { fill: '#bb735f', stroke: '#914b3e', marking: 'rgba(244,226,215,.76)' },
   running: { fill: '#bb735f', stroke: '#914b3e', marking: 'rgba(244,226,215,.76)' },
-  swimming: { fill: '#8fbabd', stroke: '#b95843', marking: 'rgba(239,235,224,.78)' },
+  swimming: { fill: hsmCanvasTheme.mapSwimming, stroke: '#b95843', marking: 'rgba(239,235,224,.78)' },
   ice_hockey: { fill: '#d3dedb', stroke: '#b95843', marking: 'rgba(113,139,139,.62)' },
   basketball: { fill: '#c68b67', stroke: '#994e3c', marking: 'rgba(247,232,218,.76)' },
   tennis: { fill: '#b7a56e', stroke: '#8f6f45', marking: 'rgba(247,240,216,.88)' },

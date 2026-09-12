@@ -516,11 +516,36 @@ h1, .loading-state strong { color: var(--hsm-color-ink); }
 .ds-status-card-approved { border-top-color: var(--hsm-color-success); }
 .ds-status-card-rejected { border-top-color: var(--hsm-color-danger); }
 .ds-status-card-skipped { border-top-color: var(--hsm-color-warning); }
+.ds-map-preview { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(190px, .7fr); gap: 14px; }
+.ds-map-canvas { position: relative; min-height: 330px; overflow: hidden; border: 1px solid var(--hsm-color-border); background: var(--hsm-color-map-ground); background-image: linear-gradient(28deg, transparent 46%, rgba(255,253,249,.55) 47% 49%, transparent 50%), linear-gradient(-18deg, transparent 44%, rgba(255,253,249,.42) 45% 48%, transparent 49%); }
+.ds-map-filter-bar { position: absolute; z-index: 2; top: 14px; left: 14px; right: 14px; display: flex; align-items: center; gap: 5px; padding: 4px 5px; border-bottom: 1px solid rgba(184,201,204,.9); background: rgba(255,253,249,.88); backdrop-filter: blur(7px); }
+.ds-map-filter-bar > span { margin-right: 5px; color: var(--hsm-color-ink-muted); font: 500 .55rem var(--hsm-font-mono); letter-spacing: .08em; }
+.ds-map-filter-bar button, .ds-map-toolbar button { border: 1px solid transparent; border-radius: var(--hsm-radius-sm); background: transparent; padding: 6px 8px; color: var(--hsm-color-teal-dark); font: 600 .6rem var(--hsm-font-body); cursor: pointer; }
+.ds-map-filter-bar button:hover, .ds-map-toolbar button:hover { background: var(--hsm-color-teal-soft); }
+.ds-map-filter-bar button.selected, .ds-map-toolbar button.selected { border-color: var(--hsm-color-teal); background: var(--hsm-color-teal); color: var(--hsm-color-surface); }
+.ds-map-toolbar { position: absolute; z-index: 2; top: 68px; left: 14px; display: flex; padding: 3px; border: 1px solid var(--hsm-color-border); background: rgba(255,253,249,.9); }
+.ds-map-marker { position: absolute; width: 18px; height: 18px; border: 2px solid var(--hsm-color-surface); border-radius: 50%; background: var(--hsm-color-accent); box-shadow: 0 0 0 4px rgba(185,84,62,.16); }
+.ds-map-marker-one { top: 44%; left: 29%; }
+.ds-map-marker-two { top: 62%; left: 48%; background: var(--hsm-color-map-sport); box-shadow: 0 0 0 4px rgba(130,150,111,.18); }
+.ds-map-marker-three { top: 35%; left: 69%; background: var(--hsm-color-map-swimming); box-shadow: 0 0 0 4px rgba(143,186,189,.18); }
+.ds-map-card { position: absolute; z-index: 3; right: 14px; bottom: 14px; width: min(290px, calc(100% - 28px)); padding: 13px 14px; border: 1px solid rgba(184,201,204,.95); border-top: 3px solid var(--hsm-color-accent); background: rgba(255,253,249,.94); box-shadow: var(--hsm-shadow-floating); }
+.ds-map-card > div:first-child { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ds-map-card > div:first-child strong { color: var(--hsm-color-ink); font-size: .78rem; line-height: 1.2; }
+.ds-map-card button { border: 0; background: transparent; padding: 0; color: var(--hsm-color-ink-muted); font: 500 .55rem var(--hsm-font-mono); cursor: pointer; text-transform: uppercase; }
+.ds-map-card-type, .ds-map-card-price small { display: block; color: var(--hsm-color-ink-muted); font-size: .61rem; }
+.ds-map-card-type { margin-top: 6px; }
+.ds-map-card-price { display: flex; align-items: baseline; gap: 8px; margin-top: 13px; }
+.ds-map-card-price strong { color: var(--hsm-color-accent); font: 700 1.25rem var(--hsm-font-body); letter-spacing: -.04em; }
+.ds-map-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }
+.ds-map-card-tags span { padding: 4px 6px; border-radius: var(--hsm-radius-pill); background: var(--hsm-color-teal-soft); color: var(--hsm-color-teal-dark); font: 500 .54rem var(--hsm-font-mono); }
+.ds-map-notes { display: grid; align-content: start; gap: 10px; padding: 14px; border-left: 3px solid var(--hsm-color-teal); background: var(--hsm-color-teal-soft); color: var(--hsm-color-teal-dark); font: 500 .62rem/1.4 var(--hsm-font-mono); }
+.ds-map-notes strong { color: var(--hsm-color-ink); font: 700 .72rem var(--hsm-font-body); }
 
 @media (max-width: 760px) {
   .ds-shell { padding: 22px 12px 32px; }
   .ds-header { display: grid; gap: 14px; margin-bottom: 20px; }
   .ds-section { padding: 16px 14px; }
-  .ds-token-grid, .ds-status-grid { grid-template-columns: 1fr; }
+  .ds-token-grid, .ds-status-grid, .ds-map-preview { grid-template-columns: 1fr; }
   .ds-swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ds-map-canvas { min-height: 360px; }
 }

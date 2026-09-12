@@ -45,6 +45,14 @@
   --hsm-color-warning-border: #d5be8c;
   --hsm-color-focus: #18324a;
 
+  /* Map canvas roles. The renderer mirrors these values in its TypeScript theme
+     because an OffscreenCanvas cannot resolve CSS custom properties. */
+  --hsm-color-map-ground: #dfe7e1;
+  --hsm-color-map-water: #acd8df;
+  --hsm-color-map-park: #b7c8b0;
+  --hsm-color-map-sport: #82966f;
+  --hsm-color-map-swimming: #8fbabd;
+
   /* Shape, spacing and depth */
   --hsm-radius-sm: 2px;
   --hsm-radius-pill: 999px;

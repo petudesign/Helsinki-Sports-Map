@@ -16,6 +16,7 @@ function DsButton({ children, variant = 'secondary', state = 'default', disabled
 
 function DesignSystemPreview() {
   const [selectedFilter, setSelectedFilter] = useState('All')
+  const [mapMode, setMapMode] = useState<'2D' | 'ISO'>('2D')
 
   return <main className="ds-shell">
     <header className="ds-header">
@@ -33,6 +34,19 @@ function DesignSystemPreview() {
         <div className="ds-token-grid">
           <div className="ds-token-group"><h3>Core palette</h3><div className="ds-swatches"><TokenSwatch name="Page" token="--hsm-color-page" /><TokenSwatch name="Surface" token="--hsm-color-surface" /><TokenSwatch name="Ink" token="--hsm-color-ink" /><TokenSwatch name="Muted ink" token="--hsm-color-ink-muted" /><TokenSwatch name="Accent" token="--hsm-color-accent" /><TokenSwatch name="Teal" token="--hsm-color-teal" /></div></div>
           <div className="ds-token-group"><h3>Semantic states</h3><div className="ds-status-row"><DsStatus label="Pending" tone="pending" /><DsStatus label="Approved" tone="approved" /><DsStatus label="Rejected" tone="rejected" /><DsStatus label="Skipped" tone="skipped" /></div></div>
+        </div>
+      </section>
+
+      <section className="ds-section" aria-labelledby="map-title">
+        <div className="ds-section-heading"><div><h2 id="map-title">Map surface</h2><p>Feature-specific map components use the same HSM foundation with map-specific density and context.</p></div><span className="ds-count">map variant</span></div>
+        <div className="ds-map-preview">
+          <div className="ds-map-canvas">
+            <div className="ds-map-filter-bar"><span>SPORT</span><button type="button" className="selected">All</button><button type="button">Swimming</button><button type="button">Outdoor gym</button></div>
+            <div className="ds-map-toolbar"><button type="button" className={mapMode === '2D' ? 'selected' : ''} onClick={() => setMapMode('2D')}>2D</button><button type="button" className={mapMode === 'ISO' ? 'selected' : ''} onClick={() => setMapMode('ISO')}>Isometric</button></div>
+            <span className="ds-map-marker ds-map-marker-one" aria-hidden="true" /><span className="ds-map-marker ds-map-marker-two" aria-hidden="true" /><span className="ds-map-marker ds-map-marker-three" aria-hidden="true" />
+            <div className="ds-map-card"><div><strong>Maunulan liikuntahalli</strong><button type="button" aria-label="Close venue card">Close</button></div><span className="ds-map-card-type">Gym · {mapMode}</span><div className="ds-map-card-price"><strong>3.60 €</strong><small>Single visit · Adults</small></div><div className="ds-map-card-tags"><span>Step-free entrance</span><span>Family signals</span></div></div>
+          </div>
+          <div className="ds-map-notes"><strong>Shared HSM anatomy</strong><span>• teal = navigation and selection</span><span>• rust = brand accent and emphasis</span><span>• quiet borders and mono labels</span><span>• feature surfaces can be denser without becoming a different product</span></div>
         </div>
       </section>
 

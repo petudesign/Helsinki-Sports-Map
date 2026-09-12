@@ -1,0 +1,59 @@
+/*
+ * HSM design tokens
+ *
+ * Keep visual decisions here so a palette or density change does not require
+ * hunting through component styles. The names describe the role of a value,
+ * not the current color, which keeps future themes and cities possible.
+ */
+:root {
+  color-scheme: light;
+
+  /* Typography */
+  --hsm-font-body: Manrope, system-ui, sans-serif;
+  --hsm-font-mono: 'DM Mono', ui-monospace, monospace;
+  --hsm-font-size-label: .58rem;
+  --hsm-font-size-caption: .68rem;
+  --hsm-font-size-body: .76rem;
+
+  /* Core palette */
+  --hsm-color-page: #f0ede6;
+  --hsm-color-surface: #fffdf9;
+  --hsm-color-surface-muted: #f8f4ed;
+  --hsm-color-surface-soft: #e7eff0;
+  --hsm-color-ink: #18324a;
+  --hsm-color-ink-muted: #526b7b;
+  --hsm-color-ink-subtle: #617786;
+  --hsm-color-border: #b8c9cc;
+  --hsm-color-border-soft: #c3d0d1;
+  --hsm-color-border-subtle: #d4cabe;
+
+  /* Brand and semantic states */
+  --hsm-color-accent: #b9543e;
+  --hsm-color-accent-dark: #a84c38;
+  --hsm-color-accent-soft: #f4e5db;
+  --hsm-color-teal: #176b7b;
+  --hsm-color-teal-dark: #15586a;
+  --hsm-color-teal-soft: #dceced;
+  --hsm-color-success: #2f654f;
+  --hsm-color-success-soft: #e6efe4;
+  --hsm-color-success-border: #b9ccbb;
+  --hsm-color-danger: #963d32;
+  --hsm-color-danger-soft: #f3d3d0;
+  --hsm-color-danger-border: #d69b93;
+  --hsm-color-warning: #816326;
+  --hsm-color-warning-soft: #eee2c9;
+  --hsm-color-warning-border: #d5be8c;
+  --hsm-color-focus: #18324a;
+
+  /* Shape, spacing and depth */
+  --hsm-radius-sm: 2px;
+  --hsm-radius-pill: 999px;
+  --hsm-space-1: 4px;
+  --hsm-space-2: 8px;
+  --hsm-space-3: 12px;
+  --hsm-space-4: 16px;
+  --hsm-space-5: 24px;
+  --hsm-space-6: 32px;
+  --hsm-shadow-panel: 0 10px 26px rgba(35, 76, 90, .08);
+  --hsm-shadow-floating: 0 12px 30px rgba(35, 76, 90, .16);
+}

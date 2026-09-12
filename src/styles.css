@@ -373,3 +373,74 @@ body { background: #f0ede6; }
   .review-edit-form > div { display: flex; }
   .review-edit-form .review-action { flex: 1 1 0; min-height: 38px; }
 }
+
+/* HSM design system adoption layer. Layout stays local to each feature; shared
+   visual decisions resolve through src/design-system/tokens.css. */
+:root {
+  color: var(--hsm-color-ink);
+  background: var(--hsm-color-page);
+  font-family: var(--hsm-font-body);
+}
+
+body { background: var(--hsm-color-page); }
+h1, .loading-state strong { color: var(--hsm-color-ink); }
+.topbar p, .topbar-right, .footer, .filter-label, .result-count,
+.search-control, .origin-control, .travel-mode-label, .loading-state,
+.review-brand p, .review-heading p, .review-top-actions,
+.review-sidebar-heading, .review-navigation, .review-price-note,
+.review-price-empty, .review-extracted p, .review-panel dt,
+.review-checks small, .review-safety-note p { color: var(--hsm-color-ink-muted); }
+
+.status-dot { background: var(--hsm-color-success); }
+.mode-toggle { background: var(--hsm-color-teal-soft); border-color: var(--hsm-color-border); }
+.mode-toggle button.selected { background: var(--hsm-color-ink); }
+.language-toggle, .filter-bar, .price-filter { border-color: var(--hsm-color-border-soft); }
+.filter-options button, .trend-toggle, .travel-mode { color: var(--hsm-color-teal-dark); }
+.filter-options button:hover, .trend-toggle:hover, .map-controls button:hover,
+.address-suggestions button:hover, .address-suggestions button:focus,
+.review-navigation button:hover, .review-navigation button:focus-visible,
+.review-action:hover, .review-action:focus-visible { background: var(--hsm-color-teal-soft); }
+.filter-options button.selected { background: var(--hsm-color-teal); border-color: var(--hsm-color-teal-dark); }
+.search-control input, .origin-control input { border-color: var(--hsm-color-border); background: rgba(255,253,249,.86); color: var(--hsm-color-ink); }
+.search-control input::placeholder, .origin-control input::placeholder { color: var(--hsm-color-ink-subtle); }
+.search-control input:focus, .origin-control input:focus { border-color: var(--hsm-color-teal); box-shadow: 0 0 0 2px rgba(23,107,123,.16); }
+.route-button { border-color: var(--hsm-color-teal); background: var(--hsm-color-teal); }
+.select-result-button, .travel-mode.selected { border-color: #79aeb5; background: var(--hsm-color-teal-soft); color: var(--hsm-color-teal-dark); }
+.map-stage, .review-sidebar, .review-main, .review-panel { border-color: var(--hsm-color-border); }
+.canvas-note, .map-legend, .map-controls, .facility-card,
+.facility-list, .review-sidebar, .review-main, .review-panel { background: rgba(255,253,249,.9); }
+.facility-card { border-top-color: var(--hsm-color-accent); }
+.facility-card > div:first-child { background: rgba(255,253,249,.98); color: var(--hsm-color-ink-muted); }
+.facility-card > div:first-child strong, .facility-facts, .journey-feedback { color: var(--hsm-color-ink); }
+.facility-card button, .facility-type, .official-details p, .official-services,
+.official-links, .facility-unknown, .facility-address, .map-legend,
+.facility-list > p, .facility-list button span { color: var(--hsm-color-ink-muted); }
+.facility-activities li { background: #d9eaeb; color: var(--hsm-color-teal-dark); }
+.facility-links, .official-details, .facility-accessibility { border-color: var(--hsm-color-border-soft); }
+.facility-links a, .official-details summary, .official-links a,
+.facility-access-link a { color: var(--hsm-color-teal-dark); }
+.facility-list summary { color: var(--hsm-color-teal-dark); background: rgba(255,253,249,.98); border-color: var(--hsm-color-border-soft); }
+.facility-list button:hover, .facility-list button:focus-visible,
+.facility-list button.selected { background: var(--hsm-color-teal-soft); border-color: #79aeb5; }
+.facility-access { border-left-color: var(--hsm-color-accent); }
+:where(button, input, summary, a):focus-visible { outline-color: var(--hsm-color-focus); }
+
+/* Reviewer states are semantic tokens, so their meaning survives palette changes. */
+.review-mark, .review-facts > div:first-child strong,
+.review-price-row > strong, .review-action.primary { border-color: var(--hsm-color-accent); color: var(--hsm-color-accent); }
+.review-action.primary { background: var(--hsm-color-accent); color: var(--hsm-color-surface); }
+.review-queue-item.selected { border-color: var(--hsm-color-accent); background: var(--hsm-color-accent-soft); }
+.review-confidence { background: var(--hsm-color-teal-soft); color: var(--hsm-color-teal-dark); }
+.review-confidence-approved { background: var(--hsm-color-success-soft); border-color: #9fc5a6; color: var(--hsm-color-success); }
+.review-confidence-rejected { background: var(--hsm-color-danger-soft); border-color: var(--hsm-color-danger-border); color: var(--hsm-color-danger); }
+.review-confidence-skipped { background: var(--hsm-color-warning-soft); border-color: var(--hsm-color-warning-border); color: var(--hsm-color-warning); }
+.review-progress span, .review-score-bar span { background: var(--hsm-color-teal); }
+.review-check-summary { border-color: var(--hsm-color-success-border); background: var(--hsm-color-success-soft); color: var(--hsm-color-success); }
+.review-score-explainer > strong { color: var(--hsm-color-success); }
+.review-checks li > span.review-check-points { background: #dfeadf; color: var(--hsm-color-success); }
+.review-checks li > span.review-check-points-review { background: var(--hsm-color-accent-soft); color: #a35c2f; }
+.review-price-list { border-color: var(--hsm-color-border-subtle); background: var(--hsm-color-surface-muted); }
+.review-price-row { border-color: var(--hsm-color-border-subtle); }
+.review-price-row > input, .review-edit-form input, .review-edit-form textarea { border-color: #9ab3b7; background: var(--hsm-color-surface); color: var(--hsm-color-ink); }
+.review-price-row > input:focus, .review-edit-form input:focus, .review-edit-form textarea:focus { border-color: var(--hsm-color-teal); box-shadow: 0 0 0 2px rgba(23,107,123,.14); }
+.review-safety-note { border-top-color: var(--hsm-color-teal); }

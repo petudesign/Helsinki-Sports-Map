@@ -81,10 +81,28 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
     }
   })
   const lipas = createLipasFeatures(project)
-  const lipasVenues: SportsVenue[] = lipas.venues.map(({ id, venue }) => ({
-    id, name: venue.name, sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [], facilityType: venue.typeName, geometry: { rings: [], bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } }, source: { provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}` }, provenance: { sources: [{ provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, updatedAt: venue.updatedAt }] }, officialUrl: venue.website, sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, lipas: { ...venue, ...accessProfileForUrl(venue.website) }, serviceMap: serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id),
-  }))
+  const lipasVenues: SportsVenue[] = lipas.venues.map(({ id, venue }) => {
+    const serviceMap = serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id)
+    return {
+      id,
+      name: venue.name,
+      sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [],
+      facilityType: venue.typeName,
+      geometry: { rings: [], bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } },
+      source: { provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}` },
+      provenance: { sources: [{ provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, updatedAt: venue.updatedAt }] },
+      officialUrl: venue.website,
+      sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`,
+      lipas: { ...venue, priceClass: serviceMap?.priceClass ?? venue.priceClass, accessStatus: serviceMap?.usageStatus ?? venue.accessStatus, ...accessProfileForUrl(venue.website) },
+      serviceMap,
+    }
+  })
   const venues = mergeVenueSources(lipasVenues, osmVenues)
+  const venueById = new Map(venues.map((venue) => [venue.id, venue]))
+  const enrichedSports = lipas.features.map((feature) => {
+    const venue = venueById.get(feature.id)
+    return { ...feature, priceClass: venue?.serviceMap?.priceClass ?? feature.priceClass }
+  })
   return {
   name: geojson.name,
   center: geojson.center,
@@ -105,7 +123,7 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
     const points = feature.geometry.coordinates.map(project)
     return [{ id: feature.id ?? 'route', kind: feature.properties.category === 'path' ? 'path' as const : feature.properties.routeKind ?? 'local', points, bounds: boundsOf(points) }]
   }),
-  sports: lipas.features,
+  sports: enrichedSports,
   osmSports: sports,
   venues,
   trees: geojson.features.flatMap((feature) => feature.properties.category === 'tree' && feature.geometry.type === 'Point' ? [project(feature.geometry.coordinates)] : []),

@@ -11,6 +11,8 @@ import { getAnalyticsConsent, setAnalyticsConsent, type AnalyticsConsent } from 
 type Mode = '2d' | 'iso'
 type SportFilter = 'all' | 'football' | 'athletics' | 'swimming' | 'outdoor_swimming' | 'ice_hockey' | 'basketball' | 'tennis' | 'padel' | 'outdoor_fitness' | 'martial_arts' | 'skateboarding'
 type PriceFilter = 'all' | 'free' | 'paid'
+type AccessibilityFilter = 'all' | 'stepFreeEntrance' | 'accessibleToilet' | 'accessibleParking'
+type FamilyFilter = 'all' | 'family'
 type Camera = { zoom: number; pan: { x: number; y: number } }
 const MAX_ZOOM = 10
 
@@ -32,6 +34,15 @@ function matchesPrice(feature: SportFeature, filter: PriceFilter) {
   return filter === 'all' || feature.priceClass === filter || feature.priceClass === 'mixed'
 }
 
+function matchesAccessibility(venue: SportsVenue | undefined, filter: AccessibilityFilter) {
+  if (filter === 'all') return true
+  return venue?.serviceMap?.accessibility?.[filter] === 'yes'
+}
+
+function matchesFamily(venue: SportsVenue | undefined, filter: FamilyFilter) {
+  return filter === 'all' || Boolean(venue?.serviceMap?.familySignals.length)
+}
+
 function priceLabelKey(priceClass: SportFeature['priceClass']) {
   return priceClass === 'free' ? 'priceFree' : priceClass === 'paid' ? 'pricePaid' : priceClass === 'mixed' ? 'priceMixed' : 'priceUnknown'
 }
@@ -50,6 +61,8 @@ function App() {
   const [mode, setMode] = useState<Mode>('2d')
   const [filter, setFilter] = useState<SportFilter>('all')
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
+  const [accessibilityFilter, setAccessibilityFilter] = useState<AccessibilityFilter>('all')
+  const [familyFilter, setFamilyFilter] = useState<FamilyFilter>('all')
   const [selected, setSelected] = useState<SportFeature>()
   const [trendingEnabled, setTrendingEnabled] = useState(false)
   const [locale, setLocale] = useState<Locale>('en')
@@ -80,6 +93,8 @@ function App() {
   const visibleSports = mapArea?.sports.filter((feature) => {
     if (!matchesFilter(feature, filter)) return false
     if (!matchesPrice(feature, priceFilter)) return false
+    if (!matchesAccessibility(venuesById.get(feature.id), accessibilityFilter)) return false
+    if (!matchesFamily(venuesById.get(feature.id), familyFilter)) return false
     if (!normalizedSearch) return true
     const venue = venuesById.get(feature.id)
     const searchable = [feature.name, venue?.name, venue?.lipas?.name, venue?.lipas?.address, feature.facilityType, feature.sport, ...(feature.sports ?? [])].filter((value): value is string => Boolean(value))
@@ -88,7 +103,7 @@ function App() {
   const trendingSignals = useMemo(() => new Map<string, TrendingSignal>(mapArea?.sports.map((feature) => [feature.id, previewTrendingSignal(feature)]) ?? []), [mapArea])
   const visibleSportIds = new Set(visibleSports.map(({ id }) => id))
   const filterOptions = allFilterOptions.filter((option) => option.id === 'all' || mapArea?.sports.some((feature) => matchesFilter(feature, option.id)))
-  const activeFilterCount = Number(priceFilter !== 'all')
+  const activeFilterCount = Number(priceFilter !== 'all') + Number(accessibilityFilter !== 'all') + Number(familyFilter !== 'all')
   const venueDiagnostics = useMemo(() => {
     const names = new Map<string, { name: string; count: number }>()
     mapArea?.venues.forEach((venue) => { const key = (venue.name ?? '').trim().toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ''); if (key) { const current = names.get(key); names.set(key, { name: current?.name ?? venue.name ?? key, count: (current?.count ?? 0) + 1 }) } })
@@ -159,7 +174,7 @@ function App() {
     window.addEventListener('resize', draw)
     draw()
     return () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('resize', draw); if (scheduleDrawRef.current === draw) scheduleDrawRef.current = null }
-  }, [mapArea, mode, filter, priceFilter, searchQuery, selected, trendingEnabled, trendingSignals, route])
+  }, [mapArea, mode, filter, priceFilter, accessibilityFilter, familyFilter, searchQuery, selected, trendingEnabled, trendingSignals, route])
 
   const reset = () => {
     cameraRef.current = { zoom: 1, pan: { x: 0, y: 0 } }
@@ -260,14 +275,14 @@ function App() {
       <div className="brand-block"><div className="brand-lockup"><img src="/helsinkisportsmaplogo.png" alt="" aria-hidden="true" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></div><p>{extraText(locale, 'areaLabel')}</p></div>
       <div className="topbar-right"><div className="mode-toggle" aria-label={extraText(locale, 'mapProjection')}><button className={mode === '2d' ? 'selected' : ''} aria-pressed={mode === '2d'} onClick={() => selectMode('2d')}>{extraText(locale, 'mode2d')}</button><button className={mode === 'iso' ? 'selected' : ''} aria-pressed={mode === 'iso'} onClick={() => selectMode('iso')}>{extraText(locale, 'modeIso')}</button></div><div className="language-toggle" aria-label={String(text(locale, 'language'))}><button className={locale === 'en' ? 'selected' : ''} aria-pressed={locale === 'en'} onClick={() => setLocale('en')}>EN</button><button className={locale === 'fi' ? 'selected' : ''} aria-pressed={locale === 'fi'} onClick={() => setLocale('fi')}>FI</button></div></div>
     </header>
-    <nav className="filter-bar" aria-label={extraText(locale, 'filterFacilities')}><span className="filter-label">{text(locale, 'sport')}</span><div className="filter-options">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}>{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div><details className="filter-drawer"><summary>{text(locale, 'filters')}{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}</summary><div className="filter-drawer-panel"><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'priceFilter')}</span><div className="filter-options">{(['all', 'free', 'paid'] as const).map((option) => <button key={option} className={priceFilter === option ? 'selected' : ''} aria-pressed={priceFilter === option} onClick={() => setPriceFilter(option)}>{text(locale, option === 'all' ? 'allPrices' : option === 'free' ? 'priceFree' : 'pricePaid')}</button>)}</div></div></div></details><span className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
+    <nav className="filter-bar" aria-label={extraText(locale, 'filterFacilities')}><span className="filter-label">{text(locale, 'sport')}</span><div className="filter-options">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}>{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div><details className="filter-drawer"><summary>{text(locale, 'filters')}{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}</summary><div className="filter-drawer-panel"><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'priceFilter')}</span><div className="filter-options">{(['all', 'free', 'paid'] as const).map((option) => <button key={option} className={priceFilter === option ? 'selected' : ''} aria-pressed={priceFilter === option} onClick={() => setPriceFilter(option)}>{text(locale, option === 'all' ? 'allPrices' : option === 'free' ? 'priceFree' : 'pricePaid')}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'accessibilityFilter')}</span><div className="filter-options">{(['all', 'stepFreeEntrance', 'accessibleToilet', 'accessibleParking'] as const).map((option) => <button key={option} className={accessibilityFilter === option ? 'selected' : ''} aria-pressed={accessibilityFilter === option} onClick={() => setAccessibilityFilter(option)}>{text(locale, option === 'all' ? 'allAccessibility' : option)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'audienceFilter')}</span><div className="filter-options"><button className={familyFilter === 'all' ? 'selected' : ''} aria-pressed={familyFilter === 'all'} onClick={() => setFamilyFilter('all')}>{text(locale, 'allAudiences')}</button><button className={familyFilter === 'family' ? 'selected' : ''} aria-pressed={familyFilter === 'family'} onClick={() => setFamilyFilter('family')}>{text(locale, 'childrenFamilies')}</button></div></div></div></details><span className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
     <div className="search-row"><label className="search-control"><span>{text(locale, 'search')}</span><input value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); setSelected(undefined); setRoutes({}) }} placeholder={text(locale, 'searchPlaceholder')} aria-label={text(locale, 'searchPlaceholder')} />{searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label={text(locale, 'clearSearch')}>×</button>}</label>{searchQuery.trim() && visibleSports.length === 1 && !selected && <button className="select-result-button" type="button" onClick={() => setSelected(visibleSports[0])}>{text(locale, 'selectResult')}: {visibleSports[0].name}</button>}<label className="origin-control"><span>{text(locale, 'startingPoint')}</span><div className="origin-input-wrap"><input value={startingPoint} onChange={(event) => { locationRequestRef.current += 1; setStartingPoint(event.target.value); setOriginCoordinates(undefined); setOriginSuggestions([]); setRoutes({}); setRouteStatus('idle'); setLocationStatus('idle') }} placeholder={text(locale, 'startingPointPlaceholder')} aria-label={text(locale, 'startingPointPlaceholder')} autoComplete="off" /><button className="location-button" type="button" onClick={useCurrentLocation} disabled={locationStatus === 'loading'} aria-label={text(locale, 'useCurrentLocation')} title={text(locale, 'useCurrentLocation')}>⌖</button></div>{originSuggestions.length > 0 && <div className="address-suggestions" role="listbox" aria-label={text(locale, 'addressSuggestions')}>{originSuggestions.map((suggestion) => <button key={`${suggestion.coordinates.join(',')}-${suggestion.label}`} type="button" role="option" onClick={() => { setStartingPoint(suggestion.label); setOriginCoordinates(suggestion.coordinates); setOriginSuggestions([]) }}>{suggestion.label}</button>)}</div>}{locationStatus === 'loading' && <span className="location-status" role="status">{text(locale, 'locationLoading')}</span>}{locationStatus === 'denied' && <span className="location-status error" role="status">{text(locale, 'locationDenied')}</span>}{locationStatus === 'error' && <span className="location-status error" role="status">{text(locale, 'locationError')}</span>}</label><button className="route-button" type="button" onClick={calculateRoute} disabled={routeStatus === 'loading' || !startingPoint.trim() || !selected?.center}>{routeStatus === 'loading' ? text(locale, 'routing') : text(locale, 'calculateRoute')}</button>{routeStatus === 'error' && <span className="route-error">{text(locale, 'routeError')}</span>}</div>
     {canPlanRoute && <div className="travel-mode-row" aria-label={text(locale, 'travelMode')}><span className="travel-mode-label">{text(locale, 'travelMode')}</span>{(['walk', 'bike', 'transit', 'car'] as const).map((modeOption) => { const result = modeOption === 'transit' ? undefined : routes[modeOption]; const label = text(locale, modeOption); return <button key={modeOption} className={`travel-mode ${travelMode === modeOption ? 'selected' : ''} ${!result && modeOption !== 'transit' ? 'unavailable' : ''}`} type="button" disabled={modeOption === 'transit'} onClick={() => setTravelMode(modeOption)}>{label}{result && <small>{Math.max(1, Math.round(result.durationSeconds / 60))} {text(locale, 'minutes')}</small>}{modeOption === 'transit' && <small>{text(locale, 'notAvailable')}</small>}</button> })}</div>}
     <div className="journey-feedback" role="status">
       {addressError && <p>{locale === 'fi' ? 'Lähtöpaikan osoitehaku epäonnistui. Tarkista osoite tai käytä nykyistä sijaintia.' : 'Starting-point lookup failed. Check the address or use your current location.'}</p>}
       {selected && <p>{locale === 'fi' ? 'Määränpää' : 'Destination'}: <strong>{selected.name}</strong>{!startingPoint.trim() && (locale === 'fi' ? ' — lisää lähtöpaikka reittiä varten.' : ' — add a starting point to plan your route.')}</p>}
       {!selected && startingPoint.trim() && <p>{locale === 'fi' ? 'Valitse määränpää kartalta tai liikuntapaikkalistasta.' : 'Select a destination on the map or in the facility list.'}</p>}
-      {visibleSports.length === 0 && <p>{locale === 'fi' ? 'Näillä rajauksilla ei löytynyt liikuntapaikkoja.' : 'No facilities match these filters.'} <button type="button" onClick={() => { setSearchQuery(''); setFilter('all'); setPriceFilter('all') }}>{locale === 'fi' ? 'Poista hakurajaukset' : 'Clear search and filters'}</button></p>}
+      {visibleSports.length === 0 && <p>{locale === 'fi' ? 'Näillä rajauksilla ei löytynyt liikuntapaikkoja.' : 'No facilities match these filters.'} <button type="button" onClick={() => { setSearchQuery(''); setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }}>{locale === 'fi' ? 'Poista hakurajaukset' : 'Clear search and filters'}</button></p>}
     </div>
     <section className="map-stage">
       <canvas ref={canvasRef} onWheel={(event) => zoomAt(event, event.deltaY > 0 ? .92 : 1.09)} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); draggingRef.current = true; drag.current = { x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false } }} onPointerMove={(event) => { if (!drag.current) return; const dx = event.clientX - drag.current.x; const dy = event.clientY - drag.current.y; if (Math.abs(event.clientX - drag.current.startX) + Math.abs(event.clientY - drag.current.startY) > 4) drag.current.moved = true; drag.current.x = event.clientX; drag.current.y = event.clientY; cameraRef.current = { ...cameraRef.current, pan: { x: cameraRef.current.pan.x + dx, y: cameraRef.current.pan.y + dy } }; scheduleDrawRef.current?.() }} onPointerUp={(event) => { const gesture = drag.current; drag.current = null; draggingRef.current = false; const rect = event.currentTarget.getBoundingClientRect(); if (!gesture?.moved) { const picked = pickMapTarget(event.currentTarget, mapArea, { mode, zoom: cameraRef.current.zoom, pan: cameraRef.current.pan }, { x: event.clientX - rect.left, y: event.clientY - rect.top }, activeCity.landmarks, visibleSportIds); if (picked?.cluster) zoomTo({ x: event.clientX - rect.left, y: event.clientY - rect.top }, 1.55); else setSelected(picked?.feature) } else { scheduleViewportLoad({ width: rect.width, height: rect.height, mode, zoom: cameraRef.current.zoom, pan: cameraRef.current.pan }) } scheduleDrawRef.current?.() }} onPointerCancel={() => { drag.current = null; draggingRef.current = false; scheduleDrawRef.current?.() }} aria-hidden="true" />

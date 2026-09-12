@@ -11,11 +11,12 @@ const copy = {
 } as const
 
 const accessCopy = { en: { access: 'Access', accessOpen: 'Open to the public', accessRestricted: 'Restricted', accessBooking: 'Booking required', accessUnknown: 'Not verified', verifyAccess: 'Check access details' }, fi: { access: 'Käyttöoikeus', accessOpen: 'Avoin yleisölle', accessRestricted: 'Rajoitettu', accessBooking: 'Varaus tarvitaan', accessUnknown: 'Ei vahvistettu', verifyAccess: 'Tarkista käyttöehdot' } } as const
+const filterCopy = { en: { accessibilityFilter: 'Accessibility', allAccessibility: 'All', stepFreeEntrance: 'Step-free entrance', accessibleToilet: 'Accessible toilet', accessibleParking: 'Accessible parking', audienceFilter: 'Audience', allAudiences: 'Everyone', childrenFamilies: 'Children and families', accessibilityDetails: 'Accessibility details', accessibilityYes: 'Yes', accessibilityNo: 'No', accessibilityUnknown: 'Not listed', lift: 'Lift', ramp: 'Ramp', wheelchairSpace: 'Wheelchair space' }, fi: { accessibilityFilter: 'Esteettömyys', allAccessibility: 'Kaikki', stepFreeEntrance: 'Portaaton sisäänkäynti', accessibleToilet: 'Esteetön WC', accessibleParking: 'Esteetön pysäköinti', audienceFilter: 'Kohderyhmä', allAudiences: 'Kaikki', childrenFamilies: 'Lapset ja perheet', accessibilityDetails: 'Esteettömyystiedot', accessibilityYes: 'Kyllä', accessibilityNo: 'Ei', accessibilityUnknown: 'Ei ilmoitettu', lift: 'Hissi', ramp: 'Luiska', wheelchairSpace: 'Pyörätuolitila' } } as const
 
-export type CopyKey = keyof typeof copy.en | keyof typeof accessCopy.en
+export type CopyKey = keyof typeof copy.en | keyof typeof accessCopy.en | keyof typeof filterCopy.en
 
 export function text(locale: Locale, key: CopyKey, variables: Record<string, string> = {}) {
-  const value = key in copy[locale] ? copy[locale][key as keyof typeof copy[typeof locale]] : accessCopy[locale][key as keyof typeof accessCopy[typeof locale]]
+  const value = key in copy[locale] ? copy[locale][key as keyof typeof copy[typeof locale]] : key in accessCopy[locale] ? accessCopy[locale][key as keyof typeof accessCopy[typeof locale]] : filterCopy[locale][key as keyof typeof filterCopy[typeof locale]]
   return Object.entries(variables).reduce<string>((result, [name, replacement]) => result.replace(`{${name}}`, replacement), value as string)
 }
 

@@ -1,4 +1,18 @@
 import payload from './service-map-kisahalli.json'
+import snapshot from './service-map-helsinki.json'
+import type { PriceClass } from './types'
+
+export type TriState = 'yes' | 'no' | 'unknown'
+
+export type VenueAccessibility = {
+  stepFreeEntrance: TriState
+  accessibleToilet: TriState
+  accessibleParking: TriState
+  lift: TriState
+  ramp: TriState
+  wheelchairSpace: TriState
+  entranceSurface?: string
+}
 
 type ServiceMapConnection = {
   section_type: string
@@ -37,6 +51,11 @@ export type ServiceMapDetails = {
   links: { labelFi: string; labelEn: string; url: string }[]
   pictureUrl?: string
   updatedAt?: string
+  priceClass?: PriceClass
+  usageStatus?: 'open' | 'restricted' | 'booking' | 'unknown'
+  familySignals: string[]
+  accessibility?: VenueAccessibility
+  sourceUrl?: string
 }
 
 const source = payload as ServiceMapPayload
@@ -82,13 +101,70 @@ export const serviceMapDetails: Record<number, ServiceMapDetails> = {
     links: source.connections?.flatMap((connection) => connection.section_type === 'LINK' && connection.name?.fi && connection.name.en && connection.www?.fi && connection.www.en ? [{ labelFi: connection.name.fi, labelEn: connection.name.en, url: connection.www.en }] : []) ?? [],
     pictureUrl: source.picture_url,
     updatedAt: source.last_modified_time,
+    familySignals: [],
   },
+}
+
+type ServiceMapSnapshot = {
+  serviceMapId: number
+  lipasId?: number
+  nameFi?: string
+  nameEn?: string
+  shortDescriptionFi?: string
+  shortDescriptionEn?: string
+  descriptionFi?: string
+  descriptionEn?: string
+  openingHoursFi?: string
+  openingHoursEn?: string
+  priceFi?: string
+  priceEn?: string
+  priceClass: PriceClass
+  usageStatus: 'open' | 'restricted' | 'booking' | 'unknown'
+  familySignals: string[]
+  accessibility: VenueAccessibility
+  links: { labelFi: string; labelEn: string; url: string }[]
+  sourceUrl: string
+  updatedAt?: string
+}
+
+const snapshotUnits = (snapshot.units ?? []) as ServiceMapSnapshot[]
+const snapshotsByServiceMapId = new Map(snapshotUnits.map((unit) => [unit.serviceMapId, unit]))
+const snapshotsByLipasId = new Map(snapshotUnits.filter((unit) => unit.lipasId !== undefined).map((unit) => [unit.lipasId as number, unit]))
+
+function detailsFromSnapshot(unit: ServiceMapSnapshot): ServiceMapDetails {
+  return {
+    id: unit.serviceMapId,
+    nameFi: unit.nameFi,
+    nameEn: unit.nameEn,
+    shortDescriptionFi: unit.shortDescriptionFi,
+    shortDescriptionEn: unit.shortDescriptionEn,
+    descriptionFi: unit.descriptionFi,
+    descriptionEn: unit.descriptionEn,
+    openingHoursFi: openingHours(unit.openingHoursFi, 'fi'),
+    openingHoursEn: openingHours(unit.openingHoursEn, 'en'),
+    priceFi: unit.priceFi,
+    priceEn: unit.priceEn,
+    priceGroups: priceGroups(unit.priceEn ?? unit.priceFi),
+    servicesFi: [],
+    servicesEn: [],
+    links: unit.links,
+    updatedAt: unit.updatedAt,
+    priceClass: unit.priceClass,
+    usageStatus: unit.usageStatus,
+    familySignals: unit.familySignals,
+    accessibility: unit.accessibility,
+    sourceUrl: unit.sourceUrl,
+  }
 }
 
 export function serviceMapForUnit(id: number | undefined) {
   if (id === undefined) return undefined
   const aliases: Record<number, number> = { 520304: 45925 }
-  return serviceMapDetails[aliases[id] ?? id]
+  const serviceMapId = aliases[id] ?? id
+  const manual = serviceMapDetails[serviceMapId]
+  const snapshotUnit = snapshotsByServiceMapId.get(serviceMapId) ?? snapshotsByLipasId.get(id)
+  if (!snapshotUnit) return manual
+  return manual ? { ...detailsFromSnapshot(snapshotUnit), ...manual, familySignals: snapshotUnit.familySignals, accessibility: snapshotUnit.accessibility, priceClass: snapshotUnit.priceClass, usageStatus: snapshotUnit.usageStatus, sourceUrl: snapshotUnit.sourceUrl } : detailsFromSnapshot(snapshotUnit)
 }
 
 export function serviceMapForUrl(url: string | undefined) {

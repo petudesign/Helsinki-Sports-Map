@@ -20,6 +20,8 @@ The implementation keeps the compact editorial/operations-tool hierarchy: monosp
 
 The queue is now a 300–330 px desktop column. The venue ID has its own 46 px right-aligned column and a 10 px gap before the venue name, so values such as `40075` no longer collide visually with the title. The three-column desktop structure remains intact, while the context panel moves below the main content at narrower widths.
 
+The desktop reviewer uses one scroll container for the entire center column. Price options, source evidence, extracted text, and review controls therefore stay in one continuous reading order; the source evidence block no longer introduces a nested scrollbar. The queue and context columns may scroll independently because they are separate navigation/context regions.
+
 ### Viewport resilience
 
 Desktop is the intentional primary viewport for this reviewer tool. At approximately 900–1100 px the layout keeps a readable queue and main content, then moves the context panels below. At mobile widths it falls back to a single-column flow with usable controls; mobile is supported as a fallback, not the primary workflow.

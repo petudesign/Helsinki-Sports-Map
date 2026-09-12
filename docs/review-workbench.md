@@ -23,6 +23,8 @@ Each candidate must show:
 
 When a candidate contains several prices, `Accept` approves the complete detected price-option set together. The primary option is the compact card value; the remaining options stay available in the detailed venue view. `Edit` currently changes only the primary option and keeps the other detected options intact.
 
+On desktop, the center reviewer column is one continuous scroll region. The price list, source evidence, extracted text, and decision controls do not have separate nested scrollbars. The queue and context columns remain independent navigation/context regions.
+
 The prototype shows a rule-based evidence score as a percentage. It is deliberately not presented as a probability: each deterministic check has a visible weight, passed checks add their points, and unresolved checks hold their points back. The current weights are price format 35, venue match 30, source freshness 20, and cross-source verification 15. A record reaches 100% only when every check passes.
 
 The next backend version should persist the decision together with the source document hash, parser version, evidence location, reviewer identity, and timestamp.

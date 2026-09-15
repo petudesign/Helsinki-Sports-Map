@@ -21,6 +21,42 @@ function pointsForGeometry(geometry) {
   return geometry.coordinates.flat()
 }
 
+function roundCoordinate(value) {
+  return Math.round(value * 1_000_000) / 1_000_000
+}
+
+function compactGeometry(geometry) {
+  if (geometry.type === 'Point') return { type: geometry.type, coordinates: geometry.coordinates.map(roundCoordinate) }
+  if (geometry.type === 'LineString') return { type: geometry.type, coordinates: geometry.coordinates.map((point) => point.map(roundCoordinate)) }
+  return { type: geometry.type, coordinates: geometry.coordinates.map((ring) => ring.map((point) => point.map(roundCoordinate))) }
+}
+
+function compactProperties(properties) {
+  const compact = { category: properties.category }
+  if (properties.category === 'building') {
+    if (properties.name !== undefined) compact.name = properties.name
+    if (properties.height !== undefined) compact.height = properties.height
+  }
+  if (properties.category === 'sport') {
+    if (properties.name !== undefined) compact.name = properties.name
+    if (properties.sport !== undefined) compact.sport = properties.sport
+    if (properties.osmTags !== undefined) compact.osmTags = {
+      ...(properties.osmTags.leisure !== undefined ? { leisure: properties.osmTags.leisure } : {}),
+      ...(properties.osmTags.sport !== undefined ? { sport: properties.osmTags.sport } : {}),
+    }
+  }
+  if (['road', 'path', 'rail', 'waterline'].includes(properties.category) && properties.routeKind !== undefined) compact.routeKind = properties.routeKind
+  return compact
+}
+
+function compactFeature(feature) {
+  return {
+    ...(feature.id !== undefined ? { id: feature.id } : {}),
+    properties: compactProperties(feature.properties),
+    geometry: compactGeometry(feature.geometry),
+  }
+}
+
 function boundsForFeature(feature) {
   return pointsForGeometry(feature.geometry).reduce((bounds, [longitude, latitude]) => ({
     minLongitude: Math.min(bounds.minLongitude, longitude),
@@ -72,7 +108,7 @@ const overview = {
   source: source.source,
   center: source.center,
   bbox: source.bbox,
-  features: source.features.filter(isOverviewFeature),
+  features: source.features.filter(isOverviewFeature).map(compactFeature),
 }
 fs.writeFileSync(path.join(outputDirectory, 'overview.json'), `${JSON.stringify(overview)}\n`)
 for (const cell of cells) {
@@ -89,8 +125,7 @@ for (const cell of cells) {
     source: source.source,
     center: source.center,
     bbox: source.bbox,
-    chunkBbox: [cellWest, cellSouth, cellEast, cellNorth],
-    features: cell.features,
+    features: cell.features.map(compactFeature),
   }
   fs.writeFileSync(path.join(outputDirectory, `${row}-${column}.json`), `${JSON.stringify(chunk)}\n`)
 }

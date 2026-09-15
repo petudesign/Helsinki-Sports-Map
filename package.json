@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 4180",
+    "dev": "vite --host localhost --port 4180",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check:data": "node tools/check-study-area.mjs",
@@ -15,20 +15,21 @@
     "check:lipas": "node tools/check-lipas-data.mjs",
     "check:lipas:classification": "node tools/check-lipas-classification.mjs",
     "data:lipas": "node tools/import-lipas.mjs",
+    "data:lipas:runtime": "node tools/build-lipas-runtime.mjs",
     "data:service-map": "node tools/import-service-map.mjs",
     "data:review-staging": "node tools/build-review-staging.mjs",
     "check:landmarks": "node tools/check-landmarks.mjs",
     "data:split-map": "node tools/split-map-data.mjs --source src/data/central-helsinki.json --output src/data/map-chunks/central-helsinki"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.2.2",
+    "typescript": "7.0.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7"
   }
 }

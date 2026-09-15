@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
 import data from '../src/data/lipas-helsinki.json' with { type: 'json' }
+import runtime from '../src/data/lipas-helsinki-runtime.json' with { type: 'json' }
 
 const sites = data.sites
 const excluded = /huoltorakennus|veneilyn palvelupaikka|kalastuskohde|pysäköinti|katsomo|opastuspiste|\binfo\b/i
 
 assert.ok(sites.length > 0, 'LIPAS snapshot is empty')
 assert.ok(sites.every((site) => site.name && site.type?.fi && site.type?.en), 'Every LIPAS site needs a Finnish and English source label')
+assert.deepEqual(runtime.sites.map((site) => site.id), sites.map((site) => site.id), 'LIPAS runtime data must contain the same sites as the source snapshot')
+assert.ok(runtime.sites.every((site) => site.geometry?.features?.[0]?.geometry), 'Every LIPAS runtime site needs a usable coordinate')
 function firstCoordinate(site) {
   const geometries = site.geometry?.features?.map(({ geometry }) => geometry) ?? []
   for (const geometry of geometries) {

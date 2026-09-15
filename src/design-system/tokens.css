@@ -64,4 +64,12 @@
   --hsm-space-6: 32px;
   --hsm-shadow-panel: 0 10px 26px rgba(35, 76, 90, .08);
   --hsm-shadow-floating: 0 12px 30px rgba(35, 76, 90, .16);
+
+  /* Motion: shared curves keep UI feedback crisp and cohesive. */
+  --hsm-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --hsm-ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --hsm-ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --hsm-duration-press: 160ms;
+  --hsm-duration-popover: 200ms;
+  --hsm-duration-panel: 240ms;
 }

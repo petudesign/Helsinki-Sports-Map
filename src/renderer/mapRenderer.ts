@@ -74,6 +74,73 @@ function drawBuilding(ctx: CanvasRenderingContext2D, building: BuildingFeature, 
   ctx.beginPath(); traceRing(ctx, top); ctx.fillStyle = theme.buildingTop; ctx.fill(); ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .8; ctx.stroke()
 }
 
+function focusHeight(feature: SportFeature) {
+  if (feature.facilityType === 'stadium') return 24
+  if (feature.facilityType === 'sports_centre') return 18
+  if (feature.facilityType === 'pitch') return 8
+  if (['swimming', 'ice_hockey'].includes(feature.sport)) return 15
+  return 10
+}
+
+function drawFocusedFeature(ctx: CanvasRenderingContext2D, feature: SportFeature, projector: ReturnType<typeof createProjector>, view: View, progress: number) {
+  const bottom = feature.rings[0]?.map(projector.point)
+  if (!bottom?.length) return
+  const projectedLift = projector.height(focusHeight(feature))
+  const schematicLift = feature.facilityType === 'pitch' ? 12 : 18
+  const lift = (view.mode === 'iso' ? Math.max(schematicLift, Math.min(52, projectedLift)) : projectedLift) * progress
+  const top = bottom.map((point) => ({ x: point.x, y: point.y - lift }))
+  const fill = feature.sport === 'swimming' ? '#65a9af' : '#ca7658'
+  const side = feature.sport === 'swimming' ? '#387f8b' : '#a84e3a'
+
+  ctx.save()
+  ctx.globalAlpha = .12 * Math.max(progress, .35)
+  ctx.fillStyle = '#8f3d2c'
+  ctx.beginPath(); ctx.ellipse(bottom.reduce((sum, point) => sum + point.x, 0) / bottom.length + 8, bottom.reduce((sum, point) => sum + point.y, 0) / bottom.length + 12, 34 + lift * .45, 15 + lift * .18, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.restore()
+
+  if (view.mode === '2d') {
+    ctx.save(); ctx.globalAlpha = .9; traceRing(ctx, bottom); ctx.fillStyle = 'rgba(196,95,70,.14)'; ctx.fill('evenodd'); ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.restore()
+    return
+  }
+
+  ctx.save()
+  ctx.globalAlpha = .92
+  for (let index = 0; index < bottom.length - 1; index++) {
+    const next = index + 1
+    ctx.beginPath(); traceRing(ctx, [bottom[index], bottom[next], top[next], top[index]])
+    ctx.fillStyle = bottom[next].x - bottom[index].x > 0 ? side : '#7e3e34'
+    ctx.fill(); ctx.strokeStyle = 'rgba(255,248,237,.7)'; ctx.lineWidth = .8; ctx.stroke()
+  }
+  ctx.beginPath(); traceRing(ctx, top); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 1.8; ctx.stroke()
+  ctx.globalAlpha = .9
+  ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = '#fff8ed'; ctx.beginPath(); traceRing(ctx, top); ctx.stroke(); ctx.setLineDash([])
+  ctx.restore()
+}
+
+function drawSelectionBeacon(ctx: CanvasRenderingContext2D, feature: SportFeature, projector: ReturnType<typeof createProjector>, view: View, height: number, progress: number) {
+  const center = centroid(feature.rings[0].map(projector.point))
+  const lift = projector.height(height) * progress
+  const top = { x: center.x, y: center.y - lift }
+
+  ctx.save()
+  ctx.globalAlpha = .16
+  ctx.fillStyle = '#b9543e'
+  ctx.beginPath(); ctx.ellipse(center.x + 7, center.y + 10, 22 + lift * .18, 9 + lift * .08, 0, 0, Math.PI * 2); ctx.fill()
+  if (view.mode === 'iso') {
+    ctx.globalAlpha = .86
+    ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 1.4
+    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(top.x, top.y - 5); ctx.stroke()
+    ctx.globalAlpha = .95
+    ctx.fillStyle = '#ca7658'; ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(top.x, top.y - 7); ctx.lineTo(top.x + 5, top.y - 2); ctx.lineTo(top.x, top.y + 3); ctx.lineTo(top.x - 5, top.y - 2); ctx.closePath(); ctx.fill(); ctx.stroke()
+  } else {
+    ctx.globalAlpha = .95
+    ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.arc(center.x, center.y, 9, 0, Math.PI * 2); ctx.stroke()
+  }
+  ctx.restore()
+}
+
 function drawTree(ctx: CanvasRenderingContext2D, point: ScreenPoint, index: number, view: View) {
   const size = (index % 3 === 0 ? 5.5 : 4.5) * Math.min(view.zoom, 1.35)
   ctx.beginPath(); ctx.ellipse(point.x + 3, point.y + 4, size * 1.2, size * .38, 0, 0, Math.PI * 2); ctx.fillStyle = theme.shadow; ctx.fill()
@@ -111,6 +178,7 @@ function drawMapLabels(ctx: CanvasRenderingContext2D, labels: MapLabel[], projec
 export type MapVisualState = {
   visibleSportIds?: ReadonlySet<string>
   selectedSportIds?: ReadonlySet<string>
+  selectionProgress?: number
   trendingEnabled?: boolean
   trendingSignals?: ReadonlyMap<string, TrendingSignal>
 }
@@ -132,6 +200,159 @@ function featureScreenCenter(feature: SportFeature, projector: ReturnType<typeof
 
 function featureMapCenter(feature: SportFeature) {
   return centroid(feature.rings[0])
+}
+
+function pointInMapRings(point: MapPoint, rings: MapPoint[][]) {
+  return Boolean(rings[0]?.length && pointInScreenRing(point, rings[0]) && rings.slice(1).every((ring) => !pointInScreenRing(point, ring)))
+}
+
+function mapDistance(a: MapPoint, b: MapPoint) {
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+function isOpenAirFeature(feature: SportFeature) {
+  return feature.facilityType === 'pitch' || /kentt|field|latu|trail|track|rata|tennis|padel|golf|ranta|puisto|ulko|ski/i.test(feature.name ?? '')
+}
+
+const selectedBuildingCache = new WeakMap<BuildingFeature[], Map<string, BuildingFeature | undefined>>()
+
+// Sports data can describe either the actual footprint (OSM polygons) or a
+// point-like LIPAS venue. Resolve the latter to a nearby building when it is
+// clearly an indoor place, so selection can focus the thing the user sees.
+function findSelectedBuilding(feature: SportFeature, buildings: BuildingFeature[]) {
+  let cache = selectedBuildingCache.get(buildings)
+  if (!cache) { cache = new Map(); selectedBuildingCache.set(buildings, cache) }
+  if (cache.has(feature.id)) return cache.get(feature.id)
+  const featureRing = feature.rings[0]
+  if (!featureRing?.length || !buildings.length) { cache.set(feature.id, undefined); return undefined }
+  const featureCenter = featureMapCenter(feature)
+  const selectedName = normalizedFeatureName(feature.name)
+  const openAir = isOpenAirFeature(feature)
+  const candidates = buildings.flatMap((building) => {
+    const ring = building.rings[0]
+    if (!ring?.length) return []
+    const center = centroid(ring)
+    const name = normalizedFeatureName(building.name)
+    const nameMatch = Boolean(selectedName && name && (selectedName === name || selectedName.includes(name) || name.includes(selectedName)))
+    const featureCenterInside = pointInMapRings(featureCenter, building.rings)
+    const buildingCenterInside = pointInMapRings(center, feature.rings)
+    const distance = mapDistance(featureCenter, center)
+    return [{ building, center, nameMatch, featureCenterInside, buildingCenterInside, distance }]
+  })
+  const contained = candidates
+    .filter(({ nameMatch, featureCenterInside, buildingCenterInside }) => nameMatch || featureCenterInside || buildingCenterInside)
+    .sort((a, b) => Number(b.nameMatch) - Number(a.nameMatch) || Number(b.featureCenterInside) - Number(a.featureCenterInside) || Number(b.buildingCenterInside) - Number(a.buildingCenterInside) || a.distance - b.distance)
+  if (contained[0]) { cache.set(feature.id, contained[0].building); return contained[0].building }
+  if (openAir) { cache.set(feature.id, undefined); return undefined }
+  const nearest = candidates.sort((a, b) => a.distance - b.distance).find(({ distance }) => distance <= 95)?.building
+  cache.set(feature.id, nearest)
+  return nearest
+}
+
+const relatedSportCache = new WeakMap<SportFeature[], Map<string, SportFeature | undefined>>()
+
+function findRelatedSportFeature(feature: SportFeature, candidates: SportFeature[] | undefined) {
+  if (!candidates?.length) return undefined
+  let cache = relatedSportCache.get(candidates)
+  if (!cache) { cache = new Map(); relatedSportCache.set(candidates, cache) }
+  if (cache.has(feature.id)) return cache.get(feature.id)
+  const selectedName = normalizedFeatureName(feature.name)
+  const selectedSports = new Set(feature.sports?.length ? feature.sports : [feature.sport])
+  const featureCenter = featureMapCenter(feature)
+  const matches = candidates.flatMap((candidate) => {
+    const ring = candidate.rings[0]
+    if (!ring?.length || candidate.id === feature.id) return []
+    const candidateName = normalizedFeatureName(candidate.name)
+    const nameMatch = Boolean(selectedName && candidateName && (selectedName === candidateName || selectedName.includes(candidateName) || candidateName.includes(selectedName)))
+    const sportMatch = selectedSports.has(candidate.sport) || (candidate.sports ?? []).some((sport) => selectedSports.has(sport))
+    const distance = mapDistance(featureCenter, featureMapCenter(candidate))
+    return [{ candidate, nameMatch, sportMatch, distance }]
+  })
+  const related = matches
+    .filter(({ nameMatch, sportMatch, distance }) => nameMatch || (sportMatch && distance <= 140))
+    .sort((a, b) => Number(b.nameMatch) - Number(a.nameMatch) || Number(b.sportMatch) - Number(a.sportMatch) || a.distance - b.distance)[0]?.candidate
+  cache.set(feature.id, related)
+  return related
+}
+
+function drawSelectedBuilding(ctx: CanvasRenderingContext2D, building: BuildingFeature, feature: SportFeature, projector: ReturnType<typeof createProjector>, view: View, progress: number) {
+  const bottom = building.rings[0]?.map(projector.point)
+  if (!bottom?.length || view.mode !== 'iso') return
+  const baseHeight = Math.max(7, Math.min(building.height, 28))
+  const projectedSelectionLift = projector.height(Math.max(11, Math.min(17, baseHeight * .78)))
+  // At overview scale real building heights collapse to a few pixels. Keep a
+  // modest schematic lift so the selected place reads as a selected volume,
+  // while still letting close zooms use the map's actual scale.
+  const selectionLift = Math.max(24, Math.min(52, projectedSelectionLift)) * progress
+  const elevation = projector.height(baseHeight) + selectionLift
+  const top = bottom.map((point) => ({ x: point.x, y: point.y - elevation }))
+  const topColor = feature.sport === 'swimming' ? '#65a9af' : '#d27d5d'
+  const sideColor = feature.sport === 'swimming' ? '#387f8b' : '#a84e3a'
+  const last = bottom[bottom.length - 1]
+  const edgeCount = last && bottom[0].x === last.x && bottom[0].y === last.y ? bottom.length - 1 : bottom.length
+  if (edgeCount < 3) return
+  const footprintCenter = centroid(bottom)
+  const footprintWidth = Math.max(...bottom.slice(0, edgeCount).map(({ x }) => x)) - Math.min(...bottom.slice(0, edgeCount).map(({ x }) => x))
+  const footprintHeight = Math.max(...bottom.slice(0, edgeCount).map(({ y }) => y)) - Math.min(...bottom.slice(0, edgeCount).map(({ y }) => y))
+
+  ctx.save()
+  ctx.globalAlpha = .15
+  ctx.fillStyle = sideColor
+  ctx.beginPath(); ctx.ellipse(footprintCenter.x + 9 * view.zoom, footprintCenter.y + 11 * view.zoom, Math.max(28, footprintWidth * .9), Math.max(13, footprintHeight * .8), 0, 0, Math.PI * 2); ctx.fill()
+  ctx.globalAlpha = .32
+  ctx.strokeStyle = topColor; ctx.lineWidth = 1; ctx.setLineDash([2, 4])
+  ctx.beginPath(); ctx.ellipse(footprintCenter.x + 6 * view.zoom, footprintCenter.y + 8 * view.zoom, Math.max(24, footprintWidth * 1.1), Math.max(11, footprintHeight * .9), 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([])
+  ctx.restore()
+
+  ctx.save()
+  ctx.globalAlpha = .96
+  ctx.shadowColor = 'rgba(150,62,42,.24)'
+  ctx.shadowBlur = 8
+  for (let index = 0; index < edgeCount; index++) {
+    const next = (index + 1) % edgeCount
+    ctx.beginPath(); traceRing(ctx, [bottom[index], bottom[next], top[next], top[index]])
+    ctx.fillStyle = bottom[next].x - bottom[index].x > 0 ? sideColor : '#7e3e34'
+    ctx.fill(); ctx.strokeStyle = 'rgba(255,248,237,.76)'; ctx.lineWidth = 1; ctx.stroke()
+  }
+  ctx.shadowBlur = 0
+  ctx.beginPath(); traceRing(ctx, top.slice(0, edgeCount)); ctx.fillStyle = topColor; ctx.fill(); ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 2.1; ctx.stroke()
+  ctx.globalAlpha = .8
+  ctx.setLineDash([5, 4]); ctx.lineWidth = 1; ctx.strokeStyle = '#fff8ed'; ctx.stroke(); ctx.setLineDash([])
+  ctx.restore()
+
+  const featureAnchor = featureScreenCenter(feature, projector)
+  const buildingAnchor = footprintCenter
+  const topAnchor = { x: buildingAnchor.x, y: buildingAnchor.y - elevation }
+  ctx.save()
+  ctx.globalAlpha = .88
+  ctx.setLineDash([3, 3])
+  ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 3.6
+  ctx.beginPath(); ctx.moveTo(featureAnchor.x, featureAnchor.y); ctx.lineTo(buildingAnchor.x, buildingAnchor.y); ctx.lineTo(topAnchor.x, topAnchor.y - 7); ctx.stroke()
+  ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 1.25
+  ctx.beginPath(); ctx.moveTo(featureAnchor.x, featureAnchor.y); ctx.lineTo(buildingAnchor.x, buildingAnchor.y); ctx.lineTo(topAnchor.x, topAnchor.y - 7); ctx.stroke(); ctx.setLineDash([])
+  ctx.fillStyle = topColor; ctx.strokeStyle = '#fff8ed'; ctx.lineWidth = 1.15
+  ctx.beginPath(); ctx.moveTo(topAnchor.x, topAnchor.y - 9); ctx.lineTo(topAnchor.x + 5, topAnchor.y - 4); ctx.lineTo(topAnchor.x, topAnchor.y + 1); ctx.lineTo(topAnchor.x - 5, topAnchor.y - 4); ctx.closePath(); ctx.fill(); ctx.stroke()
+  ctx.restore()
+}
+
+function normalizedFeatureName(name?: string) {
+  return (name ?? '').toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')
+}
+
+function landmarkMatch(selected: SportFeature, landmarks: { renderer: LandmarkRenderer; features: SportFeature[] }[]) {
+  const selectedName = normalizedFeatureName(selected.name)
+  return landmarks
+    .flatMap(({ renderer, features }) => features.map((feature) => ({ renderer, feature })))
+    .map((candidate) => {
+      const candidateName = normalizedFeatureName(candidate.feature.name)
+      const nameMatch = Boolean(selectedName && candidateName && selectedName.length > 3 && candidateName.length > 3 && (candidateName === selectedName || candidateName.endsWith(selectedName) || selectedName.endsWith(candidateName)))
+      const distance = selected.center && candidate.feature.center
+        ? Math.hypot((selected.center[0] - candidate.feature.center[0]) * 111_320, (selected.center[1] - candidate.feature.center[1]) * 111_320)
+        : Infinity
+      return { ...candidate, nameMatch, distance }
+    })
+    .filter(({ nameMatch, distance }) => nameMatch || distance < 180)
+    .sort((a, b) => Number(b.nameMatch) - Number(a.nameMatch) || a.distance - b.distance)[0]
 }
 
 function createMarkerClusters(features: SportFeature[], projector: ReturnType<typeof createProjector>, view: View, selectedIds: ReadonlySet<string> = new Set()) {
@@ -348,11 +569,18 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
   }
 
   if (hasSelection) {
-    const landmarkHeights = new Map(landmarks.flatMap(({ renderer, features }) => features.map(({ id }) => [id, renderer.selectionHeight ?? 0] as const)))
     visibleSports.filter(({ id }) => selectedIds.has(id)).forEach((feature) => {
-      const elevation = projector.height(landmarkHeights.get(feature.id) ?? 0)
-      const rings = feature.rings.map((ring) => ring.map((mapPoint) => { const point = projector.point(mapPoint); return { x: point.x, y: point.y - elevation } }))
+      const relatedFeature = findRelatedSportFeature(feature, area.osmSports)
+      const linkedLandmark = landmarkMatch(relatedFeature ?? feature, landmarks) ?? landmarkMatch(feature, landmarks)
+      const selectionFeature = linkedLandmark?.feature ?? relatedFeature ?? feature
+      const selectionHeight = linkedLandmark?.renderer.selectionHeight ?? 0
+      const selectedBuilding = !linkedLandmark && view.mode === 'iso' ? findSelectedBuilding(selectionFeature, area.buildings) : undefined
+      const elevation = projector.height(selectionHeight * (visualState.selectionProgress ?? 1))
+      const rings = selectionFeature.rings.map((ring) => ring.map((mapPoint) => { const point = projector.point(mapPoint); return { x: point.x, y: point.y - elevation } }))
       ctx.save(); ctx.shadowColor = 'rgba(150,62,42,.68)'; ctx.shadowBlur = 13; traceRings(ctx, rings); ctx.fillStyle = 'rgba(196,95,70,.12)'; ctx.fill('evenodd'); ctx.strokeStyle = '#903d2c'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore()
+      if (!linkedLandmark && selectedBuilding) drawSelectedBuilding(ctx, selectedBuilding, feature, projector, view, visualState.selectionProgress ?? 1)
+      else if (!linkedLandmark) drawFocusedFeature(ctx, selectionFeature, projector, view, visualState.selectionProgress ?? 1)
+      else drawSelectionBeacon(ctx, selectionFeature, projector, view, selectionHeight, visualState.selectionProgress ?? 1)
     })
   }
 

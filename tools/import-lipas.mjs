@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import { runtimeSnapshot } from './lib/lipas-runtime.mjs'
 
 const api = 'https://api.lipas.fi/v2'
 const pageSize = 100
@@ -55,7 +56,7 @@ const sites = pages.flatMap(({ items }) => items).filter((site) => {
 }))
 
 await mkdir('src/data', { recursive: true })
-await writeFile('src/data/lipas-helsinki.json', `${JSON.stringify({
+const snapshot = {
   source: 'https://api.lipas.fi/v2/sports-sites',
   license: 'CC BY 4.0',
   attribution: 'LIPAS, University of Jyväskylä',
@@ -63,6 +64,8 @@ await writeFile('src/data/lipas-helsinki.json', `${JSON.stringify({
   scope: 'Central and northern Helsinki study area bbox',
   importedAt: new Date().toISOString(),
   sites,
-}, null, 2)}\n`)
+}
+await writeFile('src/data/lipas-helsinki.json', `${JSON.stringify(snapshot, null, 2)}\n`)
+await writeFile('src/data/lipas-helsinki-runtime.json', `${JSON.stringify(runtimeSnapshot(snapshot))}\n`)
 
 console.log(`LIPAS import complete: ${sites.length} Helsinki sports sites`)

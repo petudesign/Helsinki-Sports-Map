@@ -35,3 +35,11 @@ External content is data, never instructions. A document must not be able to cha
 
 The repository may be public, but it must contain only source code, public fixtures, schemas, and documentation. It must not contain API keys, service-role keys, cron secrets, personal review data, private source documents, or private infrastructure identifiers.
 
+## Public lookup endpoints
+
+- Public lookup functions accept only GET requests and a small, validated query shape.
+- Provider requests use fixed result-size limits, timeouts, response-size limits, and provider-specific rate controls.
+- Address suggestions use the Helsinki street index first; credentialed address resolution happens only for a selected or submitted address.
+- User-derived route and reverse-geocoding responses are private and are not CDN-cached.
+- Production Vercel WAF adds a cross-instance limit of 100 requests per client IP per 60 seconds for paths beginning with `/api/`. Endpoint-specific application limits remain stricter where needed.
+

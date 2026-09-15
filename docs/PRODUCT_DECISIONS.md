@@ -14,6 +14,10 @@ Helsinki is the only city exposed to users for now. The data, labels, map config
 
 The normal map continues to show the available sports facilities. Trending is an optional, clearly recognizable layer that indicates what is popular now and what has only recently appeared on the list. It must not hide or replace ordinary facilities.
 
+### Trending values are preview-only until a measured signal exists
+
+The current Trending layer is a deterministic preview based on each feature ID. Its interest score and recent-change percentage are not derived from visitor counts, searches, clicks, bookings, or any other live usage data. The UI must label these values as preview data so illustrative numbers cannot be mistaken for product analytics. A future measured provider must define the event source, time window, aggregation, freshness, and privacy rules before replacing the preview provider.
+
 ### Failed demand is a future product signal
 
 Searches that produce no useful result are potentially valuable demand data: they can show that people are looking for an activity in an area where supply is missing. Failed-demand tracking is a later analytics feature and must be designed separately from trending, so neither signal is incorrectly treated as the other.
@@ -34,7 +38,7 @@ Named multi-facility complexes and parks can be grouped into one map point when 
 
 The product direction is to find facilities using actual walking, cycling, driving, and eventually public-transport routes. A future “within 20 minutes” search must use route-network travel time, not a radius calculated from aerial distance. Travel mode and estimated duration are part of the result context.
 
-Address lookup is scoped to the current Helsinki map chunk and automatically adds Helsinki context to short address queries. If the scoped lookup returns no result, a broader Finnish geocoder lookup is used as a fallback so a valid address is not rejected simply because the map chunk boundary or address formatting was too narrow.
+Address-like queries use the public Helsinki WFS street index for live street-name prefix suggestions, then resolve each candidate street to WGS84 coordinates through Helsinki Paikkatietohaku’s server-side proxy, keeping the API key out of the frontend bundle. Exact house-number queries go directly to Paikkatieto. The app automatically adds Helsinki context to short free-form queries and falls back to Nominatim when the configured providers are unavailable or return no result. Reverse geocoding remains on Nominatim because Paikkatietohaku is currently used here as an address lookup service.
 
 ### Map coverage is expanded in measured chunks
 

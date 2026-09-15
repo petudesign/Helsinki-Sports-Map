@@ -1,4 +1,4 @@
-import lipasSnapshot from './lipas-helsinki.json'
+import lipasSnapshot from './lipas-helsinki-runtime.json'
 import type { Bounds, GeoPoint, LipasVenue, MapPoint, PriceClass, SportFeature } from './types'
 import { normalizeExternalUrl } from './urls'
 

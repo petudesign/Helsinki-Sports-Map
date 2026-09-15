@@ -14,6 +14,8 @@ Location permission is requested only after the user presses the current-locatio
 
 The location feature must never be activated automatically on page load, and location data must never be added to analytics events or cookies.
 
+Typed address text is sent to the address lookup provider only when the user searches for suggestions or requests a route. The app does not store the text or include it in analytics.
+
 ## Analytics
 
 Analytics is optional and opt-in. It is intended only to understand aggregate interaction patterns and improve usability, for example whether people can find facilities, understand filters, and complete route searches.

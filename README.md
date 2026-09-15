@@ -100,6 +100,8 @@ Current sources and services include:
 - **OpenStreetMap ecosystem**
   - Nominatim for geocoding and reverse geocoding
   - OpenStreetMap-based routing for walking, cycling, and driving
+- **Helsinki Paikkatietohaku** — exact address lookup and geocoding through a server-side proxy when `PAIKKATIETO_API_KEY` is configured
+- **Helsinki WFS street index** — street-name prefix discovery for live address suggestions
 - Additional City of Helsinki data sources are being explored
 
 The data layer is intentionally kept separate from the UI so that additional sources, municipalities, and providers can be added later.
@@ -115,6 +117,8 @@ The data layer is intentionally kept separate from the UI so that additional sou
 - Chunked map datasets
 - LIPAS data import and validation scripts
 - Nominatim geocoding
+- Helsinki Paikkatieto address search
+- Helsinki WFS street-name prefix search
 - OpenStreetMap-based routing
 - Vercel
 
@@ -136,6 +140,10 @@ The repository currently contains dedicated modules for:
 - localization
 - privacy
 - data import and validation
+
+### Local API configuration
+
+The Helsinki Paikkatieto API key is intentionally kept out of the frontend bundle. Copy `.env.example` to `.env.local`, set `PAIKKATIETO_API_KEY`, and restart Vite. Vercel deployments should define the same variable in the project environment settings. Street-name prefix discovery comes from the public Helsinki WFS street index; a selected or submitted address is then resolved to WGS84 coordinates through Paikkatieto. Nominatim is used only as a bounded, user-triggered fallback for final geocoding and reverse geocoding, never for autocomplete.
 
 This keeps the product flexible enough to add new data providers or cities without tying the UI directly to one source.
 

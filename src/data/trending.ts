@@ -6,6 +6,7 @@ export type TrendingSignal = {
   interestScore: number
   recentChange: number
   stage: TrendingStage
+  source: 'preview' | 'measured'
 }
 
 export type TrendingProvider = (feature: SportFeature) => TrendingSignal
@@ -20,6 +21,5 @@ export function previewTrendingSignal(feature: SportFeature): TrendingSignal {
   const seed = [...feature.id].reduce((total, character) => total + character.charCodeAt(0), 0)
   const interestScore = 46 + (seed % 55)
   const recentChange = 6 + ((seed * 7) % 31)
-  return { interestScore, recentChange, stage: stageForSignal({ interestScore, recentChange }) }
+  return { interestScore, recentChange, stage: stageForSignal({ interestScore, recentChange }), source: 'preview' }
 }
-

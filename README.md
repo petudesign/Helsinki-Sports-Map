@@ -32,7 +32,7 @@ The long-term goal is to make the underlying system reusable beyond Helsinki as 
 - Optional current-location lookup
 - Walking, cycling, and driving routes
 - Travel time and distance estimates
-- Finnish and English localization
+- Finnish, English and simplified Chinese localization
 - Keyboard-accessible facility list
 - Privacy controls for analytics
 - Public sports facility data from LIPAS

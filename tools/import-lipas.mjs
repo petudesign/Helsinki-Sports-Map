@@ -3,7 +3,9 @@ import { runtimeSnapshot } from './lib/lipas-runtime.mjs'
 
 const api = 'https://api.lipas.fi/v2'
 const pageSize = 100
-const studyAreaBbox = { west: 24.88, south: 60.165, east: 24.98, north: 60.28 }
+const [westArg = '24.88', southArg = '60.165', eastArg = '24.98', northArg = '60.28', outputPath = 'src/data/lipas-helsinki.json', runtimeOutputPath = 'src/data/lipas-helsinki-runtime.json'] = process.argv.slice(2)
+const studyAreaBbox = { west: Number(westArg), south: Number(southArg), east: Number(eastArg), north: Number(northArg) }
+if (!Object.values(studyAreaBbox).every(Number.isFinite) || !(studyAreaBbox.west < studyAreaBbox.east && studyAreaBbox.south < studyAreaBbox.north)) throw new Error('Usage: node tools/import-lipas.mjs <west> <south> <east> <north> [output] [runtime-output]')
 
 async function getJson(path) {
   const response = await fetch(`${api}${path}`)
@@ -56,16 +58,18 @@ const sites = pages.flatMap(({ items }) => items).filter((site) => {
 }))
 
 await mkdir('src/data', { recursive: true })
+await mkdir(outputPath.includes('/') ? outputPath.slice(0, outputPath.lastIndexOf('/')) : '.', { recursive: true })
+await mkdir(runtimeOutputPath.includes('/') ? runtimeOutputPath.slice(0, runtimeOutputPath.lastIndexOf('/')) : '.', { recursive: true })
 const snapshot = {
   source: 'https://api.lipas.fi/v2/sports-sites',
   license: 'CC BY 4.0',
   attribution: 'LIPAS, University of Jyväskylä',
   cityCode: 91,
-  scope: 'Central and northern Helsinki study area bbox',
+  scope: `Helsinki sports map study area bbox ${Object.values(studyAreaBbox).join(',')}`,
   importedAt: new Date().toISOString(),
   sites,
 }
-await writeFile('src/data/lipas-helsinki.json', `${JSON.stringify(snapshot, null, 2)}\n`)
-await writeFile('src/data/lipas-helsinki-runtime.json', `${JSON.stringify(runtimeSnapshot(snapshot))}\n`)
+await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`)
+await writeFile(runtimeOutputPath, `${JSON.stringify(runtimeSnapshot(snapshot))}\n`)
 
 console.log(`LIPAS import complete: ${sites.length} Helsinki sports sites`)

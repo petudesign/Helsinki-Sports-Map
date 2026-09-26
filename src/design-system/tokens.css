@@ -9,31 +9,35 @@
   color-scheme: light;
 
   /* Typography */
-  --hsm-font-body: Manrope, system-ui, sans-serif;
-  --hsm-font-mono: 'DM Mono', ui-monospace, monospace;
+  --hsm-font-body: Satoshi, system-ui, sans-serif;
+  --hsm-font-mono: Satoshi, system-ui, sans-serif;
   --hsm-font-size-label: .58rem;
   --hsm-font-size-caption: .68rem;
   --hsm-font-size-body: .76rem;
 
   /* Core palette */
-  --hsm-color-page: #f0ede6;
-  --hsm-color-surface: #fffdf9;
-  --hsm-color-surface-muted: #f8f4ed;
-  --hsm-color-surface-soft: #e7eff0;
-  --hsm-color-ink: #18324a;
-  --hsm-color-ink-muted: #526b7b;
-  --hsm-color-ink-subtle: #617786;
-  --hsm-color-border: #b8c9cc;
-  --hsm-color-border-soft: #c3d0d1;
-  --hsm-color-border-subtle: #d4cabe;
+  --hsm-color-page: #f7faf6;
+  --hsm-color-surface: #ffffff;
+  --hsm-color-surface-muted: #f1f4ef;
+  --hsm-color-surface-soft: #e8f0e9;
+  --hsm-color-ink: #243129;
+  --hsm-color-ink-muted: #526057;
+  --hsm-color-ink-subtle: #66736a;
+  --hsm-color-border: #cbd6cd;
+  --hsm-color-border-soft: #d7e0d8;
+  --hsm-color-border-subtle: #e1e7e1;
 
   /* Brand and semantic states */
+  --hsm-color-brand: #0755a0;
+  --hsm-color-brand-dark: #043d7c;
+  --hsm-color-brand-soft: #e7f2fb;
   --hsm-color-accent: #b9543e;
   --hsm-color-accent-dark: #a84c38;
-  --hsm-color-accent-soft: #f4e5db;
-  --hsm-color-teal: #176b7b;
-  --hsm-color-teal-dark: #15586a;
-  --hsm-color-teal-soft: #dceced;
+  --hsm-color-accent-soft: #f8ebe5;
+  /* Legacy token names kept as aliases while the primary UI adopts logo blue. */
+  --hsm-color-teal: var(--hsm-color-brand);
+  --hsm-color-teal-dark: var(--hsm-color-brand-dark);
+  --hsm-color-teal-soft: var(--hsm-color-brand-soft);
   --hsm-color-success: #2f654f;
   --hsm-color-success-soft: #e6efe4;
   --hsm-color-success-border: #b9ccbb;
@@ -43,7 +47,7 @@
   --hsm-color-warning: #816326;
   --hsm-color-warning-soft: #eee2c9;
   --hsm-color-warning-border: #d5be8c;
-  --hsm-color-focus: #18324a;
+  --hsm-color-focus: var(--hsm-color-brand-dark);
 
   /* Map canvas roles. The renderer mirrors these values in its TypeScript theme
      because an OffscreenCanvas cannot resolve CSS custom properties. */

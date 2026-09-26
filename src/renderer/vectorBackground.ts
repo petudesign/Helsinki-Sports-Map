@@ -6,9 +6,9 @@ import { editorialTheme as theme } from './theme'
 type Shape = { path: Path2D; bounds: Bounds }
 type Batch = Shape & { members: Bounds[] }
 type Prepared = {
-  surfaces: { shape: Shape; kind: MapDataset['surfaces'][number]['kind'] }[]
-  routes: { shape: Shape; kind: RouteFeature['kind'] }[]
-  buildings: Shape[]
+  surfaces: { shape: Shape; kind: MapDataset['surfaces'][number]['kind']; context: boolean }[]
+  routes: { shape: Shape; kind: RouteFeature['kind']; context: boolean }[]
+  buildings: { shape: Shape; context: boolean }[]
 }
 const cache = new WeakMap<MapDataset, Map<LandmarkRenderer[], Prepared>>()
 
@@ -54,17 +54,17 @@ function prepare(area: MapDataset, renderers: LandmarkRenderer[]) {
   const buildings = new Map<string, Batch>()
   for (const building of area.buildings) {
     if (!landmarks.some(({ renderer, features }) => features.length && renderer.suppressBuilding?.(building, features))) {
-      addBatch(buildings, 'building', makeShape(building.rings, true), true)
+      addBatch(buildings, `${building.context ? 'context' : 'helsinki'}:building`, makeShape(building.rings, true), true)
     }
   }
   const routes = new Map<string, Batch>()
-  for (const route of area.routes) addBatch(routes, route.kind, makeShape([route.points], false))
+  for (const route of area.routes) addBatch(routes, `${route.context ? 'context' : 'helsinki'}:${route.kind}`, makeShape([route.points], false))
   const surfaces = new Map<string, Batch>()
-  for (const surface of area.surfaces) addBatch(surfaces, surface.kind, makeShape(surface.rings, true), true)
+  for (const surface of area.surfaces) addBatch(surfaces, `${surface.context ? 'context' : 'helsinki'}:${surface.kind}`, makeShape(surface.rings, true), true)
   const result: Prepared = {
-    surfaces: [...surfaces].map(([key, shape]) => ({ kind: key.split(':')[0] as MapDataset['surfaces'][number]['kind'], shape })),
-    routes: [...routes].map(([key, shape]) => ({ kind: key.split(':')[0] as RouteFeature['kind'], shape })),
-    buildings: [...buildings.values()],
+    surfaces: [...surfaces].map(([key, shape]) => ({ context: key.startsWith('context:'), kind: key.split(':')[1] as MapDataset['surfaces'][number]['kind'], shape })),
+    routes: [...routes].map(([key, shape]) => ({ context: key.startsWith('context:'), kind: key.split(':')[1] as RouteFeature['kind'], shape })),
+    buildings: [...buildings].map(([key, shape]) => ({ context: key.startsWith('context:'), shape })),
   }
   variants.set(renderers, result)
   return result
@@ -83,36 +83,36 @@ export function drawVectorBackground(ctx: CanvasRenderingContext2D, area: MapDat
   // The context transforms vectors directly; widths and dashes stay in screen pixels.
   for (const kind of ['water', 'urban', 'green'] as const) {
     ctx.globalAlpha = kind === 'water' ? selected ? .6 : 1 : selected ? .52 : .82
-    ctx.fillStyle = kind === 'water' ? theme.water : kind === 'urban' ? theme.urban : theme.green
-    ctx.strokeStyle = kind === 'water' ? theme.waterLine : kind === 'urban' ? theme.urbanEdge : theme.greenEdge
     ctx.lineWidth = (kind === 'water' ? 1 : kind === 'urban' ? .45 : .55) / scale
     for (const feature of prepared.surfaces) {
       if (feature.kind !== kind || !visible(feature.shape)) continue
+      ctx.fillStyle = feature.context ? kind === 'water' ? theme.contextWater : kind === 'urban' ? theme.contextUrban : theme.contextGreen : kind === 'water' ? theme.water : kind === 'urban' ? theme.urban : theme.green
+      ctx.strokeStyle = feature.context ? kind === 'water' ? theme.contextWaterLine : kind === 'urban' ? theme.contextUrbanEdge : theme.contextGreenEdge : kind === 'water' ? theme.waterLine : kind === 'urban' ? theme.urbanEdge : theme.greenEdge
       ctx.fill(feature.shape.path, 'evenodd'); ctx.stroke(feature.shape.path)
     }
   }
   ctx.globalAlpha = selected ? .34 : .58
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  for (const { shape, kind } of prepared.routes) {
+  for (const { shape, kind, context } of prepared.routes) {
     if (!visible(shape)) continue
     const stroke = (color: string, width: number, dash: number[] = []) => {
       ctx.strokeStyle = color; ctx.lineWidth = width / scale
       ctx.setLineDash(dash.map(value => value / scale)); ctx.stroke(shape.path)
     }
-    if (kind === 'rail') { stroke(theme.rail, 2.2); stroke(theme.railTie, .8, [1, 7]) }
-    else if (kind === 'waterline') stroke(theme.waterline, 2, [7, 5])
-    else if (kind === 'path') stroke(theme.path, .8, [3, 4])
+    if (kind === 'rail') { stroke(context ? theme.contextRail : theme.rail, 2.2); stroke(context ? theme.contextRailTie : theme.railTie, .8, [1, 7]) }
+    else if (kind === 'waterline') stroke(context ? theme.contextWaterline : theme.waterline, 2, [7, 5])
+    else if (kind === 'path') stroke(context ? theme.contextPath : theme.path, .8, [3, 4])
     else {
       const widths = kind === 'major' ? [6.5, 4.4] : kind === 'street' ? [4.5, 2.8] : [2.8, 1.5]
-      stroke(theme.roadEdge, widths[0]); stroke(theme.road, widths[1])
+      stroke(context ? theme.contextRoadEdge : theme.roadEdge, widths[0]); stroke(context ? theme.contextRoad : theme.road, widths[1])
     }
   }
   ctx.setLineDash([])
   ctx.lineCap = 'butt'; ctx.lineJoin = 'miter'
   ctx.globalAlpha = selected ? .28 : .52
-  ctx.fillStyle = theme.buildingTop; ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .7 / scale
-  for (const shape of prepared.buildings) {
+  for (const { shape, context } of prepared.buildings) {
     if (!visible(shape)) continue
+    ctx.fillStyle = context ? theme.contextBuildingTop : theme.buildingTop; ctx.strokeStyle = context ? theme.contextBuildingOutline : theme.buildingOutline; ctx.lineWidth = .7 / scale
     ctx.fill(shape.path, 'evenodd'); ctx.stroke(shape.path)
   }
   ctx.restore()

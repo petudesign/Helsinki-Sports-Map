@@ -24,6 +24,23 @@ export const editorialTheme = {
   ink: hsmCanvasTheme.ink,
   tree: '#5f856e',
   treeLight: '#7ea184',
+  contextWater: '#d7d9d5',
+  contextWaterLine: '#9ba4a3',
+  contextRail: '#9a9f9d',
+  contextRailTie: 'rgba(94, 101, 100, .25)',
+  contextWaterline: '#a2aaa7',
+  contextGreen: '#d2d4ce',
+  contextGreenEdge: 'rgba(112, 119, 113, .2)',
+  contextUrban: '#d7d9d5',
+  contextUrbanEdge: 'rgba(112, 119, 119, .18)',
+  contextBuildingTop: '#c9ccca',
+  contextBuildingSide: '#b6bbb8',
+  contextBuildingSideDark: '#a4aaa7',
+  contextBuildingOutline: 'rgba(85, 94, 94, .32)',
+  contextShadow: 'rgba(69, 61, 54, .06)',
+  contextRoad: '#bfc2bf',
+  contextRoadEdge: '#a2aaa7',
+  contextPath: 'rgba(110, 118, 116, .32)',
 }
 
 export const sportStyles: Record<string, { fill: string; stroke: string; marking: string }> = {

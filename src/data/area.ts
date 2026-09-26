@@ -3,6 +3,7 @@ import type { Bounds, GeoJsonFeature, GeoPoint, MapChunkManifest, MapDataset, Ma
 import { createProjector, toLocalMetres } from '../renderer/projection'
 import { venueProfile } from './venueLinks'
 import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
+import { transitDirectionsUrl } from '../routing'
 
 function estimatedHeight(id: string, explicitHeight?: number) {
   if (explicitHeight) return Math.max(5, Math.min(explicitHeight, 48))
@@ -49,13 +50,17 @@ function mergeVenueSources(lipasVenues: SportsVenue[], osmVenues: SportsVenue[])
   return [...venues.values()]
 }
 
+function needsTransitGuidance(name?: string, address?: string) {
+  return /saari|saarella|saaren|suomenlinna|pihlajasaari|vallisaari|lonna|isosaari|mustasaari|korkeasaari|seurasaari/i.test(`${name ?? ''} ${address ?? ''}`)
+}
+
 export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   const [west, south, east, north] = geojson.bbox
   const project = (point: GeoPoint) => toLocalMetres(point, geojson.center)
   const southWest = project([west, south])
   const northEast = project([east, north])
   const sports: SportFeature[] = geojson.features.flatMap((feature) => {
-    if (feature.properties.category !== 'sport' || feature.geometry.type !== 'Polygon') return []
+    if (feature.properties.category !== 'sport' || feature.properties.context === 'neighboring' || feature.geometry.type !== 'Polygon') return []
     const facilityType = feature.properties.osmTags?.leisure
     const sourceSports = feature.properties.osmTags?.sport?.split(';').map((value) => value.trim()).filter((value) => value && !['multi', 'sports_centre'].includes(value)) ?? []
     const rawSport = feature.properties.sport && !['multi', 'sports_centre'].includes(feature.properties.sport) ? feature.properties.sport : undefined
@@ -81,19 +86,31 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
     }
   })
   const lipas = createLipasFeatures(project)
+  const featuresById = new Map(lipas.features.map((feature) => [feature.id, feature]))
   const lipasVenues: SportsVenue[] = lipas.venues.map(({ id, venue }) => {
+    const feature = featuresById.get(id)
     const serviceMap = serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id)
     return {
       id,
       name: venue.name,
-      sports: lipas.features.find((feature) => feature.id === id)?.sports ?? [],
+      sports: feature?.sports ?? [],
       facilityType: venue.typeName,
       geometry: { rings: [], bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } },
       source: { provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}` },
       provenance: { sources: [{ provider: 'lipas', id: String(venue.id), url: `https://api.lipas.fi/v2/sports-sites/${venue.id}`, updatedAt: venue.updatedAt }] },
       officialUrl: venue.website,
       sourceUrl: `https://api.lipas.fi/v2/sports-sites/${venue.id}`,
-      lipas: { ...venue, priceClass: serviceMap?.priceClass ?? venue.priceClass, accessStatus: serviceMap?.usageStatus ?? venue.accessStatus, ...accessProfileForUrl(venue.website) },
+      lipas: {
+        ...venue,
+        priceClass: serviceMap?.priceClass ?? venue.priceClass,
+        accessStatus: serviceMap?.usageStatus ?? venue.accessStatus,
+        ...accessProfileForUrl(venue.website),
+        ...(feature?.center && needsTransitGuidance(venue.name, venue.address) ? {
+          accessNoteFi: 'Kohde on saarella tai saaren tuntumassa. Tarkista ajantasainen julkisen liikenteen tai lautan yhteys ennen lähtöä.',
+          accessNoteEn: 'This place is on or near an island. Check the current public-transport or ferry connection before leaving.',
+          accessSourceUrl: transitDirectionsUrl(feature.center),
+        } : {}),
+      },
       serviceMap,
     }
   })
@@ -110,18 +127,18 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   surfaces: geojson.features.flatMap((feature) => {
     if (!['green', 'urban', 'water'].includes(feature.properties.category) || feature.geometry.type !== 'Polygon') return []
     const rings = feature.geometry.coordinates.map((ring) => ring.map(project))
-    return [{ id: feature.id ?? 'surface', kind: feature.properties.category as 'green' | 'urban' | 'water', rings, bounds: boundsOfRings(rings) }]
+    return [{ id: feature.id ?? 'surface', kind: feature.properties.category as 'green' | 'urban' | 'water', rings, bounds: boundsOfRings(rings), context: feature.properties.context }]
   }),
   buildings: geojson.features.flatMap((feature) => {
     if (feature.properties.category !== 'building' || feature.geometry.type !== 'Polygon') return []
     const id = feature.id ?? 'building'
     const rings = feature.geometry.coordinates.map((ring) => ring.map(project))
-    return [{ id, name: feature.properties.name, height: estimatedHeight(id, feature.properties.height), rings, bounds: boundsOfRings(rings) }]
+    return [{ id, name: feature.properties.name, height: estimatedHeight(id, feature.properties.height), rings, bounds: boundsOfRings(rings), context: feature.properties.context }]
   }),
   routes: geojson.features.flatMap((feature) => {
     if (!['road', 'path', 'rail', 'waterline'].includes(feature.properties.category) || feature.geometry.type !== 'LineString') return []
     const points = feature.geometry.coordinates.map(project)
-    return [{ id: feature.id ?? 'route', kind: feature.properties.category === 'path' ? 'path' as const : feature.properties.routeKind ?? 'local', points, bounds: boundsOf(points) }]
+    return [{ id: feature.id ?? 'route', kind: feature.properties.category === 'path' ? 'path' as const : feature.properties.routeKind ?? 'local', points, bounds: boundsOf(points), context: feature.properties.context }]
   }),
   sports: enrichedSports,
   osmSports: sports,

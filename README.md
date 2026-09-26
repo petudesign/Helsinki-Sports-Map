@@ -25,7 +25,8 @@ The long-term goal is to make the underlying system reusable beyond Helsinki as 
 
 ## Current features
 
-- 2D and isometric map views
+- MapLibre vector map with 2D and tilted views
+- Native pinch zoom, touch panning and clustered facility markers
 - Sports facility browsing
 - Sport and facility filtering
 - Address search
@@ -36,7 +37,9 @@ The long-term goal is to make the underlying system reusable beyond Helsinki as 
 - Keyboard-accessible facility list
 - Privacy controls for analytics
 - Public sports facility data from LIPAS
-- Custom map rendering and chunked map data
+- Viewport-based vector tiles and a separately loaded facility dataset
+
+Map configuration and data regeneration: [map engine notes](docs/map-engine.md).
 
 ## Current status
 
@@ -111,10 +114,9 @@ The data layer is intentionally kept separate from the UI so that additional sou
 - React
 - TypeScript
 - Vite
-- HTML Canvas 2D
-- Custom 2D and isometric map rendering
-- Custom geographic projection layer
-- Chunked map datasets
+- MapLibre GL JS / WebGL vector map
+- OpenFreeMap basemap tiles (configurable style URL)
+- Clustered GeoJSON facilities and a separate route layer
 - LIPAS data import and validation scripts
 - Nominatim geocoding
 - Helsinki Paikkatieto address search
@@ -122,7 +124,7 @@ The data layer is intentionally kept separate from the UI so that additional sou
 - OpenStreetMap-based routing
 - Vercel
 
-The project does not currently use Leaflet as its map renderer. The map is drawn through a custom Canvas-based renderer so that the same normalized geographic data can support both the 2D and isometric views while each view retains control over its own projection and visual treatment.
+The main map uses MapLibre for native touch gestures, zoom-dependent vector tiles and worker-based clustering. The previous custom Canvas renderer remains in the repository for reference but is not loaded by the application. The tilted view uses the same map instance as the 2D view.
 
 ## Architecture
 

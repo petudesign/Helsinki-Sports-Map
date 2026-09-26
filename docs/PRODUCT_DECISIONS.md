@@ -42,7 +42,7 @@ Address-like queries use the public Helsinki WFS street index for live street-na
 
 ### Map coverage is expanded in measured chunks
 
-The first map release covered only the Olympic Stadium and adjacent central area. The current expanded chunk covers longitudes 24.88–24.98 and latitudes 60.165–60.28, extending the map north through Pasila, Käpylä, Oulunkylä, Maunula, and Pakila. OSM geometry and LIPAS facilities use the same bounding box. The chunked runtime starts with a lightweight overview and loads visible detail chunks as the user explores. The current expanded view exposes 652 rendered sports areas; Lauttasaari and eastern Helsinki remain separate future expansion areas so the map does not become one oversized initial payload.
+The first map release covered only the Olympic Stadium and adjacent central area. The current expanded chunk covers Lauttasaari together with the central, northern and northeast districts inside longitudes 24.76–25.00 and latitudes 60.12–60.30. OSM geometry and LIPAS facilities use the same bounding box. The chunked runtime starts with a lightweight overview and loads visible detail chunks as the user explores; detail data is split into 8×8 spatial chunks and the loader retains only a bounded set of assembled viewport datasets so the wider map does not become one oversized interaction payload.
 
 ### Localization is a product capability, not a one-off translation
 
@@ -103,7 +103,15 @@ The map uses two levels of orientation labels. Larger districts remain visible a
 
 ### Map geometry is prepared for spatial chunking
 
-The Helsinki base map is split into a 4×4 set of spatial GeoJSON chunks, with a separate lightweight overview geometry. Features crossing a chunk boundary are included in each relevant chunk, and the runtime deduplicates features when assembling the current dataset. The app starts with the overview, then requests only the visible detail chunk plus a small neighboring preload area after zooming, panning, or switching projection. LIPAS facilities remain available across the full current area so counts and filters do not flicker while background geometry is loading.
+The Helsinki base map is split into an 8×8 set of spatial GeoJSON chunks, with a separate lightweight overview geometry. Features crossing a chunk boundary are included in each relevant chunk, and the runtime deduplicates features when assembling the current dataset. The app starts with the overview, then requests only the visible detail chunk plus a small neighboring preload area after zooming, panning, or switching projection. LIPAS facilities remain available across the full current area so counts and filters do not flicker while background geometry is loading.
+
+### Helsinki boundary and neighboring context
+
+The map uses the OpenStreetMap Helsinki municipality boundary to classify base-map geometry. Helsinki sports facilities remain the only searchable/listed facilities, while buildings, roads, parks, water and rail geometry outside Helsinki is retained as a muted neighboring context. This keeps places such as Keilaniemi visible for orientation without presenting them as Helsinki facilities or using the same visual weight as the city itself.
+
+### Islands need an explicit arrival path
+
+A walking, cycling, or driving route alone is not enough for a tourist planning an island visit. For island and near-island facilities, the detail card explains that the connection may involve public transport or a ferry and opens a destination-specific public-transport directions link. The app does not claim a ferry schedule or availability; the external route planner remains the current source for live connections.
 
 ### Chunk generation and loading are city-configurable
 

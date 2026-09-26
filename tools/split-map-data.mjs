@@ -33,6 +33,7 @@ function compactGeometry(geometry) {
 
 function compactProperties(properties) {
   const compact = { category: properties.category }
+  if (properties.context !== undefined) compact.context = properties.context
   if (properties.category === 'building') {
     if (properties.name !== undefined) compact.name = properties.name
     if (properties.height !== undefined) compact.height = properties.height

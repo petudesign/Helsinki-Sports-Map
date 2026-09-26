@@ -8,6 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check:data": "node tools/check-study-area.mjs",
+    "check:map": "node tools/check-map-migration.mjs",
+    "check:routing": "node tools/check-routing.mjs",
+    "check:transit": "node tools/check-transit-route.mjs",
+    "data:venue-map": "node tools/build-venue-map.mjs",
     "check:expanded-map": "node tools/check-expanded-map.mjs",
     "check:venues": "node tools/check-venue-data.mjs",
     "check:service-map": "node tools/check-service-map.mjs",
@@ -15,6 +19,7 @@
     "check:lipas": "node tools/check-lipas-data.mjs",
     "check:lipas:classification": "node tools/check-lipas-classification.mjs",
     "data:lipas": "node tools/import-lipas.mjs",
+    "data:classify-boundary": "node tools/classify-map-boundary.mjs",
     "data:lipas:runtime": "node tools/build-lipas-runtime.mjs",
     "data:service-map": "node tools/import-service-map.mjs",
     "data:review-staging": "node tools/build-review-staging.mjs",
@@ -22,11 +27,13 @@
     "data:split-map": "node tools/split-map-data.mjs --source src/data/central-helsinki.json --output src/data/map-chunks/central-helsinki"
   },
   "dependencies": {
+    "@remixicon/react": "^4.9.0",
     "@vitejs/plugin-react": "6.1.1",
-    "vite": "8.2.2",
-    "typescript": "7.0.2",
+    "maplibre-gl": "^6.11.2",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
   },
   "devDependencies": {
     "@types/react": "19.2.18",

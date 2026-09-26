@@ -44,5 +44,5 @@ export function drawVolume(ctx: CanvasRenderingContext2D, ring: MapPoint[], heig
 
 export function drawMapLabel(ctx: CanvasRenderingContext2D, point: MapPoint, projector: Projector, text: string, elevation = 0) {
   const screen = projector.point(point); const y = screen.y - elevation
-  ctx.font = '600 8px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(237,232,223,.94)'; ctx.strokeText(text, screen.x, y); ctx.fillStyle = '#2f3330'; ctx.fillText(text, screen.x, y)
+  ctx.font = '600 8px Satoshi, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(237,232,223,.94)'; ctx.strokeText(text, screen.x, y); ctx.fillStyle = '#2f3330'; ctx.fillText(text, screen.x, y)
 }

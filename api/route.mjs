@@ -39,7 +39,7 @@ export default async function handler(request, response) {
   const origin = [originLng.value, originLat.value]
   const destination = [destinationLng.value, destinationLat.value]
   if (distanceMetres(origin, destination) > MAX_ROUTE_DISTANCE_METRES) {
-    response.status(400).json({ error: 'Route is outside the supported area' })
+    response.status(400).json({ error: 'route_outside_supported_area' })
     return
   }
 
@@ -58,7 +58,7 @@ export default async function handler(request, response) {
       return
     }
     if (!upstream.ok) {
-      response.status(502).json({ error: 'Routing service request failed' })
+      response.status(502).json({ error: 'routing_service_unavailable' })
       return
     }
     response.status(200)
@@ -66,6 +66,6 @@ export default async function handler(request, response) {
     response.setHeader('Content-Type', 'application/json')
     response.send(body)
   } catch {
-    response.status(502).json({ error: 'Routing service request failed' })
+    response.status(502).json({ error: 'routing_service_unavailable' })
   }
 }

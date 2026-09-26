@@ -1,23 +1,88 @@
 import type { GeoPoint } from './data/types'
 
 export type TravelMode = 'walk' | 'bike' | 'transit' | 'car'
+export type TransitLeg = {
+  mode: string
+  routeName?: string
+  headsign?: string
+  from?: string
+  to?: string
+  fromCoordinates?: GeoPoint
+  toCoordinates?: GeoPoint
+  durationSeconds: number
+  zones: string[]
+}
+export type TransitDetails = {
+  zones: string[]
+  legs: TransitLeg[]
+  transfers: number
+  walkDurationSeconds: number
+}
 export type RouteResult = {
-  mode: Exclude<TravelMode, 'transit'>
+  mode: TravelMode
   origin: GeoPoint
   destination: GeoPoint
   coordinates: GeoPoint[]
   distanceMetres: number
   durationSeconds: number
+  transit?: TransitDetails
 }
 
 export type AddressSuggestion = { label: string; coordinates?: GeoPoint; streetName?: string }
+
+export type RouteFailureCode = 'unavailable' | 'no-route' | 'outside-area' | 'invalid'
+
+export class RouteRequestError extends Error {
+  readonly code: RouteFailureCode
+
+  constructor(code: RouteFailureCode) {
+    super(code)
+    this.name = 'RouteRequestError'
+    this.code = code
+  }
+}
 
 const PAIKKATIETO_ADDRESS_PROXY = '/api/paikkatieto'
 const HELSINKI_STREET_PROXY = '/api/helsinki-streets'
 const GEOCODE_PROXY = '/api/geocode'
 const REVERSE_GEOCODE_PROXY = '/api/reverse-geocode'
 const ROUTE_PROXY = '/api/route'
+const TRANSIT_ROUTE_PROXY = '/api/transit-route'
 const MAX_STREET_SUGGESTIONS = 8
+
+class HttpRequestError extends Error {
+  readonly status: number
+  readonly responseError?: string
+
+  constructor(status: number, responseError?: string) {
+    super(`Request failed (${status})`)
+    this.name = 'HttpRequestError'
+    this.status = status
+    this.responseError = responseError
+  }
+}
+
+// Bound both the request and JSON body read. A disconnected local proxy must not
+// leave autocomplete or routing waiting forever. Preserve caller cancellation.
+async function requestJson<T>(url: string, signal?: AbortSignal, timeoutMs = 10_000, init: RequestInit = {}): Promise<T> {
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  if (signal?.aborted) abort()
+  else signal?.addEventListener('abort', abort, { once: true })
+  const timeout = setTimeout(abort, timeoutMs)
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal, headers: { Accept: 'application/json', ...(init.headers ?? {}) } })
+    if (!response.ok) {
+      let responseError: string | undefined
+      try { responseError = (await response.json() as { error?: string }).error } catch { /* Keep the HTTP status as the useful error. */ }
+      throw new HttpRequestError(response.status, responseError)
+    }
+    return await response.json() as T
+  } finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener('abort', abort)
+  }
+}
 
 type LocalizedValue = string | Record<string, string> | null | undefined
 type PaikkatietoAddress = {
@@ -132,9 +197,7 @@ async function searchPaikkatieto(query: string, signal?: AbortSignal): Promise<A
   if (!parsed.streetname) return []
   const params = new URLSearchParams({ municipality: 'Helsinki', page_size: '25', streetname: parsed.streetname })
   if (parsed.streetnumber) params.set('streetnumber', parsed.streetnumber)
-  const response = await fetch(`${PAIKKATIETO_ADDRESS_PROXY}?${params}`, { signal, headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error('Paikkatieto address request failed')
-  const result = await response.json() as { results?: PaikkatietoAddress[] }
+  const result = await requestJson<{ results?: PaikkatietoAddress[] }>(`${PAIKKATIETO_ADDRESS_PROXY}?${params}`, signal)
   const suggestions = dedupeSuggestions((result.results ?? []).flatMap((address) => {
     const suggestion = formatPaikkatietoAddress(address)
     return suggestion ? [suggestion] : []
@@ -145,9 +208,7 @@ async function searchPaikkatieto(query: string, signal?: AbortSignal): Promise<A
 }
 
 async function searchHelsinkiStreetNames(prefix: string, signal?: AbortSignal) {
-  const response = await fetch(`${HELSINKI_STREET_PROXY}?prefix=${encodeURIComponent(prefix)}`, { signal })
-  if (!response.ok) throw new Error('Helsinki street lookup failed')
-  const result = await response.json() as { features?: HelsinkiStreetFeature[] }
+  const result = await requestJson<{ features?: HelsinkiStreetFeature[] }>(`${HELSINKI_STREET_PROXY}?prefix=${encodeURIComponent(prefix)}`, signal)
   const names = new Map<string, string>()
   for (const feature of result.features ?? []) {
     const name = feature.properties?.katunimi?.trim()
@@ -161,9 +222,7 @@ async function searchHelsinkiStreetNames(prefix: string, signal?: AbortSignal) {
 
 async function searchNominatim(query: string, signal?: AbortSignal): Promise<AddressSuggestion[]> {
   const params = new URLSearchParams({ q: query })
-  const response = await fetch(`${GEOCODE_PROXY}?${params}`, { signal, headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error('Geocoding request failed')
-  const results = await response.json() as NominatimResult[]
+  const results = await requestJson<NominatimResult[]>(`${GEOCODE_PROXY}?${params}`, signal)
   return dedupeSuggestions(results.flatMap((result) => {
     const suggestion = formatNominatimAddress(result)
     return suggestion ? [suggestion] : []
@@ -181,19 +240,14 @@ export async function searchAddresses(query: string, signal?: AbortSignal): Prom
       const prefixResults = streetNames
         .map((streetName) => ({ label: streetName, streetName }))
         .filter((suggestion) => matchesAddressQuery(suggestion, trimmedQuery))
-      if (prefixResults.length > 0) return prefixResults
+      return prefixResults
     } catch (error) {
       if (signal?.aborted) throw error
     }
   }
 
-  try {
-    const paikkatietoResults = (await searchPaikkatieto(trimmedQuery, signal)).filter((suggestion) => matchesAddressQuery(suggestion, trimmedQuery))
-    if (paikkatietoResults.length > 0) return paikkatietoResults
-  } catch (error) {
-    if (signal?.aborted) throw error
-  }
-  return []
+  // Only a successful empty response means no matches. Let failures reach the UI.
+  return (await searchPaikkatieto(trimmedQuery, signal)).filter((suggestion) => matchesAddressQuery(suggestion, trimmedQuery))
 }
 
 export async function geocodeAddress(query: string): Promise<GeoPoint> {
@@ -215,20 +269,64 @@ export async function geocodeAddress(query: string): Promise<GeoPoint> {
 
 export async function reverseGeocode(coordinates: GeoPoint, signal?: AbortSignal): Promise<AddressSuggestion> {
   const params = new URLSearchParams({ lat: String(coordinates[1]), lon: String(coordinates[0]) })
-  const response = await fetch(`${REVERSE_GEOCODE_PROXY}?${params}`, { signal, headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error('Reverse geocoding request failed')
-  const result = await response.json() as { display_name?: string }
+  const result = await requestJson<{ display_name?: string }>(`${REVERSE_GEOCODE_PROXY}?${params}`, signal)
   return { label: result.display_name ?? `${coordinates[1].toFixed(5)}, ${coordinates[0].toFixed(5)}`, coordinates }
 }
 
 export async function routeByMode(origin: GeoPoint, destination: GeoPoint, mode: Exclude<TravelMode, 'transit'>): Promise<RouteResult> {
   const params = new URLSearchParams({ mode, originLng: String(origin[0]), originLat: String(origin[1]), destinationLng: String(destination[0]), destinationLat: String(destination[1]) })
-  const response = await fetch(`${ROUTE_PROXY}?${params}`)
-  if (!response.ok) throw new Error('Routing request failed')
-  const result = await response.json() as { code: string; routes?: { distance: number; duration: number; geometry?: { coordinates: GeoPoint[] } }[] }
+  let result: { code: string; routes?: { distance: number; duration: number; geometry?: { coordinates: GeoPoint[] } }[] }
+  try {
+    result = await requestJson(`${ROUTE_PROXY}?${params}`, undefined, 12_000)
+  } catch (error) {
+    if (error instanceof HttpRequestError) {
+      if (error.status >= 500 || error.responseError === 'routing_service_unavailable') throw new RouteRequestError('unavailable')
+      if (error.responseError === 'route_outside_supported_area') throw new RouteRequestError('outside-area')
+      throw new RouteRequestError('invalid')
+    }
+    throw new RouteRequestError('unavailable')
+  }
   const route = result.routes?.[0]
-  if (result.code !== 'Ok' || !route?.geometry?.coordinates?.length) throw new Error('No walking route found')
+  if (result.code === 'NoRoute' || !route?.geometry?.coordinates?.length) throw new RouteRequestError('no-route')
+  if (result.code !== 'Ok') throw new RouteRequestError('unavailable')
   return { mode, origin, destination, coordinates: route.geometry.coordinates, distanceMetres: route.distance, durationSeconds: route.duration }
+}
+
+type TransitRouteResponse = {
+  code: string
+  route?: {
+    coordinates: GeoPoint[]
+    distanceMetres: number
+    durationSeconds: number
+    transit: TransitDetails
+  }
+}
+
+export async function routeByTransit(origin: GeoPoint, destination: GeoPoint, locale: 'fi' | 'en' = 'en'): Promise<RouteResult> {
+  let result: TransitRouteResponse
+  try {
+    result = await requestJson<TransitRouteResponse>(TRANSIT_ROUTE_PROXY, undefined, 15_000, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin, destination, locale }),
+    })
+  } catch (error) {
+    if (error instanceof HttpRequestError) {
+      if (error.responseError === 'transit_no_route') throw new RouteRequestError('no-route')
+      if (error.status === 401 || error.status === 403 || error.status >= 500 || error.responseError === 'transit_service_unavailable') throw new RouteRequestError('unavailable')
+      throw new RouteRequestError('invalid')
+    }
+    throw new RouteRequestError('unavailable')
+  }
+  if (result.code === 'NoRoute' || !result.route?.coordinates?.length) throw new RouteRequestError('no-route')
+  if (result.code !== 'Ok') throw new RouteRequestError('unavailable')
+  return { mode: 'transit', origin, destination, ...result.route }
+}
+
+export function transitDirectionsUrl(destination: GeoPoint, origin?: GeoPoint) {
+  const params = new URLSearchParams({ api: '1', destination: `${destination[1]},${destination[0]}`, travelmode: 'transit' })
+  if (origin) params.set('origin', `${origin[1]},${origin[0]}`)
+  return `https://www.google.com/maps/dir/?${params.toString()}`
 }
 
 export const routeWalking = (origin: GeoPoint, destination: GeoPoint) => routeByMode(origin, destination, 'walk')

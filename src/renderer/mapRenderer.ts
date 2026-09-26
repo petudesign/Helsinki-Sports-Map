@@ -62,16 +62,20 @@ function isBoundsVisible(bounds: Bounds | undefined, projector: ReturnType<typeo
 
 function drawBuilding(ctx: CanvasRenderingContext2D, building: BuildingFeature, bottomRings: ScreenPoint[][], elevation: number, view: View) {
   const bottom = bottomRings[0]; if (!bottom?.length) return
-  if (view.mode === '2d') { traceRings(ctx, bottomRings); ctx.fillStyle = theme.buildingTop; ctx.fill('evenodd'); ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .7; ctx.stroke(); return }
+  const buildingTop = building.context ? theme.contextBuildingTop : theme.buildingTop
+  const buildingSide = building.context ? theme.contextBuildingSide : theme.buildingSide
+  const buildingSideDark = building.context ? theme.contextBuildingSideDark : theme.buildingSideDark
+  const buildingOutline = building.context ? theme.contextBuildingOutline : theme.buildingOutline
+  if (view.mode === '2d') { traceRings(ctx, bottomRings); ctx.fillStyle = buildingTop; ctx.fill('evenodd'); ctx.strokeStyle = buildingOutline; ctx.lineWidth = .7; ctx.stroke(); return }
   const top = bottom.map((point) => ({ x: point.x, y: point.y - elevation }))
-  ctx.save(); ctx.translate(10 * view.zoom, 12 * view.zoom); ctx.beginPath(); traceRing(ctx, bottom); ctx.fillStyle = theme.shadow; ctx.fill(); ctx.restore()
+  ctx.save(); ctx.translate(10 * view.zoom, 12 * view.zoom); ctx.beginPath(); traceRing(ctx, bottom); ctx.fillStyle = building.context ? theme.contextShadow : theme.shadow; ctx.fill(); ctx.restore()
   for (let index = 0; index < bottom.length - 1; index++) {
     const next = index + 1
     const dx = bottom[next].x - bottom[index].x
     ctx.beginPath(); traceRing(ctx, [bottom[index], bottom[next], top[next], top[index]])
-    ctx.fillStyle = dx > 0 ? theme.buildingSide : theme.buildingSideDark; ctx.fill(); ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .55; ctx.stroke()
+    ctx.fillStyle = dx > 0 ? buildingSide : buildingSideDark; ctx.fill(); ctx.strokeStyle = buildingOutline; ctx.lineWidth = .55; ctx.stroke()
   }
-  ctx.beginPath(); traceRing(ctx, top); ctx.fillStyle = theme.buildingTop; ctx.fill(); ctx.strokeStyle = theme.buildingOutline; ctx.lineWidth = .8; ctx.stroke()
+  ctx.beginPath(); traceRing(ctx, top); ctx.fillStyle = buildingTop; ctx.fill(); ctx.strokeStyle = buildingOutline; ctx.lineWidth = .8; ctx.stroke()
 }
 
 function focusHeight(feature: SportFeature) {
@@ -156,21 +160,22 @@ function drawMapLabels(ctx: CanvasRenderingContext2D, labels: MapLabel[], projec
   ctx.textBaseline = 'middle';
   ([...labels])
     .filter((label) => view.zoom >= (label.minZoom ?? 0))
-    .sort((a, b) => (a.tone === 'secondary' ? 1 : 0) - (b.tone === 'secondary' ? 1 : 0))
+    .sort((a, b) => Number(a.tone === 'context') - Number(b.tone === 'context') || Number(a.tone === 'secondary') - Number(b.tone === 'secondary'))
     .forEach((label) => {
     const secondary = label.tone === 'secondary'
-    ctx.font = secondary ? '600 7px DM Mono, monospace' : '600 9px DM Mono, monospace'
+    const context = label.tone === 'context'
+    ctx.font = context ? '600 7px Satoshi, sans-serif' : secondary ? '600 7px Satoshi, sans-serif' : '600 9px Satoshi, sans-serif'
     const anchor = projector.point(toLocalMetres(label.coordinates, area.center))
     if (anchor.x < -100 || anchor.x > width + 100 || anchor.y < -60 || anchor.y > height + 60) return
     const textWidth = ctx.measureText(label.text).width
-    const baseBox = { width: textWidth + (secondary ? 8 : 10), height: secondary ? 15 : 18 }
+    const baseBox = { width: textWidth + (secondary || context ? 8 : 10), height: secondary || context ? 15 : 18 }
     const offset = label.offset ?? { x: 0, y: 0 }
     const box = { x: anchor.x + offset.x - baseBox.width / 2, y: anchor.y + offset.y - baseBox.height / 2, ...baseBox }
     if (box.x < 4 || box.x + box.width > width - 4 || box.y < 4 || box.y + box.height > height - 4) return
     if (offset.x || offset.y) { ctx.strokeStyle = 'rgba(117,109,101,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(anchor.x + offset.x, anchor.y + offset.y); ctx.stroke() }
-    ctx.fillStyle = secondary ? 'rgba(242,238,230,.72)' : 'rgba(242,238,230,.9)'; ctx.fillRect(box.x, box.y, box.width, box.height)
-    ctx.strokeStyle = secondary ? 'rgba(117,109,101,.22)' : 'rgba(117,109,101,.35)'; ctx.lineWidth = .6; ctx.strokeRect(box.x, box.y, box.width, box.height)
-    ctx.fillStyle = secondary ? '#747b82' : '#5c6670'; ctx.fillText(label.text, anchor.x + offset.x, anchor.y + offset.y)
+    ctx.fillStyle = context ? 'rgba(222,224,220,.72)' : secondary ? 'rgba(242,238,230,.72)' : 'rgba(242,238,230,.9)'; ctx.fillRect(box.x, box.y, box.width, box.height)
+    ctx.strokeStyle = context ? 'rgba(117,125,123,.3)' : secondary ? 'rgba(117,109,101,.22)' : 'rgba(117,109,101,.35)'; ctx.lineWidth = .6; ctx.strokeRect(box.x, box.y, box.width, box.height)
+    ctx.fillStyle = context ? '#818987' : secondary ? '#747b82' : '#5c6670'; ctx.fillText(label.text, anchor.x + offset.x, anchor.y + offset.y)
   })
   ctx.restore()
 }
@@ -401,8 +406,8 @@ function drawMarkerCluster(ctx: CanvasRenderingContext2D, cluster: MarkerCluster
   const radius = Math.min(20, 10 + Math.log10(count) * 4)
   ctx.save(); ctx.globalAlpha = emphasis === 'dimmed' ? .5 : 1
   ctx.beginPath(); ctx.arc(cluster.point.x, cluster.point.y, radius + 3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(23,107,123,.14)'; ctx.fill()
-  ctx.beginPath(); ctx.arc(cluster.point.x, cluster.point.y, radius, 0, Math.PI * 2); ctx.fillStyle = '#176b7b'; ctx.fill(); ctx.strokeStyle = '#fffdf9'; ctx.lineWidth = 2; ctx.stroke()
-  ctx.fillStyle = '#fffdf9'; ctx.font = '700 10px Manrope, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count), cluster.point.x, cluster.point.y)
+  ctx.beginPath(); ctx.arc(cluster.point.x, cluster.point.y, radius, 0, Math.PI * 2); ctx.fillStyle = '#0755a0'; ctx.fill(); ctx.strokeStyle = '#fffdf9'; ctx.lineWidth = 2; ctx.stroke()
+  ctx.fillStyle = '#fffdf9'; ctx.font = '700 10px Satoshi, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(count), cluster.point.x, cluster.point.y)
   ctx.restore()
 }
 
@@ -478,10 +483,10 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
     drawVectorBackground(ctx, area, landmarkRenderers, projector, width, height, hasSelection)
   } else {
   ctx.save(); ctx.globalAlpha = hasSelection ? .6 : 1
-  area.surfaces.filter((feature) => feature.kind === 'water' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.water; ctx.fill('evenodd'); ctx.strokeStyle = theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'water' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = feature.context ? theme.contextWater : theme.water; ctx.fill('evenodd'); ctx.strokeStyle = feature.context ? theme.contextWaterLine : theme.waterLine; ctx.lineWidth = 1; ctx.stroke() })
   ctx.globalAlpha = hasSelection ? .52 : .82
-  area.surfaces.filter((feature) => feature.kind === 'urban' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.urban; ctx.fill('evenodd'); ctx.strokeStyle = theme.urbanEdge; ctx.lineWidth = .45; ctx.stroke() })
-  area.surfaces.filter((feature) => feature.kind === 'green' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = theme.green; ctx.fill('evenodd'); ctx.strokeStyle = theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'urban' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = feature.context ? theme.contextUrban : theme.urban; ctx.fill('evenodd'); ctx.strokeStyle = feature.context ? theme.contextUrbanEdge : theme.urbanEdge; ctx.lineWidth = .45; ctx.stroke() })
+  area.surfaces.filter((feature) => feature.kind === 'green' && isBoundsVisible(feature.bounds, projector, width, height)).forEach((feature) => { traceRings(ctx, feature.rings.map(projectRing)); ctx.fillStyle = feature.context ? theme.contextGreen : theme.green; ctx.fill('evenodd'); ctx.strokeStyle = feature.context ? theme.contextGreenEdge : theme.greenEdge; ctx.lineWidth = .55; ctx.stroke() })
   ctx.restore()
 
   ctx.save(); ctx.globalAlpha = hasSelection ? .34 : .72
@@ -489,11 +494,11 @@ export function renderMap(canvas: HTMLCanvasElement | OffscreenCanvas, area: Map
     const points = route.points.map(projector.point)
     const stroke = () => strokeLine(ctx, points)
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    if (route.kind === 'rail') { ctx.strokeStyle = theme.rail; ctx.lineWidth = 2.8; stroke(); ctx.strokeStyle = theme.railTie; ctx.lineWidth = .8; ctx.setLineDash([1, 7]); stroke(); ctx.setLineDash([]); return }
-    if (route.kind === 'waterline') { ctx.strokeStyle = theme.waterline; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); stroke(); ctx.setLineDash([]); return }
-    if (route.kind === 'path') { ctx.strokeStyle = theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); stroke(); ctx.setLineDash([]); return }
+    if (route.kind === 'rail') { ctx.strokeStyle = route.context ? theme.contextRail : theme.rail; ctx.lineWidth = 2.8; stroke(); ctx.strokeStyle = route.context ? theme.contextRailTie : theme.railTie; ctx.lineWidth = .8; ctx.setLineDash([1, 7]); stroke(); ctx.setLineDash([]); return }
+    if (route.kind === 'waterline') { ctx.strokeStyle = route.context ? theme.contextWaterline : theme.waterline; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); stroke(); ctx.setLineDash([]); return }
+    if (route.kind === 'path') { ctx.strokeStyle = route.context ? theme.contextPath : theme.path; ctx.lineWidth = .8; ctx.setLineDash([3, 4]); stroke(); ctx.setLineDash([]); return }
     const widthByKind = route.kind === 'major' ? [6.5, 4.4] : route.kind === 'street' ? [4.5, 2.8] : [2.8, 1.5]
-    ctx.strokeStyle = theme.roadEdge; ctx.lineWidth = widthByKind[0]; stroke(); ctx.strokeStyle = theme.road; ctx.lineWidth = widthByKind[1]; stroke()
+    ctx.strokeStyle = route.context ? theme.contextRoadEdge : theme.roadEdge; ctx.lineWidth = widthByKind[0]; stroke(); ctx.strokeStyle = route.context ? theme.contextRoad : theme.road; ctx.lineWidth = widthByKind[1]; stroke()
   })
   ctx.restore()
 

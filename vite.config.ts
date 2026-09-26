@@ -1,5 +1,36 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import transitRouteHandler from './api/transit-route.mjs'
+
+function transitDevApiPlugin(apiKey: string) {
+  if (apiKey) process.env.DIGITRANSIT_API_KEY = apiKey
+  return {
+    name: 'hsm-transit-dev-api',
+    configureServer(server: { middlewares: { use: (path: string, handler: (request: any, response: any, next: () => void) => void) => void } }) {
+      server.middlewares.use('/api/transit-route', (request, response, next) => {
+        if (request.method !== 'POST') { next(); return }
+        let rawBody = ''
+        request.on('data', (chunk: Buffer) => { rawBody += chunk.toString() })
+        request.on('end', async () => {
+          let body
+          try { body = JSON.parse(rawBody) } catch {
+            response.statusCode = 400
+            response.setHeader('Content-Type', 'application/json')
+            response.end(JSON.stringify({ error: 'Invalid transit request' }))
+            return
+          }
+          const apiResponse = {
+            status(code: number) { response.statusCode = code; return apiResponse },
+            setHeader(name: string, value: string) { response.setHeader(name, value) },
+            json(payload: unknown) { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(payload)) },
+          }
+          try { await transitRouteHandler({ ...request, body }, apiResponse) }
+          catch { response.statusCode = 502; response.end(JSON.stringify({ error: 'transit_service_unavailable' })) }
+        })
+      })
+    },
+  }
+}
 
 function wfsProxyPath(path: string) {
   const requestUrl = new URL(path, 'http://localhost')
@@ -44,9 +75,10 @@ function routeProxyPath(path: string) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiKey = env.PAIKKATIETO_API_KEY
+  const transitApiKey = env.DIGITRANSIT_API_KEY
 
   return {
-    plugins: [react()],
+    plugins: [react(), transitDevApiPlugin(transitApiKey)],
     server: {
       proxy: {
           '/api/paikkatieto': {

@@ -41,7 +41,7 @@ function DesignSystemPreview() {
         <div className="ds-section-heading"><div><h2 id="map-title">Map surface</h2><p>Feature-specific map components use the same HSM foundation with map-specific density and context.</p></div><span className="ds-count">map variant</span></div>
         <div className="ds-map-preview">
           <div className="ds-map-canvas">
-            <div className="ds-map-filter-bar"><span>SPORT</span><button type="button" className="selected">All</button><button type="button">Swimming</button><button type="button">Outdoor gym</button></div>
+            <div className="ds-map-filter-bar"><button type="button" className="selected">All</button><button type="button">Swimming</button><button type="button">Outdoor gym</button></div>
             <div className="ds-map-toolbar"><button type="button" className={mapMode === '2D' ? 'selected' : ''} onClick={() => setMapMode('2D')}>2D</button><button type="button" className={mapMode === 'ISO' ? 'selected' : ''} onClick={() => setMapMode('ISO')}>Isometric</button></div>
             <span className="ds-map-marker ds-map-marker-one" aria-hidden="true" /><span className="ds-map-marker ds-map-marker-two" aria-hidden="true" /><span className="ds-map-marker ds-map-marker-three" aria-hidden="true" />
             <div className="ds-map-card"><div><strong>Maunulan liikuntahalli</strong><button type="button" aria-label="Close venue card">Close</button></div><span className="ds-map-card-type">Gym · {mapMode}</span><div className="ds-map-card-price"><strong>3.60 €</strong><small>Single visit · Adults</small></div><div className="ds-map-card-tags"><span>Step-free entrance</span><span>Family signals</span></div></div>

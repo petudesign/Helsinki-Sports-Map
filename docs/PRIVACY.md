@@ -16,6 +16,12 @@ The location feature must never be activated automatically on page load, and loc
 
 Typed address text is sent to the address lookup provider only when the user searches for suggestions or requests a route. The app does not store the text or include it in analytics.
 
+## Basemap requests
+
+The interactive basemap is rendered locally with MapLibre. By default, the browser requests styles, fonts and visible vector tiles from OpenFreeMap (`tiles.openfreemap.org`). These requests expose the network address and requested map tile area to that provider. They do not include the facility search text or route form values. Moving to a selected place or displaying a route can change the requested tile area. The basemap is necessary map functionality, not analytics, and is loaded with either cookie preference.
+
+The provider can be changed using `VITE_MAP_STYLE_URL`. Provider availability, terms and privacy must be reviewed before a public launch. If it is unavailable, facility search and the facility list remain usable, and the map offers a retry action.
+
 ## Analytics
 
 Analytics is optional and opt-in. It is intended only to understand aggregate interaction patterns and improve usability, for example whether people can find facilities, understand filters, and complete route searches.

@@ -1,4 +1,5 @@
 import lipasSnapshot from './lipas-helsinki-runtime.json'
+import helsinkiBoundary from './helsinki-boundary.json'
 import type { Bounds, GeoPoint, LipasVenue, MapPoint, PriceClass, SportFeature } from './types'
 import { normalizeExternalUrl } from './urls'
 
@@ -14,13 +15,35 @@ type LipasSite = {
   geometry?: { features?: { geometry?: { type: string; coordinates: unknown } }[] }
 }
 
+const helsinkiBoundaryRing = helsinkiBoundary[0].geojson.coordinates[0] as GeoPoint[]
+
+function geometryCoordinates(site: LipasSite) {
+  return site.geometry?.features?.flatMap(({ geometry }) => {
+    if (!geometry || !Array.isArray(geometry.coordinates)) return []
+    if (geometry.type === 'Point') return [geometry.coordinates as GeoPoint]
+    if (geometry.type === 'LineString') return (geometry.coordinates as unknown[]).filter(Array.isArray).map((coordinate) => coordinate as GeoPoint)
+    if (geometry.type === 'Polygon') return (geometry.coordinates as unknown[][]).flatMap((ring) => ring.filter(Array.isArray).map((coordinate) => coordinate as GeoPoint))
+    return []
+  }) ?? []
+}
+
 function firstCoordinate(site: LipasSite) {
-  const feature = site.geometry?.features?.[0]?.geometry
-  if (!feature) return undefined
-  if (feature.type === 'Point' && Array.isArray(feature.coordinates)) return feature.coordinates as GeoPoint
-  if (feature.type === 'LineString' && Array.isArray(feature.coordinates)) return feature.coordinates[0] as GeoPoint
-  if (feature.type === 'Polygon' && Array.isArray(feature.coordinates)) return feature.coordinates[0]?.[0] as GeoPoint
-  return undefined
+  return geometryCoordinates(site)[0]
+}
+
+function pointInRing([longitude, latitude]: GeoPoint, ring: GeoPoint[]) {
+  let inside = false
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [currentLongitude, currentLatitude] = ring[index]
+    const [previousLongitude, previousLatitude] = ring[previous]
+    if ((currentLatitude > latitude) !== (previousLatitude > latitude) && longitude < (previousLongitude - currentLongitude) * (latitude - currentLatitude) / (previousLatitude - currentLatitude) + currentLongitude) inside = !inside
+  }
+  return inside
+}
+
+function isWithinHelsinki(site: LipasSite) {
+  const coordinates = geometryCoordinates(site)
+  return coordinates.length > 0 && coordinates.every((coordinate) => pointInRing(coordinate, helsinkiBoundaryRing))
 }
 
 function normalized(value: string) {
@@ -44,7 +67,7 @@ function addressKey(address: string | undefined) {
 const sites = (lipasSnapshot.sites as LipasSite[]).flatMap((site) => {
   const coordinate = firstCoordinate(site)
   return coordinate ? [{ site, coordinate, normalizedName: normalized(site.name) }] : []
-})
+}).filter(({ site }) => isWithinHelsinki(site))
 
 // LIPAS uses the generic “Ball field” category for these five fields, but
 // their individual names and descriptions identify them as football fields.
@@ -157,7 +180,7 @@ function iconFromSports(sports: string[]) {
 
 function isUserFacingSite(site: LipasSite) {
   const label = `${site.name} ${site.type?.fi ?? ''}`.toLocaleLowerCase('fi-FI')
-  return !/huoltorakennus|veneilyn palvelupaikka|kalastuskohde|pysäköinti|katsomo|opastuspiste|\binfo\b/.test(label)
+  return !/huoltorakennus|veneilyn palvelupaikka|kalastuskohde|pysäköinti|katsomo|opastuspiste|neighbourhood park|lähi-\/ulkoilupuisto|\binfo\b/.test(label)
 }
 
 function venueGroupName(site: LipasSite) {

@@ -28,13 +28,18 @@ export function runtimeSite(site) {
     .filter((key) => site.properties?.[key] !== undefined)
     .map((key) => [key, site.properties[key]]))
   const firstGeometry = site.geometry?.features?.[0]?.geometry
+  // The UI only consumes this anchor (see firstCoordinate in lipas.ts).
+  // Keep full paths/polygons in the source snapshot, not the browser payload.
+  const coordinate = firstGeometry?.type === 'Point' ? firstGeometry.coordinates
+    : firstGeometry?.type === 'LineString' ? firstGeometry.coordinates[0]
+      : firstGeometry?.type === 'Polygon' ? firstGeometry.coordinates[0]?.[0] : undefined
   return {
     id: site.id,
     name: site.name,
     website: site.website,
     type: site.type,
     address: site.address,
-    geometry: firstGeometry ? { features: [{ geometry: firstGeometry }] } : undefined,
+    geometry: coordinate ? { features: [{ geometry: { type: 'Point', coordinates: coordinate } }] } : undefined,
     properties,
     comment: site.comment,
     updatedAt: site.updatedAt,

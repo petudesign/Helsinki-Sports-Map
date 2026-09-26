@@ -1,13 +1,13 @@
 export type GeoPoint = [longitude: number, latitude: number]
 export type MapPoint = { x: number; y: number }
-export type MapLabel = { text: string; coordinates: GeoPoint; minZoom?: number; tone?: 'primary' | 'secondary'; offset?: { x: number; y: number } }
+export type MapLabel = { text: string; coordinates: GeoPoint; minZoom?: number; tone?: 'primary' | 'secondary' | 'context'; offset?: { x: number; y: number } }
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number }
 export type MapViewport = { width: number; height: number; mode: '2d' | 'iso'; zoom: number; pan: MapPoint }
 export type MapChunkManifest = { name: string; center: GeoPoint; bbox: [number, number, number, number]; chunks: { id: string; file: string; row: number; column: number; bbox: [number, number, number, number] }[] }
 
-export type SurfaceFeature = { id: string; kind: 'green' | 'water' | 'urban'; rings: MapPoint[][]; bounds?: Bounds }
-export type BuildingFeature = { id: string; rings: MapPoint[][]; bounds?: Bounds; height: number; name?: string }
-export type RouteFeature = { id: string; kind: 'rail' | 'waterline' | 'major' | 'street' | 'local' | 'path'; points: MapPoint[]; bounds?: Bounds }
+export type SurfaceFeature = { id: string; kind: 'green' | 'water' | 'urban'; rings: MapPoint[][]; bounds?: Bounds; context?: 'neighboring' }
+export type BuildingFeature = { id: string; rings: MapPoint[][]; bounds?: Bounds; height: number; name?: string; context?: 'neighboring' }
+export type RouteFeature = { id: string; kind: 'rail' | 'waterline' | 'major' | 'street' | 'local' | 'path'; points: MapPoint[]; bounds?: Bounds; context?: 'neighboring' }
 export type VenueIcon = 'football' | 'athletics' | 'swimming' | 'ice_hockey' | 'basketball' | 'tennis' | 'fitness' | 'multi'
 export type PriceClass = 'free' | 'paid' | 'mixed' | 'unknown'
 export type SportFeature = { id: string; name?: string; sport: string; sports?: string[]; facilityType?: string; priceClass?: PriceClass; icon?: VenueIcon; rings: MapPoint[][]; bounds?: Bounds; center?: GeoPoint }
@@ -69,6 +69,7 @@ export type GeoJsonFeature = {
     height?: number
     routeKind?: 'rail' | 'waterline' | 'major' | 'street' | 'local'
     osmTags?: { leisure?: string; sport?: string }
+    context?: 'neighboring'
   }
   geometry:
     | { type: 'Point'; coordinates: GeoPoint }

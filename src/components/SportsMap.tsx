@@ -24,6 +24,19 @@ const empty: FeatureCollection = { type: 'FeatureCollection', features: [] }
 // Bundle the v6 module worker explicitly for both Vite dev and production URLs.
 setWorkerUrl(workerUrl)
 const styleUrl = import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron'
+const openStreetMapFallbackStyle = {
+  version: 8,
+  sources: {
+    openstreetmap: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+    },
+  },
+  layers: [{ id: 'openstreetmap-raster', type: 'raster', source: 'openstreetmap' }],
+} as const
+const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected'])
 const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 350
 const defaultCameraOffset = (): [number, number] => window.matchMedia('(min-width: 721px)').matches ? [-220, 0] : [0, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
@@ -123,6 +136,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   latest.current = { features, selected, onSelect, locale }
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [usingOsmFallback, setUsingOsmFallback] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [transitZoneData, setTransitZoneData] = useState<TransitZoneCollection>(emptyTransitZones)
   const points = useMemo(() => pointData(features, locale), [features, locale])
@@ -162,7 +176,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     let map: LibreMap
     try {
       map = new LibreMap({
-        container: container.current, style: styleUrl, center: activeCity.center, zoom: 11.7,
+        container: container.current, style: usingOsmFallback ? openStreetMapFallbackStyle : styleUrl, center: activeCity.center, zoom: 11.7,
         minZoom: 9, maxZoom: 19, maxBounds: [[24.35, 59.85], [25.65, 60.65]],
         renderWorldCopies: false, maxTileCacheSize: 128, pixelRatio: Math.min(window.devicePixelRatio, 2),
         dragRotate: false, touchPitch: false, pitchWithRotate: false,
@@ -182,7 +196,15 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const observer = new ResizeObserver(() => map.resize())
     observer.observe(container.current)
     // Native gestures animate the camera without any React state updates.
-    map.on('error', () => setFailed(true))
+    map.on('error', (event) => {
+      const sourceId = 'sourceId' in event ? String(event.sourceId) : undefined
+      if (!usingOsmFallback && (!sourceId || !appSourceIds.has(sourceId))) {
+        setUsingOsmFallback(true)
+        setFailed(false)
+        return
+      }
+      setFailed(true)
+    })
     map.on('idle', () => { if (map.isStyleLoaded()) setFailed(false) })
     map.on('load', () => {
       window.clearTimeout(timeout)
@@ -211,12 +233,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         'fill-opacity': 0.18,
       } })
       map.addLayer({ id: 'transit-zone-boundary', type: 'line', source: 'transit-zones', paint: { 'line-color': '#2f73a7', 'line-width': 1.4, 'line-opacity': 0.68, 'line-dasharray': [2, 2] } })
-      map.addLayer({ id: 'transit-zone-labels', type: 'symbol', source: 'transit-zones', layout: { 'text-field': ['get', 'zone'], 'text-font': ['Noto Sans Bold'], 'text-size': 18, 'text-allow-overlap': true }, paint: { 'text-color': '#235b87', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      if (!usingOsmFallback) map.addLayer({ id: 'transit-zone-labels', type: 'symbol', source: 'transit-zones', layout: { 'text-field': ['get', 'zone'], 'text-font': ['Noto Sans Bold'], 'text-size': 18, 'text-allow-overlap': true }, paint: { 'text-color': '#235b87', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('facilities', { type: 'geojson', data: pointData(latest.current.features, latest.current.locale), cluster: true, clusterMaxZoom: 14, clusterRadius: 42, attribution: 'LIPAS, University of Jyväskylä · CC BY 4.0' })
       map.addLayer({ id: 'clusters', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
         'circle-color': '#0755a0', 'circle-radius': ['step', ['get', 'point_count'], 18, 20, 23, 80, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
       } })
-      map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'facilities', filter: ['has', 'point_count'], layout: {
+      if (!usingOsmFallback) map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'facilities', filter: ['has', 'point_count'], layout: {
         'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Regular'], 'text-size': 12,
       }, paint: { 'text-color': '#ffffff' } })
       map.addLayer({ id: 'facility-hit-area', type: 'circle', source: 'facilities', filter: ['!', ['has', 'point_count']], paint: { 'circle-radius': 22, 'circle-opacity': 0 } })
@@ -224,7 +246,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 9],
         'circle-color': '#b9543e', 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 2,
       } })
-      map.addLayer({ id: 'facility-labels', type: 'symbol', source: 'facilities', minzoom: 15, filter: ['!', ['has', 'point_count']], layout: {
+      if (!usingOsmFallback) map.addLayer({ id: 'facility-labels', type: 'symbol', source: 'facilities', minzoom: 15, filter: ['!', ['has', 'point_count']], layout: {
         'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-anchor': 'top', 'text-offset': [0, 1.2], 'text-max-width': 12,
       }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('route', { type: 'geojson', data: empty })
@@ -234,8 +256,10 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map.addLayer({ id: 'route-start', type: 'circle', source: 'route-points', filter: ['==', ['get', 'kind'], 'start'], paint: { 'circle-radius': 9, 'circle-color': routePointColors.start, 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 3 } })
       map.addLayer({ id: 'route-end', type: 'circle', source: 'route-points', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 10, 'circle-color': routePointColors.end, 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 3 } })
       map.addLayer({ id: 'route-stop-points', type: 'circle', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], paint: { 'circle-radius': 7, 'circle-color': ['match', ['get', 'kind'], 'board', routePointColors.board, 'alight', routePointColors.alight, 'transfer', routePointColors.transfer, routePointColors.board], 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 2 } })
-      map.addLayer({ id: 'route-point-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['start', 'end'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
-      map.addLayer({ id: 'route-stop-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 10, 'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-max-width': 16 }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      if (!usingOsmFallback) {
+        map.addLayer({ id: 'route-point-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['start', 'end'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+        map.addLayer({ id: 'route-stop-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 10, 'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-max-width': 16 }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      }
       map.addSource('selected', { type: 'geojson', data: empty })
       map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 12, 'circle-color': '#b9543e', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 4 } })
       map.on('click', async (event) => {
@@ -257,7 +281,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       setFailed(false)
     })
     return () => { window.clearTimeout(timeout); observer.disconnect(); mapRef.current = null; map.remove() }
-  }, [attempt, polygons])
+  }, [attempt, polygons, usingOsmFallback])
 
   useEffect(() => {
     if (ready) (mapRef.current?.getSource('facilities') as GeoJSONSource)?.setData(points)
@@ -319,7 +343,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   return <>
     <div ref={container} className="sports-map" data-ready={ready} />
     {(!ready || failed) && <div className="map-status" role="status">
-      {failed ? <>{locale === 'fi' ? 'Taustakarttaa ei voitu ladata. Voit käyttää kohdelistaa.' : 'The basemap could not load. You can still use the facility list.'}<button onClick={() => setAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></> : (locale === 'fi' ? 'Ladataan karttaa…' : 'Loading map…')}
+      {failed ? <>{locale === 'fi' ? 'Taustakarttaa ei voitu ladata. Voit käyttää kohdelistaa.' : 'The basemap could not load. You can still use the facility list.'}<button onClick={() => { setFailed(false); setUsingOsmFallback(false); setAttempt((value) => value + 1) }}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></> : (locale === 'fi' ? 'Ladataan karttaa…' : 'Loading map…')}
     </div>}
   </>
 })

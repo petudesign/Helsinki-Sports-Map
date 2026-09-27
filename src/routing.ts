@@ -9,6 +9,7 @@ export type TransitLeg = {
   to?: string
   fromCoordinates?: GeoPoint
   toCoordinates?: GeoPoint
+  geometry?: GeoPoint[]
   durationSeconds: number
   zones: string[]
 }

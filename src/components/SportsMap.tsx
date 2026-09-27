@@ -1,13 +1,13 @@
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react'
 import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson'
+import type { FeatureCollection, LineString, MultiPolygon, Point, Polygon } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { activeCity } from '../config/city'
 import boundary from '../data/helsinki-boundary.json'
 import type { MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
-import type { Locale } from '../i18n'
+import { text, type Locale } from '../i18n'
 
 export type MapControls = { reset: () => void }
 type Props = {
@@ -27,7 +27,7 @@ const styleUrl = import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreema
 const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 350
 const defaultCameraOffset = (): [number, number] => window.matchMedia('(min-width: 721px)').matches ? [-220, 0] : [0, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
-const routePointColors = { start: '#245b7a', end: '#c75543' } as const
+const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
 type TransitZoneCollection = FeatureCollection<Polygon | MultiPolygon>
 const emptyTransitZones: TransitZoneCollection = { type: 'FeatureCollection', features: [] }
 const HSL_ZONES_URL = 'https://services1.arcgis.com/sswNXkUiRoWtrx0t/arcgis/rest/services/zones_all/FeatureServer/0/query?where=ZONE%20IN%20(%27A%27,%27B%27,%27C%27,%27D%27,%27E%27)&outFields=ZONE,NIMI_E&returnGeometry=true&outSR=4326&f=geojson'
@@ -45,21 +45,73 @@ async function loadTransitZones(): Promise<TransitZoneCollection> {
   }
 }
 
-function pointData(features: SportFeature[]): FeatureCollection<Point> {
+function pointData(features: SportFeature[], locale: Locale): FeatureCollection<Point> {
   return { type: 'FeatureCollection', features: features.flatMap((feature) => feature.center ? [{
     type: 'Feature' as const, id: feature.id,
-    properties: { id: feature.id, name: feature.name ?? '', sport: feature.sport },
+    properties: { id: feature.id, name: locale === 'en' ? feature.nameEn ?? feature.name ?? '' : feature.name ?? '', sport: feature.sport },
     geometry: { type: 'Point' as const, coordinates: feature.center },
   }] : []) }
 }
 
+function transitModeLabel(locale: Locale, mode: string) {
+  switch (mode.toUpperCase()) {
+    case 'BUS': return text(locale, 'busMode')
+    case 'TRAM': return text(locale, 'tramMode')
+    case 'RAIL': return text(locale, 'trainMode')
+    case 'SUBWAY': return text(locale, 'metroMode')
+    case 'FERRY': return text(locale, 'ferryMode')
+    default: return text(locale, 'transitMode')
+  }
+}
+
+function routeLineData(route: RouteResult | undefined): FeatureCollection<LineString> {
+  if (!route) return empty as FeatureCollection<LineString>
+  const transitLegs = route.transit?.legs ?? []
+  const transitFeatures = transitLegs.flatMap((leg, index) => {
+    const fallback = [
+      leg.fromCoordinates ?? (index === 0 ? route.origin : undefined),
+      leg.toCoordinates ?? (index === transitLegs.length - 1 ? route.destination : undefined),
+    ].filter((coordinate): coordinate is [number, number] => Boolean(coordinate))
+    const coordinates = leg.geometry && leg.geometry.length > 1 ? leg.geometry : fallback
+    return coordinates.length > 1 ? [{ type: 'Feature' as const, properties: { mode: leg.mode.toLowerCase() }, geometry: { type: 'LineString' as const, coordinates } }] : []
+  })
+  if (transitFeatures.length) return { type: 'FeatureCollection', features: transitFeatures }
+  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { mode: route.mode }, geometry: { type: 'LineString', coordinates: route.coordinates } }] }
+}
+
 function routePointData(route: RouteResult | undefined, locale: Locale): FeatureCollection<Point> {
   if (!route) return empty as FeatureCollection<Point>
+  const events = (route.transit?.legs ?? []).flatMap((leg) => {
+    if (leg.mode.toUpperCase() === 'WALK') return []
+    return [
+      leg.fromCoordinates ? { kind: 'board' as const, coordinates: leg.fromCoordinates, leg } : undefined,
+      leg.toCoordinates ? { kind: 'alight' as const, coordinates: leg.toCoordinates, leg } : undefined,
+    ].filter((event): event is NonNullable<typeof event> => Boolean(event))
+  })
+  const groups = new Map<string, typeof events>()
+  for (const event of events) {
+    const key = event.coordinates.map((value) => value.toFixed(6)).join(',')
+    const group = groups.get(key) ?? []
+    group.push(event)
+    groups.set(key, group)
+  }
+  const stopFeatures = [...groups.values()].map((group) => {
+    const [first] = group
+    const board = group.find((event) => event.kind === 'board')
+    const isTransfer = group.length > 1
+    const label = isTransfer && board
+      ? text(locale, 'transitChange', { mode: transitModeLabel(locale, board.leg.mode), route: board.leg.routeName ?? '—' })
+      : first.kind === 'board'
+        ? text(locale, 'transitBoard', { mode: transitModeLabel(locale, first.leg.mode), route: first.leg.routeName ?? '—' })
+        : text(locale, 'transitAlight', { stop: first.leg.to ?? (locale === 'fi' ? 'määränpää' : 'destination') })
+    return { type: 'Feature' as const, properties: { kind: isTransfer ? 'transfer' : first.kind, label }, geometry: { type: 'Point' as const, coordinates: first.coordinates } }
+  })
   return {
     type: 'FeatureCollection',
     features: [
       { type: 'Feature', properties: { kind: 'start', label: locale === 'fi' ? 'Lähtö tästä' : 'Start here' }, geometry: { type: 'Point', coordinates: route.origin } },
       { type: 'Feature', properties: { kind: 'end', label: locale === 'fi' ? 'Perille' : 'Destination' }, geometry: { type: 'Point', coordinates: route.destination } },
+      ...stopFeatures,
     ],
   }
 }
@@ -67,13 +119,13 @@ function routePointData(route: RouteResult | undefined, locale: Locale): Feature
 export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LibreMap | null>(null)
-  const latest = useRef({ features, selected, onSelect })
-  latest.current = { features, selected, onSelect }
+  const latest = useRef({ features, selected, onSelect, locale })
+  latest.current = { features, selected, onSelect, locale }
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [transitZoneData, setTransitZoneData] = useState<TransitZoneCollection>(emptyTransitZones)
-  const points = useMemo(() => pointData(features), [features])
+  const points = useMemo(() => pointData(features, locale), [features, locale])
   const polygons = useMemo<FeatureCollection<Polygon>>(() => ({
     type: 'FeatureCollection',
     features: (area.osmSports ?? []).map((feature) => ({
@@ -160,7 +212,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       } })
       map.addLayer({ id: 'transit-zone-boundary', type: 'line', source: 'transit-zones', paint: { 'line-color': '#2f73a7', 'line-width': 1.4, 'line-opacity': 0.68, 'line-dasharray': [2, 2] } })
       map.addLayer({ id: 'transit-zone-labels', type: 'symbol', source: 'transit-zones', layout: { 'text-field': ['get', 'zone'], 'text-font': ['Noto Sans Bold'], 'text-size': 18, 'text-allow-overlap': true }, paint: { 'text-color': '#235b87', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
-      map.addSource('facilities', { type: 'geojson', data: pointData(latest.current.features), cluster: true, clusterMaxZoom: 14, clusterRadius: 42, attribution: 'LIPAS, University of Jyväskylä · CC BY 4.0' })
+      map.addSource('facilities', { type: 'geojson', data: pointData(latest.current.features, latest.current.locale), cluster: true, clusterMaxZoom: 14, clusterRadius: 42, attribution: 'LIPAS, University of Jyväskylä · CC BY 4.0' })
       map.addLayer({ id: 'clusters', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
         'circle-color': '#0755a0', 'circle-radius': ['step', ['get', 'point_count'], 18, 20, 23, 80, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
       } })
@@ -177,11 +229,13 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('route', { type: 'geojson', data: empty })
       map.addLayer({ id: 'route-casing', type: 'line', source: 'route', paint: { 'line-color': '#fffdf9', 'line-width': 8 } })
-      map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': routeColors.walk, 'line-width': 4 } })
+      map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': ['match', ['get', 'mode'], 'walk', routeColors.walk, 'bike', routeColors.bike, 'car', routeColors.car, routeColors.transit], 'line-width': 4 } })
       map.addSource('route-points', { type: 'geojson', data: empty })
       map.addLayer({ id: 'route-start', type: 'circle', source: 'route-points', filter: ['==', ['get', 'kind'], 'start'], paint: { 'circle-radius': 9, 'circle-color': routePointColors.start, 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 3 } })
       map.addLayer({ id: 'route-end', type: 'circle', source: 'route-points', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 10, 'circle-color': routePointColors.end, 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 3 } })
-      map.addLayer({ id: 'route-point-labels', type: 'symbol', source: 'route-points', layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      map.addLayer({ id: 'route-stop-points', type: 'circle', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], paint: { 'circle-radius': 7, 'circle-color': ['match', ['get', 'kind'], 'board', routePointColors.board, 'alight', routePointColors.alight, 'transfer', routePointColors.transfer, routePointColors.board], 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 2 } })
+      map.addLayer({ id: 'route-point-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['start', 'end'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      map.addLayer({ id: 'route-stop-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 10, 'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-max-width': 16 }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('selected', { type: 'geojson', data: empty })
       map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 12, 'circle-color': '#b9543e', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 4 } })
       map.on('click', async (event) => {
@@ -225,7 +279,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   useEffect(() => {
     const map = mapRef.current
     if (!ready || !map) return
-    ;(map.getSource('selected') as GeoJSONSource | undefined)?.setData(pointData(selected && !route ? [selected] : []))
+    ;(map.getSource('selected') as GeoJSONSource | undefined)?.setData(pointData(selected && !route ? [selected] : [], locale))
     if (selected?.center) {
       const mobile = window.matchMedia('(max-width: 720px)').matches
       map.easeTo({ center: selected.center, zoom: Math.max(map.getZoom(), 15),
@@ -237,9 +291,8 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    ;(map.getSource('route') as GeoJSONSource | undefined)?.setData(route ? { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: route.coordinates } } : empty)
+    ;(map.getSource('route') as GeoJSONSource | undefined)?.setData(routeLineData(route))
     ;(map.getSource('route-points') as GeoJSONSource | undefined)?.setData(routePointData(route, locale))
-    if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-color', route ? routeColors[route.mode] : routeColors.walk)
     if (route?.coordinates.length) {
       const bounds = new LngLatBounds(route.origin, route.destination)
       route.coordinates.forEach((coordinate) => bounds.extend(coordinate))

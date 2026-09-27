@@ -1,6 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { RiApps2Line, RiArrowDownSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCircleLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiLeafLine, RiMapPin2Fill, RiMapPin2Line, RiMedal2Line, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
-import type { MapDataset, SportFeature, SportsVenue } from './data/types'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { RiApps2Line, RiArrowDownSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCircleLine, RiCloseLine, RiEqualizer2Line, RiErrorWarningLine, RiFireLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiLeafLine, RiMapPin2Fill, RiMapPin2Line, RiMedal2Line, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
+import type { LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
 import { SportsMap, type MapControls } from './components/SportsMap'
@@ -8,12 +8,58 @@ import { extraText, sportText, text, type Locale } from './i18n'
 import { geocodeAddress, reverseGeocode, routeByMode, routeByTransit, RouteRequestError, searchAddresses, transitDirectionsUrl, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
 import { getAnalyticsConsent, setAnalyticsConsent, type AnalyticsConsent } from './privacy'
 const ReviewWorkbench = lazy(() => import('./review/ReviewWorkbench').then((module) => ({ default: module.ReviewWorkbench })))
+const WikiWorkbench = lazy(() => import('./wiki/WikiWorkbench').then((module) => ({ default: module.WikiWorkbench })))
 
 type Mode = '2d' | 'iso'
 type SportFilter = 'all' | 'football' | 'basketball' | 'outdoor' | 'gym' | 'athletics' | 'swimming' | 'outdoor_swimming' | 'ice_hockey' | 'tennis' | 'padel' | 'martial_arts' | 'skateboarding'
 type PriceFilter = 'all' | 'free' | 'paid'
 type AccessibilityFilter = 'all' | 'stepFreeEntrance' | 'accessibleToilet' | 'accessibleParking'
 type FamilyFilter = 'all' | 'family'
+
+function FacilityBreakdown({ facilities, locale }: { facilities: NonNullable<LipasVenue['facilities']>; locale: Locale }) {
+  if (facilities.length < 2) return null
+  return <details className="facility-breakdown"><summary>{text(locale, 'facilityComponents', { count: String(facilities.length) })}</summary><ul>{facilities.map((facility) => {
+    const sourceName = facility.name.split(' / ').slice(-1)[0] || facility.name
+    const type = locale === 'en' ? facility.typeNameEn ?? facility.typeName : facility.typeName
+    const name = locale === 'en' && sourceName.toLocaleLowerCase('fi-FI') === facility.typeName?.toLocaleLowerCase('fi-FI') ? type ?? sourceName : sourceName
+    return <li key={facility.id}><strong>{name}</strong>{type && type.toLocaleLowerCase(locale) !== name.toLocaleLowerCase(locale) && <span>{type}</span>}{facility.address && <small>{facility.address}</small>}</li>
+  })}</ul></details>
+}
+
+function FacilityDetails({ feature, venue, trend, trendingEnabled, locale, route, travelMode, onDirections }: {
+  feature: SportFeature
+  venue?: SportsVenue
+  trend?: TrendingSignal
+  trendingEnabled: boolean
+  locale: Locale
+  route?: RouteResult
+  travelMode: TravelMode
+  onDirections: () => void
+}) {
+  const serviceMap = venue?.serviceMap
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const photoCaption = locale === 'en' ? serviceMap?.pictureCaptionEn ?? serviceMap?.pictureCaptionFi : serviceMap?.pictureCaptionFi ?? serviceMap?.pictureCaptionEn
+  return <div className="facility-card" aria-live="polite">
+    {venue?.lipas?.parentName && <span className="facility-parent-name">{venue.lipas.parentName}</span>}
+    {serviceMap?.pictureUrl && !photoFailed && <figure className="facility-photo"><img src={serviceMap.pictureUrl} alt={photoCaption ?? featureDisplayName(feature, locale, venue?.name)} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />{(photoCaption || serviceMap.sourceUrl) && <figcaption>{photoCaption && <span>{photoCaption}</span>}{serviceMap.sourceUrl && <a href={serviceMap.sourceUrl} target="_blank" rel="noreferrer">{locale === 'fi' ? 'Helsingin palvelukartta' : 'Helsinki Service Map'} ↗</a>}</figcaption>}</figure>}
+    {trend && trendingEnabled && <section className={`trend-summary trend-${trend.stage}`}><div><span>{text(locale, trend.source === 'preview' ? 'previewScore' : 'interestSignal')}</span><strong>{trend.interestScore}</strong></div><div className="trend-summary-bar"><span style={{ '--trend-progress': trend.interestScore / 100 } as CSSProperties} /></div><small>+{trend.recentChange}% · {text(locale, trend.stage === 'new' ? 'newOnList' : trend.stage === 'rising' ? 'risingInterest' : 'popularNow')}</small></section>}
+    {venue?.lipas?.address && <p className="facility-address"><RiMapPin2Line className="location-icon" aria-hidden="true" size={16} />{venue.lipas.address}</p>}
+    <button className="directions-open" type="button" onClick={onDirections}>{locale === 'fi' ? 'Reittiohjeet' : 'Directions'}</button>
+    <dl className="facility-facts"><div><dt>{text(locale, 'priceFilter')}</dt><dd>{text(locale, priceLabelKey(venue?.lipas?.priceClass ?? feature.priceClass))}</dd></div><div><dt>{text(locale, 'access')}</dt><dd>{text(locale, venue?.lipas?.accessStatus === 'open' ? 'accessOpen' : venue?.lipas?.accessStatus === 'restricted' ? 'accessRestricted' : venue?.lipas?.accessStatus === 'booking' ? 'accessBooking' : 'accessUnknown')}</dd></div></dl>
+    {!venue?.lipas?.accessNoteFi && (venue?.lipas?.accessSourceUrl ?? venue?.officialUrl) && <p className="facility-access-link"><a href={venue?.lipas?.accessSourceUrl ?? venue?.officialUrl} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a></p>}
+    {venue?.lipas?.accessNoteFi && <div className="facility-access"><span className="facility-question">{text(locale, 'access')}</span><p>{locale === 'en' ? venue.lipas.accessNoteEn : venue.lipas.accessNoteFi}</p>{venue.lipas.accessSourceUrl && <a href={venue.lipas.accessSourceUrl} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a>}</div>}
+    {route && <span className="facility-type">{text(locale, travelMode === 'walk' ? 'walkingRoute' : travelMode)}: {Math.max(1, Math.round(route.durationSeconds / 60))} {text(locale, 'minutes')} · {Math.round(route.distanceMetres)} m</span>}
+    {venue?.lipas?.typeName && <span className="facility-type">{locale === 'en' ? venue.lipas.typeNameEn ?? venue.lipas.typeName : venue.lipas.typeName}</span>}
+    {venue?.sports.length ? <><span className="facility-question">{text(locale, 'whatCanYouDo')}</span><ul className="facility-activities">{venue.sports.map((sport) => <li key={sport}>{venueActivityLabel(locale, sport)}</li>)}</ul></> : <p className="facility-unknown">{text(locale, 'missingSports')}</p>}
+    <FacilityBreakdown facilities={venue?.lipas?.facilities ?? []} locale={locale} />
+    {serviceMap && <details className="official-details"><summary>{text(locale, 'officialInfo')}</summary>{(locale === 'en' ? serviceMap.shortDescriptionEn : serviceMap.shortDescriptionFi) && <p>{locale === 'en' ? serviceMap.shortDescriptionEn : serviceMap.shortDescriptionFi}</p>}{(locale === 'en' ? serviceMap.servicesEn : serviceMap.servicesFi).length > 0 && <><span className="facility-question">{text(locale, 'officialServices')}</span><ul className="official-services">{(locale === 'en' ? serviceMap.servicesEn : serviceMap.servicesFi).map((service) => <li key={service}>{service}</li>)}</ul></>}{(locale === 'en' ? serviceMap.openingHoursEn : serviceMap.openingHoursFi) && <><span className="facility-question">{text(locale, 'openingHours')}</span><p className="official-hours">{locale === 'en' ? serviceMap.openingHoursEn : serviceMap.openingHoursFi}</p></>}{(locale === 'en' ? serviceMap.priceEn : serviceMap.priceFi) && <><span className="facility-question">{text(locale, 'priceDetails')}</span><div className="price-groups">{serviceMap.priceGroups.map((group) => <section key={group.heading}><strong>{group.heading}</strong><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></section>)}</div></>}{serviceMap.links.length > 0 && <><span className="facility-question">{text(locale, 'officialLinks')}</span><ul className="official-links">{serviceMap.links.map((link) => <li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{locale === 'en' ? link.labelEn : link.labelFi} ↗</a></li>)}</ul></>}</details>}
+    {venue && <div className="facility-links"><a href={venue.officialUrl ?? venue.sourceUrl} target="_blank" rel="noreferrer">{venue.officialUrl ? text(locale, 'openOfficial') : text(locale, 'viewSource')} ↗</a></div>}
+  </div>
+}
+
+function featureDisplayName(feature: SportFeature, locale: Locale, fallback?: string) {
+  return (locale === 'en' ? feature.nameEn : feature.name) ?? feature.name ?? fallback ?? text(locale, 'selectArea')
+}
 
 const allFilterOptions: { id: SportFilter; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'football', label: 'Football' }, { id: 'basketball', label: 'Basketball' }, { id: 'outdoor', label: 'Outdoor' }, { id: 'gym', label: 'Gym' },
@@ -120,6 +166,20 @@ function transitLegDetail(locale: Locale, leg: NonNullable<RouteResult['transit'
   return details.join(' · ')
 }
 
+function transitCompactLabel(locale: Locale, leg: NonNullable<RouteResult['transit']>['legs'][number]) {
+  const mode = transitModeLabel(locale, leg.mode)
+  return leg.routeName ? `${mode} ${leg.routeName}` : mode
+}
+
+function hslTicketZones(zones: string[]) {
+  const normalized = new Set(zones.map((zone) => zone.trim().toUpperCase()))
+  if (normalized.has('A')) return normalized.has('C') ? 'ABC' : 'AB'
+  if (normalized.has('B')) return normalized.has('C') ? 'BC' : 'AB'
+  if (normalized.has('C')) return normalized.has('D') ? 'CD' : 'BC'
+  if (normalized.has('D')) return 'D'
+  return zones.join('') || 'HSL'
+}
+
 function reportDataUrl(locale: Locale, feature: SportFeature, venue: SportsVenue | undefined) {
   const name = feature.name ?? venue?.name ?? (locale === 'fi' ? 'Nimetön liikuntapaikka' : 'Unnamed sports facility')
   const title = `${locale === 'fi' ? 'Virheellinen liikuntapaikkatieto' : 'Incorrect facility data'}: ${name}`
@@ -145,12 +205,14 @@ function venueActivityLabel(locale: Locale, sport: string) {
 
 function App() {
   const reviewMode = new URLSearchParams(window.location.search).get('review') === '1'
+  const wikiMode = new URLSearchParams(window.location.search).get('wiki') === '1'
   const mapRef = useRef<MapControls>(null)
   const filterDrawerRef = useRef<HTMLDetailsElement>(null)
   const sportDrawerRef = useRef<HTMLDetailsElement>(null)
   const [loadError, setLoadError] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
-  const [listOpen, setListOpen] = useState(false)
+  const [sidebarView, setSidebarView] = useState<'list' | 'detail'>('list')
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [listLimit, setListLimit] = useState(60)
   const [mapArea, setMapArea] = useState<MapDataset>()
   const [mode, setMode] = useState<Mode>('2d')
@@ -164,6 +226,7 @@ function App() {
   const [trendingEnabled, setTrendingEnabled] = useState(false)
   const [locale, setLocale] = useState<Locale>('en')
   const [searchQuery, setSearchQuery] = useState('')
+  const deferredSearchQuery = useDeferredValue(searchQuery)
   const [startingPoint, setStartingPoint] = useState('')
   const [originCoordinates, setOriginCoordinates] = useState<[number, number]>()
   const [originSuggestions, setOriginSuggestions] = useState<AddressSuggestion[]>([])
@@ -193,35 +256,41 @@ function App() {
     }
   }, [])
   useEffect(() => {
-    if (reviewMode) return
+    if (reviewMode || wikiMode) return
     let cancelled = false
     setLoadError(false)
     activeCity.loadDataset().then((data) => { if (!cancelled) setMapArea(data) })
       .catch(() => { if (!cancelled) setLoadError(true) })
     return () => { cancelled = true }
-  }, [reviewMode, loadAttempt])
-  const selectFeature = useCallback((feature: SportFeature | undefined) => {
+  }, [reviewMode, wikiMode, loadAttempt])
+  const selectFeature = useCallback((feature: SportFeature | undefined, expandSidebar = false) => {
     setSelected(feature)
+    setSidebarView(feature ? 'detail' : 'list')
+    setSidebarExpanded(expandSidebar)
     setRoutePlannerOpen(false)
     setReportDialogOpen(false)
-    if (feature) setListOpen(false)
   }, [])
   useEffect(() => { const stored = getAnalyticsConsent(); setAnalyticsConsentState(stored); setConsentVisible(stored === undefined) }, [])
   const venuesById = useMemo(() => new Map(mapArea?.venues.map((venue) => [venue.id, venue]) ?? []), [mapArea])
-  const normalizedSearch = searchQuery.trim().toLocaleLowerCase('fi-FI')
+  const searchIndex = useMemo(() => new Map((mapArea?.sports ?? []).map((feature) => {
+    const venue = venuesById.get(feature.id)
+    const searchable = [feature.name, feature.nameEn, venue?.name, venue?.lipas?.name, venue?.lipas?.parentName, venue?.lipas?.address, feature.facilityType, feature.sport, ...(feature.sports ?? []), ...(venue?.lipas?.facilities ?? []).flatMap(({ name, typeName, typeNameEn, address }) => [name, typeName, typeNameEn, address])]
+      .filter((value): value is string => Boolean(value))
+    const searchText = searchable.flatMap((value) => [value, sportText('en', value), sportText('fi', value)]).map((value) => value.toLocaleLowerCase('fi-FI'))
+    return [feature.id, searchText]
+  })), [mapArea, venuesById])
+  const normalizedSearch = deferredSearchQuery.trim().toLocaleLowerCase('fi-FI')
   const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
     if (!matchesFilter(feature, filter)) return false
     if (!matchesPrice(feature, priceFilter)) return false
     if (!matchesAccessibility(venuesById.get(feature.id), accessibilityFilter)) return false
     if (!matchesFamily(venuesById.get(feature.id), familyFilter)) return false
     if (!normalizedSearch) return true
-    const venue = venuesById.get(feature.id)
-    const searchable = [feature.name, venue?.name, venue?.lipas?.name, venue?.lipas?.address, feature.facilityType, feature.sport, ...(feature.sports ?? [])].filter((value): value is string => Boolean(value))
-    return searchable.flatMap((value) => [value, sportText('en', value), sportText('fi', value)]).some((value) => value?.toLocaleLowerCase('fi-FI').includes(normalizedSearch))
-  }) ?? [], [mapArea, filter, priceFilter, accessibilityFilter, familyFilter, normalizedSearch, venuesById])
-  const sortedSports = useMemo(() => [...visibleSports].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', locale)), [visibleSports, locale])
+    return searchIndex.get(feature.id)?.some((value) => value.includes(normalizedSearch)) ?? false
+  }) ?? [], [mapArea, filter, priceFilter, accessibilityFilter, familyFilter, normalizedSearch, searchIndex, venuesById])
+  const sortedSports = useMemo(() => [...visibleSports].sort((a, b) => featureDisplayName(a, locale).localeCompare(featureDisplayName(b, locale), locale)), [visibleSports, locale])
   useEffect(() => { setListLimit(60) }, [visibleSports])
-  useEffect(() => { if (selected && !visibleSports.some(({ id }) => id === selected.id)) { setSelected(undefined); setRoutePlannerOpen(false) } }, [visibleSports, selected])
+  useEffect(() => { if (selected && !visibleSports.some(({ id }) => id === selected.id)) selectFeature(undefined) }, [visibleSports, selected, selectFeature])
   const trendingSignals = useMemo(() => new Map<string, TrendingSignal>(mapArea?.sports.map((feature) => [feature.id, previewTrendingSignal(feature)]) ?? []), [mapArea])
   const topTrending = useMemo(() => visibleSports
     .map((feature) => ({ feature, signal: trendingSignals.get(feature.id) }))
@@ -240,9 +309,9 @@ function App() {
   }, [mapArea])
   const selectedVenue = selected ? venuesById.get(selected.id) : undefined
   const selectedTrend = selected ? trendingSignals.get(selected.id) : undefined
-  const serviceMap = selectedVenue?.serviceMap
   const route = routes[travelMode]
   const transitRoute = routes.transit?.transit
+  const transitTicketZones = hslTicketZones(transitRoute?.zones ?? [])
   const canPlanRoute = routePlannerOpen && Object.keys(routes).length > 0
   const [addressError, setAddressError] = useState(false)
   const routeRequestRef = useRef(0)
@@ -277,7 +346,7 @@ function App() {
 
   const selectFilter = (nextFilter: SportFilter) => {
     setFilter(nextFilter)
-    if (selected && !matchesFilter(selected, nextFilter)) { setSelected(undefined); setRoutePlannerOpen(false) }
+    if (selected && !matchesFilter(selected, nextFilter)) selectFeature(undefined)
   }
   const closeRoutePlanner = () => {
     routeRequestRef.current += 1
@@ -370,15 +439,16 @@ function App() {
   }
 
   if (reviewMode) return <Suspense fallback={<p>Loading review…</p>}><ReviewWorkbench /></Suspense>
+  if (wikiMode) return <Suspense fallback={<p>Loading wiki…</p>}><WikiWorkbench /></Suspense>
   if (loadError) return <main className="app-shell loading-shell"><p role="alert">{locale === 'fi' ? 'Kohdetietojen lataus epäonnistui.' : 'Could not load facilities.'}</p><button onClick={() => setLoadAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></main>
   if (!mapArea) return <main className="app-shell loading-shell"><div className="loading-state"><span className="status-dot" /><strong>{text(locale, 'loading', { city: activeCity.displayName })}</strong><span>{text(locale, 'preparing')}</span></div></main>
 
   return <main className={`app-shell ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
     <header className="topbar">
       <div className="brand-block"><div className="brand-lockup"><img src="/helsinkisportsmaplogo.png" alt="" aria-hidden="true" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></div><p>{extraText(locale, 'areaLabel')}</p></div>
-      <div className="topbar-right"><div className="mode-toggle" aria-label={extraText(locale, 'mapProjection')}><button className={mode === '2d' ? 'selected' : ''} aria-pressed={mode === '2d'} onClick={() => setMode('2d')}>{extraText(locale, 'mode2d')}</button><button className={mode === 'iso' ? 'selected' : ''} aria-pressed={mode === 'iso'} onClick={() => setMode('iso')}>{locale === 'fi' ? 'Vino' : 'Tilt'}</button></div><div className="language-toggle" aria-label={String(text(locale, 'language'))}><button className={locale === 'en' ? 'selected' : ''} aria-pressed={locale === 'en'} onClick={() => setLocale('en')}>EN</button><button className={locale === 'fi' ? 'selected' : ''} aria-pressed={locale === 'fi'} onClick={() => setLocale('fi')}>FI</button></div></div>
+      <div className="topbar-right"><a className="wiki-entry" href="?wiki=1">Wiki</a><div className="mode-toggle" aria-label={extraText(locale, 'mapProjection')}><button className={mode === '2d' ? 'selected' : ''} aria-pressed={mode === '2d'} onClick={() => setMode('2d')}>{extraText(locale, 'mode2d')}</button><button className={mode === 'iso' ? 'selected' : ''} aria-pressed={mode === 'iso'} onClick={() => setMode('iso')}>{locale === 'fi' ? 'Vino' : 'Tilt'}</button></div><div className="language-toggle" aria-label={String(text(locale, 'language'))}><button className={locale === 'en' ? 'selected' : ''} aria-pressed={locale === 'en'} onClick={() => setLocale('en')}>EN</button><button className={locale === 'fi' ? 'selected' : ''} aria-pressed={locale === 'fi'} onClick={() => setLocale('fi')}>FI</button></div></div>
     </header>
-    <nav className="filter-bar" aria-label={extraText(locale, 'filterFacilities')}><div className="filter-options filter-quick-options">{quickFilterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div><details ref={sportDrawerRef} className="sport-drawer"><summary className="filter-see-all"><span>{locale === 'fi' ? 'Kaikki kategoriat' : 'All categories'}</span><RiArrowDownSLine aria-hidden="true" size={15} /></summary><div className="sport-drawer-panel">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => { selectFilter(option.id); if (sportDrawerRef.current) sportDrawerRef.current.open = false }}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></details><button type="button" className={'trend-toggle trend-nav-toggle ' + (trendingEnabled ? 'selected' : '')} aria-label={text(locale, 'trending')} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine className="trend-toggle-icon" aria-hidden="true" size={17} /><span className="trend-toggle-text">{text(locale, 'trending')}</span></button><details ref={filterDrawerRef} className="filter-drawer"><summary aria-label={text(locale, 'filters')}><RiEqualizer2Line className="filter-drawer-icon" aria-hidden="true" size={17} /><span className="filter-drawer-summary-text">{text(locale, 'filters')}</span>{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}</summary><div className="filter-drawer-panel"><div className="filter-drawer-group filter-sport-group"><span className="filter-drawer-label">{text(locale, 'sport')}</span><div className="filter-options filter-drawer-sport-options">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'priceFilter')}</span><div className="filter-options">{(['all', 'free', 'paid'] as const).map((option) => <button key={option} className={priceFilter === option ? 'selected' : ''} aria-pressed={priceFilter === option} onClick={() => setPriceFilter(option)}>{text(locale, option === 'all' ? 'allPrices' : option === 'free' ? 'priceFree' : 'pricePaid')}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'accessibilityFilter')}</span><div className="filter-options">{(['all', 'stepFreeEntrance', 'accessibleToilet', 'accessibleParking'] as const).map((option) => <button key={option} className={filter === option ? 'selected' : ''} aria-pressed={filter === option} onClick={() => setAccessibilityFilter(option)}>{text(locale, option === 'all' ? 'allAccessibility' : option)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'audienceFilter')}</span><div className="filter-options"><button className={familyFilter === 'all' ? 'selected' : ''} aria-pressed={familyFilter === 'all'} onClick={() => setFamilyFilter('all')}>{text(locale, 'allAudiences')}</button><button className={familyFilter === 'family' ? 'selected' : ''} aria-pressed={familyFilter === 'family'} onClick={() => setFamilyFilter('family')}>{text(locale, 'childrenFamilies')}</button></div></div></div></details><span className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
+    <nav className="filter-bar" aria-label={extraText(locale, 'filterFacilities')}><div className="filter-options filter-quick-options">{quickFilterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div><details ref={sportDrawerRef} className="sport-drawer"><summary className="filter-see-all"><span>{locale === 'fi' ? 'Kaikki kategoriat' : 'All categories'}</span><RiArrowDownSLine aria-hidden="true" size={15} /></summary><div className="sport-drawer-panel">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => { selectFilter(option.id); if (sportDrawerRef.current) sportDrawerRef.current.open = false }}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></details><button type="button" className={'trend-toggle trend-nav-toggle ' + (trendingEnabled ? 'selected' : '')} aria-label={text(locale, 'trending')} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine className="trend-toggle-icon" aria-hidden="true" size={17} /><span className="trend-toggle-text">{text(locale, 'trending')}</span></button><details ref={filterDrawerRef} className="filter-drawer"><summary aria-label={text(locale, 'filters')}><RiEqualizer2Line className="filter-drawer-icon" aria-hidden="true" size={17} /><span className="filter-drawer-summary-text">{text(locale, 'filters')}</span>{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}</summary><div className="filter-drawer-panel"><div className="filter-drawer-group filter-sport-group"><span className="filter-drawer-label">{text(locale, 'sport')}</span><div className="filter-options filter-drawer-sport-options">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'priceFilter')}</span><div className="filter-options">{(['all', 'free', 'paid'] as const).map((option) => <button key={option} className={priceFilter === option ? 'selected' : ''} aria-pressed={priceFilter === option} onClick={() => setPriceFilter(option)}>{text(locale, option === 'all' ? 'allPrices' : option === 'free' ? 'priceFree' : 'pricePaid')}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'accessibilityFilter')}</span><div className="filter-options">{(['all', 'stepFreeEntrance', 'accessibleToilet', 'accessibleParking'] as const).map((option) => <button key={option} className={accessibilityFilter === option ? 'selected' : ''} aria-pressed={accessibilityFilter === option} onClick={() => setAccessibilityFilter(option)}>{text(locale, option === 'all' ? 'allAccessibility' : option)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'audienceFilter')}</span><div className="filter-options"><button className={familyFilter === 'all' ? 'selected' : ''} aria-pressed={familyFilter === 'all'} onClick={() => setFamilyFilter('all')}>{text(locale, 'allAudiences')}</button><button className={familyFilter === 'family' ? 'selected' : ''} aria-pressed={familyFilter === 'family'} onClick={() => setFamilyFilter('family')}>{text(locale, 'childrenFamilies')}</button></div></div></div></details><span className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
     {routePlannerOpen && selected ? <div className="directions-panel" role="group" aria-label={locale === 'fi' ? 'Reittiohjeet' : 'Directions'}>
       <div className="directions-track" aria-hidden="true"><RiCircleLine size={17} /><span /><RiMapPin2Fill size={18} /></div>
       <div className="directions-fields">
@@ -388,7 +458,7 @@ function App() {
           <button className="location-button" type="button" onClick={useCurrentLocation} disabled={locationStatus === 'loading'} aria-label={text(locale, 'useCurrentLocation')} title={text(locale, 'useCurrentLocation')}><RiFocus3Line aria-hidden="true" size={16} /></button>
           {originSuggestions.length > 0 && <div className="address-suggestions" role="listbox" aria-label={text(locale, 'addressSuggestions')}>{originSuggestions.map((suggestion) => <button key={`${suggestion.coordinates?.join(',') ?? suggestion.label}-${suggestion.label}`} type="button" role="option" onClick={() => { acceptedStreetRef.current = suggestion.coordinates ? undefined : suggestion.label; setStartingPoint(suggestion.label); setOriginCoordinates(suggestion.coordinates); setOriginSuggestions([]) }}>{suggestion.label}</button>)}</div>}
         </div>
-        <div className="directions-destination"><span>{locale === 'fi' ? 'Määränpää' : 'Destination'}</span><strong>{selected.name ?? selectedVenue?.lipas?.name ?? text(locale, 'selectArea')}</strong></div>
+        <div className="directions-destination"><span>{locale === 'fi' ? 'Määränpää' : 'Destination'}</span><strong>{featureDisplayName(selected, locale, selectedVenue?.lipas?.name)}</strong></div>
       </div>
       <button className="directions-close" type="button" onClick={closeRoutePlanner} aria-label={locale === 'fi' ? 'Sulje reittiohjeet' : 'Close directions'}><RiCloseLine aria-hidden="true" size={19} /></button>
       <button className="route-button directions-submit" type="button" onClick={calculateRoute} disabled={routeStatus === 'loading' || !startingPoint.trim() || !selected.center}>{routeStatus === 'loading' ? text(locale, 'routing') : text(locale, 'calculateRoute')}</button>
@@ -401,20 +471,26 @@ function App() {
        {routeStatus === 'outside-area' && <span className="route-error">{text(locale, 'routeOutsideArea')}</span>}
        {routeStatus === 'invalid' && <span className="route-error">{text(locale, 'routeInvalid')}</span>}
     </div> : <div className="search-row">
-      <label className="search-control"><RiSearchLine className="search-icon" aria-hidden="true" size={16} /><input value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); setSelected(undefined); setRoutes({}) }} placeholder={text(locale, 'searchPlaceholder')} aria-label={text(locale, 'searchPlaceholder')} />{searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label={text(locale, 'clearSearch')}>×</button>}</label>
-      {searchQuery.trim() && visibleSports.length === 1 && !selected && <button className="select-result-button" type="button" onClick={() => setSelected(visibleSports[0])}>{text(locale, 'selectResult')}: {visibleSports[0].name}</button>}
+      <label className="search-control"><RiSearchLine className="search-icon" aria-hidden="true" size={16} /><input value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); selectFeature(undefined); setRoutes({}) }} placeholder={text(locale, 'searchPlaceholder')} aria-label={text(locale, 'searchPlaceholder')} />{searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label={text(locale, 'clearSearch')}>×</button>}</label>
+      {searchQuery.trim() && deferredSearchQuery === searchQuery && visibleSports.length === 1 && !selected && <button className="select-result-button" type="button" onClick={() => selectFeature(visibleSports[0], true)}>{text(locale, 'selectResult')}: {featureDisplayName(visibleSports[0], locale)}</button>}
     </div>}
     {canPlanRoute && <div className="travel-mode-row" aria-label={text(locale, 'travelMode')}><span className="travel-mode-label">{text(locale, 'travelMode')}</span>{(['walk', 'bike', 'transit', 'car'] as const).map((modeOption) => { const result = routes[modeOption]; const label = text(locale, modeOption); const ModeIcon = modeOption === 'walk' ? RiWalkLine : modeOption === 'bike' ? RiBikeLine : modeOption === 'transit' ? RiBus2Line : RiCarLine; return <button key={modeOption} className={`travel-mode mode-${modeOption} ${travelMode === modeOption ? 'selected' : ''} ${!result ? 'unavailable' : ''}`} type="button" disabled={routeStatus === 'loading' || !result} aria-label={label} title={label} onClick={() => setTravelMode(modeOption)}><ModeIcon className="travel-mode-icon" aria-hidden="true" size={20} /><span className="travel-mode-name">{label}</span>{result && <small>{formatRouteDuration(locale, result.durationSeconds)}</small>}</button> })}</div>}
     {travelMode === 'transit' && transitRoute && <aside className="transit-guidance" role="status">
-      <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitRoute.zones.join('')}`}>{transitRoute.zones.length ? transitRoute.zones.join('') : '—'}</span></div>
-      <div className="transit-leg-summary" aria-label={text(locale, 'gettingThere')}>
-        {transitRoute.legs.map((leg, index) => <div className={`transit-leg transit-leg-${leg.mode.toLowerCase()}`} key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
-          <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
-          <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
-          <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
-        </div>)}
+      <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</span></div>
+      <div className="transit-route-summary" aria-label={text(locale, 'gettingThere')}>
+        {transitRoute.legs.map((leg, index) => <span className={`transit-route-chip transit-route-chip-${leg.mode.toLowerCase()}`} key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}><TransitLegIcon mode={leg.mode} /><strong>{transitCompactLabel(locale, leg)}</strong><time>{formatRouteDuration(locale, leg.durationSeconds)}</time></span>)}
       </div>
-      <p className="transit-ticket-reminder">{text(locale, 'hslTicketReminder')}</p>
+      <p className="transit-ticket-reminder">{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
+      <details className="transit-steps">
+        <summary><span>{text(locale, 'transitSteps')}</span><small>{text(locale, 'transitStepsHint')}</small></summary>
+        <div className="transit-leg-summary" aria-label={text(locale, 'gettingThere')}>
+          {transitRoute.legs.map((leg, index) => <div className={`transit-leg transit-leg-${leg.mode.toLowerCase()}`} key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
+            <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
+            <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
+            <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
+          </div>)}
+        </div>
+      </details>
       <a href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
     </aside>}
     {travelMode === 'transit' && !transitRoute && transitStatus === 'unavailable' && <p className="journey-note" role="status">{text(locale, 'transitUnavailable')} {originCoordinates && selected?.center && <a href={transitDirectionsUrl(selected.center, originCoordinates)} target="_blank" rel="noreferrer">{text(locale, 'openTransitDirections')} ↗</a>}</p>}
@@ -426,9 +502,28 @@ function App() {
       {routePlannerOpen && addressError && <p>{locale === 'fi' ? 'Lähtöpaikan osoitehaku epäonnistui. Tarkista osoite tai käytä nykyistä sijaintia.' : 'Starting-point lookup failed. Check the address or use your current location.'}</p>}
       {visibleSports.length === 0 && <p>{locale === 'fi' ? 'Näillä rajauksilla ei löytynyt liikuntapaikkoja.' : 'No facilities match these filters.'} <button type="button" onClick={() => { setSearchQuery(''); setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }}>{locale === 'fi' ? 'Poista hakurajaukset' : 'Clear search and filters'}</button></p>}
     </div>
+    <div className="map-workspace">
+      <aside className={`facility-sidebar ${sidebarExpanded ? 'is-expanded' : ''}`} aria-label={text(locale, 'facilityList')}>
+        <header className="facility-sidebar-header">
+          {sidebarView === 'detail' && selected && <button type="button" className="facility-sidebar-back" onClick={() => { setSidebarView('list'); setSidebarExpanded(true) }} aria-label={locale === 'fi' ? 'Takaisin liikuntapaikkalistaan' : 'Back to facility list'}>←</button>}
+          <div className="facility-sidebar-heading">
+            <h2>{sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : text(locale, 'facilityList')}</h2>
+            <span>{sidebarView === 'detail' && selected ? selectedVenue?.lipas?.address ?? text(locale, priceLabelKey(selectedVenue?.lipas?.priceClass ?? selected.priceClass)) : `${visibleSports.length} ${text(locale, 'areas')}`}</span>
+          </div>
+          {sidebarView === 'detail' && selected && !routePlannerOpen && <button className="facility-report" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'}><RiErrorWarningLine aria-hidden="true" size={19} /></button>}
+          <button type="button" className="facility-sidebar-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-expanded={sidebarExpanded} aria-label={sidebarExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowDownSLine aria-hidden="true" size={19} /></button>
+        </header>
+        <div key={sidebarView === 'detail' && selected ? selected.id : 'facility-list'} className="facility-sidebar-content">
+          {sidebarView === 'detail' && selected ? <FacilityDetails feature={selected} venue={selectedVenue} trend={selectedTrend} trendingEnabled={trendingEnabled} locale={locale} route={route} travelMode={travelMode} onDirections={() => { setSearchQuery(''); setRoutePlannerOpen(true); setSidebarExpanded(false) }} /> : <>
+            <p className="facility-list-hint">{text(locale, 'facilityListHint')}</p>
+            <div className="facility-results" role="list">{sortedSports.slice(0, listLimit).map((feature) => { const venue = venuesById.get(feature.id); const activities = venue?.sports?.map((sport) => venueActivityLabel(locale, sport)).join(', '); return <div role="listitem" key={feature.id}><button type="button" className={selected?.id === feature.id ? 'selected' : ''} aria-pressed={selected?.id === feature.id} onClick={() => selectFeature(feature, true)}><strong>{featureDisplayName(feature, locale, venue?.lipas?.name)}</strong><span className="facility-list-activities">{activities || (venue?.lipas?.typeName ? locale === 'en' ? venue.lipas.typeNameEn ?? venue.lipas.typeName : venue.lipas.typeName : text(locale, 'missingSports'))}</span>{venue?.lipas?.address && <span className="facility-list-address">{venue.lipas.address}</span>}<span className="facility-price">{text(locale, priceLabelKey(feature.priceClass))}</span></button></div> })}</div>
+            {listLimit < sortedSports.length && <button className="load-more" onClick={() => setListLimit((value) => value + 60)}>{locale === 'fi' ? 'Näytä lisää' : 'Show more'}</button>}
+          </>}
+        </div>
+      </aside>
     <section className="map-stage" aria-label={locale === 'fi' ? 'Kartta ja kohteet' : 'Map and facilities'}>
       <SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} />
-      {travelMode === 'transit' && transitRoute && <div className="transit-map-legend" aria-label={`${text(locale, 'hslZoneMap')}: ${transitRoute.zones.join(' · ')}`}><span className="transit-map-legend-swatch" /><strong>{text(locale, 'hslZoneMap')}</strong><span>{transitRoute.zones.join(' · ') || text(locale, 'hslZonesUnknown')}</span><small>{text(locale, 'hslZoneMapSource')}</small></div>}
+      {travelMode === 'transit' && transitRoute && <div className="transit-map-legend" aria-label={`${text(locale, 'hslZoneMap')}: ${transitRoute.zones.join(' · ')}`}><div className="transit-zone-key"><span className="transit-map-legend-swatch" /><strong>{text(locale, 'hslZoneMap')}</strong><span>{transitRoute.zones.join(' · ') || text(locale, 'hslZonesUnknown')}</span><small>{text(locale, 'hslZoneMapSource')}</small></div><div className="transit-route-key"><span><i className="transit-route-key-line transit-route-key-walk" />{text(locale, 'walkMode')}</span><span><i className="transit-route-key-line transit-route-key-transit" />{text(locale, 'transitMode')}</span></div></div>}
       {trendingEnabled && topTrending.length > 0 && <div className="trending-rail" aria-label={text(locale, 'trendingNow')}>
         <div className="trending-rail-heading"><span className="trend-pulse" /><div><strong>{text(locale, 'trendingNow')}{trendingIsPreview && <span className="trend-preview-badge">{text(locale, 'previewData')}</span>}</strong><small>{locale === 'fi' ? 'Valitse kohde, niin se nostetaan kartalta esiin.' : 'Select a place to lift it from the map.'}</small></div></div>
         <div className="trending-items">{topTrending.map(({ feature, signal }, index) => {
@@ -436,16 +531,16 @@ function App() {
           const stageKey = signal.stage === 'new' ? 'newOnList' : signal.stage === 'rising' ? 'risingInterest' : 'popularNow'
           return <button key={feature.id} type="button" className={`trending-item trend-${signal.stage} ${selected?.id === feature.id ? 'selected' : ''}`} onClick={() => selectFeature(feature)} aria-pressed={selected?.id === feature.id}>
             <span className="trending-rank">0{index + 1}</span>
-            <span className="trending-item-copy"><strong>{feature.name ?? venue?.name ?? text(locale, 'selectArea')}</strong><small>{venue?.sports[0] ? venueActivityLabel(locale, venue.sports[0]) : venue?.facilityType ?? text(locale, 'sportsAreas')}</small></span>
+            <span className="trending-item-copy"><strong>{featureDisplayName(feature, locale, venue?.name)}</strong><small>{venue?.sports[0] ? venueActivityLabel(locale, venue.sports[0]) : venue?.facilityType ?? text(locale, 'sportsAreas')}</small></span>
             <span className="trending-score"><strong>{signal.interestScore}</strong><small>+{signal.recentChange}%</small></span>
             <span className="trending-stage">{text(locale, stageKey)}</span>
           </button>
         })}</div>
       </div>}
-      {selected && !routePlannerOpen ? <aside key={selected.id} className="facility-card" aria-live="polite"><div><strong>{selected.name ?? selectedVenue?.lipas?.name ?? text(locale, 'selectArea')}</strong><button onClick={() => { setSelected(undefined); setRoutes({}) }}>{text(locale, 'clear')}</button></div>{selectedTrend && trendingEnabled && <div className={`trend-summary trend-${selectedTrend.stage}`}><div><span>{text(locale, selectedTrend.source === 'preview' ? 'previewScore' : 'interestSignal')}</span><strong>{selectedTrend.interestScore}</strong></div><div className="trend-summary-bar"><span style={{ '--trend-progress': selectedTrend.interestScore / 100 } as CSSProperties} /></div><small>+{selectedTrend.recentChange}% · {text(locale, selectedTrend.stage === 'new' ? 'newOnList' : selectedTrend.stage === 'rising' ? 'risingInterest' : 'popularNow')}</small></div>}{selectedVenue?.lipas?.address && <p className="facility-address"><RiMapPin2Line className="location-icon" aria-hidden="true" size={16} />{selectedVenue.lipas.address}</p>}<button className="directions-open" type="button" onClick={() => { setSearchQuery(''); setRoutePlannerOpen(true); setListOpen(false) }}>{locale === 'fi' ? 'Reittiohjeet' : 'Directions'}</button><dl className="facility-facts"><div><dt>{text(locale, 'priceFilter')}</dt><dd>{text(locale, priceLabelKey(selectedVenue?.lipas?.priceClass ?? selected.priceClass))}</dd></div><div><dt>{text(locale, 'access')}</dt><dd>{text(locale, selectedVenue?.lipas?.accessStatus === 'open' ? 'accessOpen' : selectedVenue?.lipas?.accessStatus === 'restricted' ? 'accessRestricted' : selectedVenue?.lipas?.accessStatus === 'booking' ? 'accessBooking' : 'accessUnknown')}</dd></div></dl>{!selectedVenue?.lipas?.accessNoteFi && (selectedVenue?.lipas?.accessSourceUrl ?? selectedVenue?.officialUrl) && <p className="facility-access-link"><a href={selectedVenue?.lipas?.accessSourceUrl ?? selectedVenue?.officialUrl} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a></p>}{selectedVenue?.lipas?.accessNoteFi && <div className="facility-access"><span className="facility-question">{text(locale, 'access')}</span><p>{locale === 'en' ? selectedVenue.lipas.accessNoteEn : selectedVenue.lipas.accessNoteFi}</p>{selectedVenue.lipas.accessSourceUrl && <a href={selectedVenue.lipas.accessSourceUrl} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a>}</div>}{route && <span className="facility-type">{text(locale, travelMode === 'walk' ? 'walkingRoute' : travelMode)}: {Math.max(1, Math.round(route.durationSeconds / 60))} {text(locale, 'minutes')} · {Math.round(route.distanceMetres)} m</span>}{selectedVenue?.lipas?.typeName && <span className="facility-type">{locale === 'en' ? selectedVenue.lipas.typeNameEn ?? selectedVenue.lipas.typeName : selectedVenue.lipas.typeName}</span>}{selectedVenue?.sports.length ? <><span className="facility-question">{text(locale, 'whatCanYouDo')}</span><ul className="facility-activities">{selectedVenue.sports.map((sport) => <li key={sport}>{venueActivityLabel(locale, sport)}</li>)}</ul></> : <p className="facility-unknown">{text(locale, 'missingSports')}</p>}{serviceMap && <details className="official-details"><summary>{text(locale, 'officialInfo')}</summary>{(locale === 'en' ? serviceMap.shortDescriptionEn : serviceMap.shortDescriptionFi) && <p>{locale === 'en' ? serviceMap.shortDescriptionEn : serviceMap.shortDescriptionFi}</p>}{(locale === 'en' ? serviceMap.servicesEn : serviceMap.servicesFi).length > 0 && <><span className="facility-question">{text(locale, 'officialServices')}</span><ul className="official-services">{(locale === 'en' ? serviceMap.servicesEn : serviceMap.servicesFi).map((service) => <li key={service}>{service}</li>)}</ul></>}{(locale === 'en' ? serviceMap.openingHoursEn : serviceMap.openingHoursFi) && <><span className="facility-question">{text(locale, 'openingHours')}</span><p className="official-hours">{locale === 'en' ? serviceMap.openingHoursEn : serviceMap.openingHoursFi}</p></>}{(locale === 'en' ? serviceMap.priceEn : serviceMap.priceFi) && <><span className="facility-question">{text(locale, 'priceDetails')}</span><div className="price-groups">{serviceMap.priceGroups.map((group) => <section key={group.heading}><strong>{group.heading}</strong><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></section>)}</div></>}{serviceMap.links.length > 0 && <><span className="facility-question">{text(locale, 'officialLinks')}</span><ul className="official-links">{serviceMap.links.map((link) => <li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{locale === 'en' ? link.labelEn : link.labelFi} ↗</a></li>)}</ul></>}</details>}{selectedVenue && <div className="facility-links"><a href={selectedVenue.officialUrl ?? selectedVenue.sourceUrl} target="_blank" rel="noreferrer">{selectedVenue.officialUrl ? text(locale, 'openOfficial') : text(locale, 'viewSource')} ↗</a></div>}</aside> : <div className="map-legend"><div><span className="legend-swatch facility" /> {text(locale, 'selectArea')}</div><div><span className="legend-swatch park" /> {text(locale, 'contextMap')}</div><div><span className="legend-swatch water" /> {text(locale, 'water')}</div>{trendingEnabled && <><div className="legend-divider" /><div><span className="legend-swatch trend-new" /> {text(locale, 'newOnList')}</div><div><span className="legend-swatch trend-rising" /> {text(locale, 'risingInterest')}</div><div><span className="legend-swatch trend-popular" /> {text(locale, 'popularNow')}</div>{trendingIsPreview && <small>{text(locale, 'trendingNote')}</small>}</>}</div>}
-    <details className="facility-list" open={listOpen} onToggle={(event) => setListOpen(event.currentTarget.open)}><summary><span className="facility-list-summary-open">{text(locale, 'openFacilityList')}</span><span className="facility-list-summary-close">{text(locale, 'closeFacilityList')}</span> ({visibleSports.length})</summary><p>{text(locale, 'facilityListHint')}</p><div role="list">{listOpen && sortedSports.slice(0, listLimit).map((feature) => { const venue = venuesById.get(feature.id); const activities = venue?.sports?.map((sport) => venueActivityLabel(locale, sport)).join(', '); return <div role="listitem" key={feature.id}><button type="button" className={selected?.id === feature.id ? 'selected' : ''} aria-pressed={selected?.id === feature.id} onClick={() => selectFeature(feature)}><strong>{feature.name ?? venue?.lipas?.name ?? text(locale, 'selectArea')}</strong><span>{activities || (venue?.lipas?.typeName ? locale === 'en' ? venue.lipas.typeNameEn ?? venue.lipas.typeName : venue.lipas.typeName : text(locale, 'missingSports'))}</span>{venue?.lipas?.address && <span>{venue.lipas.address}</span>}<span className="facility-price">{text(locale, priceLabelKey(feature.priceClass))}</span></button></div> })}</div>{listOpen && listLimit < sortedSports.length && <button className="load-more" onClick={() => setListLimit((value) => value + 60)}>{locale === 'fi' ? 'Näytä lisää' : 'Show more'}</button>}</details>
+      {!selected && <div className="map-legend"><div><span className="legend-swatch facility" /> {text(locale, "selectArea")}</div><div><span className="legend-swatch park" /> {text(locale, "contextMap")}</div><div><span className="legend-swatch water" /> {text(locale, "water")}</div>{trendingEnabled && <><div className="legend-divider" /><div><span className="legend-swatch trend-new" /> {text(locale, "newOnList")}</div><div><span className="legend-swatch trend-rising" /> {text(locale, "risingInterest")}</div><div><span className="legend-swatch trend-popular" /> {text(locale, "popularNow")}</div>{trendingIsPreview && <small>{text(locale, "trendingNote")}</small>}</>}</div>}
      {debugVenues && <aside className="debug-venues" aria-label="Venue debug information"><strong>DEBUG / VENUES</strong><span>{venueDiagnostics.featureCount} map features · {venueDiagnostics.venueCount} venues · {venueDiagnostics.sourceCount} sources</span><span>{venueDiagnostics.duplicateNameGroups} duplicate-name groups after merge</span>{venueDiagnostics.duplicateNames.length > 0 && <span title={venueDiagnostics.duplicateNames.join(' · ')}>Examples: {venueDiagnostics.duplicateNames.join(' · ')}</span>}<span>URL flag: <code>?debug=venues</code></span></aside>}
-      {selected && !routePlannerOpen && <button className="facility-report" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'}><RiFlagLine aria-hidden="true" size={16} /></button>}
+      <button className="map-reset" onClick={() => { selectFeature(undefined); mapRef.current?.reset() }}>{text(locale, 'reset')}</button>
+    </section>
       {reportDialogOpen && selected && !routePlannerOpen && <div className="report-dialog-backdrop" role="presentation" onClick={() => setReportDialogOpen(false)}>
         <aside className="report-dialog" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" onClick={(event) => event.stopPropagation()}>
           <button className="report-dialog-close" type="button" onClick={() => setReportDialogOpen(false)} aria-label={locale === 'fi' ? 'Sulje raportointi' : 'Close report dialog'}><RiCloseLine aria-hidden="true" size={18} /></button>
@@ -458,8 +553,7 @@ function App() {
           </div>
         </aside>
       </div>}
-      <button className="map-reset" onClick={() => { setSelected(undefined); mapRef.current?.reset() }}>{text(locale, 'reset')}</button>
-    </section>
+    </div>
     <footer className="footer"><a href={mapArea.source} target="_blank" rel="noreferrer">{mapArea.attribution} · ODbL</a><span className="footer-disclaimer">{extraText(locale, 'officialDisclaimer')}</span><button className="privacy-link" type="button" onClick={() => setConsentVisible(true)}>{text(locale, 'privacySettings')}</button></footer>
     {consentVisible && <aside className="consent-banner" role="dialog" aria-labelledby="privacy-consent-title" aria-describedby="privacy-consent-body"><div><span className="consent-kicker">{text(locale, 'privacySettings')}</span><strong id="privacy-consent-title">{text(locale, 'analyticsConsentTitle')}</strong><p id="privacy-consent-body">{text(locale, 'analyticsConsentBody')}</p><details className="consent-details"><summary>{text(locale, 'privacyDetails')}</summary><p>{text(locale, 'privacyDetailsBody')}</p><p>{locale === 'fi' ? 'Taustakartta ladataan OpenFreeMap-palvelusta. Palvelu näkee verkkopyyntöjen IP-osoitteen ja pyydetyn kartta-alueen, mutta sille ei lähetetä hakutekstiä tai reittilomakkeen tietoja.' : 'The basemap loads from OpenFreeMap. The provider receives your IP address and requested map tile area, but not your search text or route form values.'}</p></details></div><div className="consent-actions"><button type="button" className="consent-secondary" onClick={() => chooseAnalyticsConsent('denied')}>{text(locale, 'onlyNecessary')}</button><button type="button" className="consent-primary" onClick={() => chooseAnalyticsConsent('granted')}>{text(locale, 'allowAnalytics')}</button></div></aside>}
   </main>

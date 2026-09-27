@@ -51,7 +51,7 @@ function wfsProxyPath(path: string) {
 function nominatimSearchProxyPath(path: string) {
   const requestUrl = new URL(path, 'http://localhost')
   const query = requestUrl.searchParams.get('q')?.trim() ?? ''
-  const params = new URLSearchParams({ format: 'jsonv2', limit: '1', addressdetails: '1', countrycodes: 'fi', 'accept-language': 'fi,en', viewbox: '24.89,60.215,24.98,60.165', bounded: '1', q: query })
+  const params = new URLSearchParams({ format: 'jsonv2', limit: '1', addressdetails: '1', countrycodes: 'fi', 'accept-language': 'fi,en', viewbox: '24.7828026,60.2978497,25.2545116,59.922486', bounded: '1', q: query })
   return `/search?${params}`
 }
 

@@ -10,11 +10,13 @@ export type BuildingFeature = { id: string; rings: MapPoint[][]; bounds?: Bounds
 export type RouteFeature = { id: string; kind: 'rail' | 'waterline' | 'major' | 'street' | 'local' | 'path'; points: MapPoint[]; bounds?: Bounds; context?: 'neighboring' }
 export type VenueIcon = 'football' | 'athletics' | 'swimming' | 'ice_hockey' | 'basketball' | 'tennis' | 'fitness' | 'multi'
 export type PriceClass = 'free' | 'paid' | 'mixed' | 'unknown'
-export type SportFeature = { id: string; name?: string; sport: string; sports?: string[]; facilityType?: string; priceClass?: PriceClass; icon?: VenueIcon; rings: MapPoint[][]; bounds?: Bounds; center?: GeoPoint }
+export type SportFeature = { id: string; name?: string; nameEn?: string; sport: string; sports?: string[]; facilityType?: string; priceClass?: PriceClass; icon?: VenueIcon; rings: MapPoint[][]; bounds?: Bounds; center?: GeoPoint }
 
 export type LipasVenue = {
   id: number
   name: string
+  parentName?: string
+  facilities?: { id: number; name: string; typeName?: string; typeNameEn?: string; address?: string }[]
   typeName?: string
   typeNameEn?: string
   website?: string

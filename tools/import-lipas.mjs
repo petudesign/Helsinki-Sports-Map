@@ -3,9 +3,16 @@ import { runtimeSnapshot } from './lib/lipas-runtime.mjs'
 
 const api = 'https://api.lipas.fi/v2'
 const pageSize = 100
-const [westArg = '24.88', southArg = '60.165', eastArg = '24.98', northArg = '60.28', outputPath = 'src/data/lipas-helsinki.json', runtimeOutputPath = 'src/data/lipas-helsinki-runtime.json'] = process.argv.slice(2)
-const studyAreaBbox = { west: Number(westArg), south: Number(southArg), east: Number(eastArg), north: Number(northArg) }
-if (!Object.values(studyAreaBbox).every(Number.isFinite) || !(studyAreaBbox.west < studyAreaBbox.east && studyAreaBbox.south < studyAreaBbox.north)) throw new Error('Usage: node tools/import-lipas.mjs <west> <south> <east> <north> [output] [runtime-output]')
+const boundary = JSON.parse(await readFile(new URL('../src/data/helsinki-boundary.json', import.meta.url), 'utf8'))[0]
+const defaultBounds = {
+  west: Number(boundary.boundingbox[2]),
+  south: Number(boundary.boundingbox[0]),
+  east: Number(boundary.boundingbox[3]),
+  north: Number(boundary.boundingbox[1]),
+}
+const [westArg = String(defaultBounds.west), southArg = String(defaultBounds.south), eastArg = String(defaultBounds.east), northArg = String(defaultBounds.north), outputPath = 'src/data/lipas-helsinki.json', runtimeOutputPath = 'src/data/lipas-helsinki-runtime.json'] = process.argv.slice(2)
+const helsinkiBbox = { west: Number(westArg), south: Number(southArg), east: Number(eastArg), north: Number(northArg) }
+if (!Object.values(helsinkiBbox).every(Number.isFinite) || !(helsinkiBbox.west < helsinkiBbox.east && helsinkiBbox.south < helsinkiBbox.north)) throw new Error('Usage: node tools/import-lipas.mjs <west> <south> <east> <north> [output] [runtime-output]')
 
 async function getJson(path) {
   const response = await fetch(`${api}${path}`)
@@ -41,7 +48,7 @@ function firstCoordinate(geometry) {
 
 const sites = pages.flatMap(({ items }) => items).filter((site) => {
   const [longitude, latitude] = firstCoordinate(site.location?.geometries) ?? []
-  return longitude >= studyAreaBbox.west && longitude <= studyAreaBbox.east && latitude >= studyAreaBbox.south && latitude <= studyAreaBbox.north
+  return longitude >= helsinkiBbox.west && longitude <= helsinkiBbox.east && latitude >= helsinkiBbox.south && latitude <= helsinkiBbox.north
 }).map((site) => ({
   id: site['lipas-id'],
   name: site.name,
@@ -65,7 +72,7 @@ const snapshot = {
   license: 'CC BY 4.0',
   attribution: 'LIPAS, University of Jyväskylä',
   cityCode: 91,
-  scope: `Helsinki sports map study area bbox ${Object.values(studyAreaBbox).join(',')}`,
+  scope: `Helsinki municipal bbox ${Object.values(helsinkiBbox).join(',')}`,
   importedAt: new Date().toISOString(),
   sites,
 }

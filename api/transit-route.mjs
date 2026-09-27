@@ -123,6 +123,7 @@ function routeFromItinerary(itinerary, origin, destination) {
       to: leg.to?.name ?? undefined,
       fromCoordinates: Number.isFinite(leg.from?.lon) && Number.isFinite(leg.from?.lat) ? [leg.from.lon, leg.from.lat] : undefined,
       toCoordinates: Number.isFinite(leg.to?.lon) && Number.isFinite(leg.to?.lat) ? [leg.to.lon, leg.to.lat] : undefined,
+      geometry: geometry.length > 1 ? geometry : undefined,
       durationSeconds: Math.max(0, Number(leg.duration) || 0),
       zones: legZones,
     }

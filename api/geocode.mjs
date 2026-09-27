@@ -1,7 +1,7 @@
 import { applyRateLimit, readBoundedQueryParam, reserveNominatimSlot, timeoutSignal } from '../server/security.mjs'
 
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
-const HELSINKI_VIEWBOX = '24.89,60.215,24.98,60.165'
+const HELSINKI_VIEWBOX = '24.7828026,60.2978497,25.2545116,59.922486'
 const NOMINATIM_USER_AGENT = 'Helsinki-Sports-Map/0.0.1 (+https://helsinki-sports-map.vercel.app/)'
 
 function safeResult(result) {

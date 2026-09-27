@@ -60,10 +60,6 @@ function distanceMetres(a: GeoPoint, b: GeoPoint) {
   return Math.sqrt(((a[0] - b[0]) * latitudeScale * 111_320) ** 2 + ((a[1] - b[1]) * 111_320) ** 2)
 }
 
-function addressKey(address: string | undefined) {
-  return address ? normalized(address) : undefined
-}
-
 const sites = (lipasSnapshot.sites as LipasSite[]).flatMap((site) => {
   const coordinate = firstCoordinate(site)
   return coordinate ? [{ site, coordinate, normalizedName: normalized(site.name) }] : []
@@ -179,8 +175,8 @@ function iconFromSports(sports: string[]) {
 }
 
 function isUserFacingSite(site: LipasSite) {
-  const label = `${site.name} ${site.type?.fi ?? ''}`.toLocaleLowerCase('fi-FI')
-  return !/huoltorakennus|veneilyn palvelupaikka|kalastuskohde|pysäköinti|katsomo|opastuspiste|neighbourhood park|lähi-\/ulkoilupuisto|\binfo\b/.test(label)
+  const label = `${site.name} ${site.type?.fi ?? ''} ${site.type?.en ?? ''}`.toLocaleLowerCase('fi-FI')
+  return !/huoltorakennus|veneilyn palvelupaikka|kalastuskohde|pysäköinti|katsomo|opastuspiste|neighbourhood park|lähi-\/ulkoilupuisto|\binfo\b|ruoanlaitto|ruuanlaitto|cooking|tulentek|grillipaikka|grillikatos|keittokatos|telttail|leiriyty|leirint|camping|camp\s*site|matkailupalveluiden alue/.test(label)
 }
 
 function venueGroupName(site: LipasSite) {
@@ -203,19 +199,21 @@ export function accessProfileForUrl(url: string | undefined) {
   return undefined
 }
 
-function shouldAlwaysGroup(groupName: string) {
-  // These are named complexes/parks whose LIPAS sub-records should be
-  // explored as one place instead of competing markers on the same area.
-  return /^(uimastadion|olympiastadion|töölön kisahalli|eläintarhan urheilukenttä|violanpuisto)$/i.test(groupName)
+function groupingRadius(groupName: string) {
+  // Keep school campuses together while still separating other facilities
+  // with the same parent name when their coordinates are clearly apart.
+  if (/(peruskoulu|yhteiskoulu|lukio|koulu|school|college)/.test(normalized(groupName))) return 150
+  return 80
 }
 
 function splitNearbyGroups(members: { site: LipasSite; coordinate: GeoPoint }[], groupName: string) {
-  if (shouldAlwaysGroup(groupName)) return [members]
+  const radius = groupingRadius(groupName)
   const groups: { site: LipasSite; coordinate: GeoPoint }[][] = []
   members.forEach((member) => {
     const matching = groups.filter((group) => group.some((existing) => {
-      const sameAddress = addressKey(existing.site.address) && addressKey(existing.site.address) === addressKey(member.site.address)
-      return sameAddress || distanceMetres(member.coordinate, existing.coordinate) <= 80
+      const distance = distanceMetres(member.coordinate, existing.coordinate)
+      const sameAddress = existing.site.address && member.site.address && normalized(existing.site.address) === normalized(member.site.address)
+      return distance <= radius || (Boolean(sameAddress) && distance <= 200)
     }))
     if (!matching.length) { groups.push([member]); return }
     const target = matching[0]
@@ -253,10 +251,11 @@ export function createLipasFeatures(project: (point: GeoPoint) => MapPoint) {
   const venues: { id: string; venue: LipasVenue }[] = []
   const groups = new Map<string, { site: LipasSite; coordinate: GeoPoint }[]>()
   sites.filter(({ site }) => isUserFacingSite(site)).forEach(({ site, coordinate }) => {
-    const key = venueGroupName(site)
+    const key = normalized(venueGroupName(site))
     groups.set(key, [...(groups.get(key) ?? []), { site, coordinate }])
   })
-  groups.forEach((members, groupName) => {
+  groups.forEach((members) => {
+    const groupName = venueGroupName(members[0].site)
     const clusters = splitNearbyGroups(members, groupName)
     clusters.forEach((cluster) => {
       const totals = cluster.reduce<GeoPoint>((total, member) => [total[0] + member.coordinate[0], total[1] + member.coordinate[1]], [0, 0])
@@ -266,11 +265,15 @@ export function createLipasFeatures(project: (point: GeoPoint) => MapPoint) {
       const sports = [...new Set(cluster.flatMap(({ site }) => sportsFromSite(site)))]
       const priceClass = priceClassForSites(cluster.map(({ site }) => site))
       const representative = cluster.find(({ site }) => /yleisurheilukenttä|jalkapallostadion|maauimala|uimahalli/i.test(site.type?.fi ?? '')) ?? cluster[0]
-      // Address is shown as a separate field in the card, not in the name.
       const displayName = groupName
+      const displayNameEn = normalized(displayName) === normalized(cluster[0].site.type?.fi ?? '')
+        ? cluster[0].site.type?.en ?? displayName
+        : displayName
+      const facilities = cluster.map(({ site }) => ({ id: site.id, name: site.name, typeName: site.type?.fi, typeNameEn: site.type?.en, address: site.address }))
+      const address = addressForCluster(cluster)
       const id = `lipas-group:${groupName}:${representative.site.id}`
-      features.push({ id, name: displayName, sport: sports[0] ?? 'multi', sports, priceClass, facilityType: `${cluster.length} facilities`, icon: iconFromSports(sports), rings: [ring], bounds: boundsOf(ring), center: coordinate })
-      venues.push({ id, venue: { id: representative.site.id, name: displayName, typeName: cluster.length > 1 ? `${cluster.length} liikuntapaikkaa` : representative.site.type?.fi, typeNameEn: cluster.length > 1 ? `${cluster.length} sports facilities` : representative.site.type?.en, website: normalizeExternalUrl(representative.site.website), address: addressForCluster(cluster), updatedAt: representative.site.updatedAt, priceClass } })
+      features.push({ id, name: displayName, nameEn: displayNameEn, sport: sports[0] ?? 'multi', sports, priceClass, facilityType: `${cluster.length} facilities`, icon: iconFromSports(sports), rings: [ring], bounds: boundsOf(ring), center: coordinate })
+      venues.push({ id, venue: { id: representative.site.id, name: displayName, facilities, typeName: cluster.length > 1 ? `${cluster.length} liikuntapaikkaa` : representative.site.type?.fi, typeNameEn: cluster.length > 1 ? `${cluster.length} sports facilities` : representative.site.type?.en, website: normalizeExternalUrl(representative.site.website), address, updatedAt: representative.site.updatedAt, priceClass } })
     })
   })
   return { features, venues }

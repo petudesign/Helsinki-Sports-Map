@@ -57,3 +57,41 @@ Known product limitation: the evidence score is deterministic and not a probabil
 
 - Initial review prototype: queue used a misleading fixed `92%` badge and the ID column was too close to the venue name.
 - Current pass: restored a transparent percentage score with per-check contributions, widened the desktop queue with an explicit ID column, and removed redundant prototype labels.
+
+---
+
+# Latest design QA — wiki editor (2026-09-27)
+
+## Comparison target and evidence
+
+- Source visual: `C:\Users\petsk\AppData\Local\Temp\codex-clipboard-65239030-ff69-4327-9d92-09f0f4f458b7.png`, 800 × 379 px.
+- Implementation: `http://localhost:4181/?wiki=1`; the in-app browser screenshot was captured at 1280 × 720 px and displayed in the same CUA comparison response as the source. The browser capture is not saved to a local screenshot file.
+- Viewport and state: implementation screenshot 1280 × 720 px (CSS size/device scale not exposed by the selected browser); the source is a 800 × 379 px Zeroheight dashboard. They are intentionally different screens: the source informs the navigation and documentation-shell direction, while the requested result is an editable wiki page. No pixel-level spacing claims are made and no density normalization was applied.
+- Full-view evidence: both images were reviewed together in one comparison response. The implementation carries over a slim navigation area, light documentation canvas, and restrained utility styling. It uses the map's existing logo and colors and omits dashboard cards and the activity feed because the requested screen is for writing documentation.
+- Focused region: not required for this adaptation; the source does not show the heading editor or wiki editing controls.
+
+## Fidelity and interaction review
+
+- Typography: reuses the app's Satoshi family with a clear page title, section headings, and smaller navigation labels. Finnish and English interface labels are available.
+- Spacing and layout: desktop uses a fixed left outline and one scrollable editing canvas. The page outline follows the created heading hierarchy. A narrow-screen layout moves the outline into a disclosure and keeps the language selector available; that breakpoint was reviewed in CSS but not captured in the browser.
+- Colors and tokens: uses the existing blue/teal product palette, light surfaces, soft borders, and rounded controls. No Zeroheight-specific blue links or dashboard widgets were copied.
+- Images and icons: reuses the existing product logo and installed Remix icons. No new decorative assets were needed.
+- Copy and content: the empty state explains how to start; heading, subheading, and note controls use direct labels. Draft status identifies browser-local saving.
+- Interactions: browser verification confirmed adding and editing a heading, adding a subheading, deleting the temporary section, and persistence after reload. The map exposes a working Wiki link. Browser console returned no errors.
+- Build: `npm run build` passed. Vite still reports the existing large map-data chunks.
+
+## Findings
+
+No actionable P0/P1/P2 differences for the requested Zeroheight-inspired wiki adaptation. The source and implementation represent different screens by design, so this pass checks structural direction and the built editor rather than claiming a pixel-identical clone.
+
+## Follow-up polish
+
+- Capture the wiki at a real mobile viewport and refine the compact header if needed.
+- Replace browser-local draft storage with a shared source of truth when collaborative/published wiki editing is needed.
+
+## Comparison history
+
+- Initial wiki pass: empty page, dynamic heading outline, subsection editing, delete controls, local save state, and responsive styling added.
+- Current pass: verified heading/subheading interactions and local persistence, removed temporary verification content, confirmed map-to-wiki navigation, and checked the browser console.
+
+**final result: passed**

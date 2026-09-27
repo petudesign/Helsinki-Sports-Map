@@ -26,6 +26,7 @@ type ServiceMapPayload = {
   short_description?: { fi?: string; en?: string }
   description?: { fi?: string; en?: string }
   picture_url?: string
+  picture_caption?: { fi?: string; en?: string }
   street_address?: { fi?: string; en?: string }
   last_modified_time?: string
   connections?: ServiceMapConnection[]
@@ -50,6 +51,8 @@ export type ServiceMapDetails = {
   servicesEn: string[]
   links: { labelFi: string; labelEn: string; url: string }[]
   pictureUrl?: string
+  pictureCaptionFi?: string
+  pictureCaptionEn?: string
   updatedAt?: string
   priceClass?: PriceClass
   usageStatus?: 'open' | 'restricted' | 'booking' | 'unknown'
@@ -100,6 +103,9 @@ export const serviceMapDetails: Record<number, ServiceMapDetails> = {
     servicesEn: source.service_names_en ?? [],
     links: source.connections?.flatMap((connection) => connection.section_type === 'LINK' && connection.name?.fi && connection.name.en && connection.www?.fi && connection.www.en ? [{ labelFi: connection.name.fi, labelEn: connection.name.en, url: connection.www.en }] : []) ?? [],
     pictureUrl: source.picture_url,
+    pictureCaptionFi: source.picture_caption?.fi,
+    pictureCaptionEn: source.picture_caption?.en,
+    sourceUrl: `https://palvelukartta.hel.fi/fi/unit/${source.id}`,
     updatedAt: source.last_modified_time,
     familySignals: [],
   },
@@ -116,6 +122,9 @@ type ServiceMapSnapshot = {
   descriptionEn?: string
   openingHoursFi?: string
   openingHoursEn?: string
+  pictureUrl?: string
+  pictureCaptionFi?: string
+  pictureCaptionEn?: string
   priceFi?: string
   priceEn?: string
   priceClass: PriceClass
@@ -148,6 +157,9 @@ function detailsFromSnapshot(unit: ServiceMapSnapshot): ServiceMapDetails {
     servicesFi: [],
     servicesEn: [],
     links: unit.links,
+    pictureUrl: unit.pictureUrl,
+    pictureCaptionFi: unit.pictureCaptionFi,
+    pictureCaptionEn: unit.pictureCaptionEn,
     updatedAt: unit.updatedAt,
     priceClass: unit.priceClass,
     usageStatus: unit.usageStatus,

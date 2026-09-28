@@ -195,6 +195,8 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const timeout = window.setTimeout(() => setFailed(true), 20000)
     const observer = new ResizeObserver(() => map.resize())
     observer.observe(container.current)
+    let fallbackClusterCountOverlay: HTMLElement | undefined
+    let updateFallbackClusterCounts: (() => void) | undefined
     // Native gestures animate the camera without any React state updates.
     map.on('error', (event) => {
       const sourceId = 'sourceId' in event ? String(event.sourceId) : undefined
@@ -238,6 +240,40 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map.addLayer({ id: 'clusters', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
         'circle-color': '#0755a0', 'circle-radius': ['step', ['get', 'point_count'], 18, 20, 23, 80, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
       } })
+      if (usingOsmFallback) {
+        // The raster fallback has no glyph source. Draw count labels in HTML so
+        // clusters keep their numbers even when the vector style is unavailable.
+        fallbackClusterCountOverlay = document.createElement('div')
+        fallbackClusterCountOverlay.className = 'cluster-count-overlay'
+        fallbackClusterCountOverlay.setAttribute('aria-hidden', 'true')
+        map.getCanvasContainer().append(fallbackClusterCountOverlay)
+        const labels = new Map<string, HTMLSpanElement>()
+        updateFallbackClusterCounts = () => {
+          const visible = new Set<string>()
+          for (const feature of map.queryRenderedFeatures({ layers: ['clusters'] })) {
+            if (feature.geometry.type !== 'Point' || feature.properties?.cluster_id == null) continue
+            const clusterId = String(feature.properties.cluster_id)
+            visible.add(clusterId)
+            let label = labels.get(clusterId)
+            if (!label) {
+              label = document.createElement('span')
+              label.className = 'cluster-count-label'
+              labels.set(clusterId, label)
+              fallbackClusterCountOverlay?.append(label)
+            }
+            label.textContent = String(feature.properties.point_count_abbreviated ?? feature.properties.point_count ?? '')
+            const [longitude, latitude] = feature.geometry.coordinates as [number, number]
+            const { x, y } = map.project([longitude, latitude])
+            label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`
+          }
+          for (const [clusterId, label] of labels) {
+            if (visible.has(clusterId)) continue
+            label.remove()
+            labels.delete(clusterId)
+          }
+        }
+        map.on('render', updateFallbackClusterCounts)
+      }
       if (!usingOsmFallback) map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'facilities', filter: ['has', 'point_count'], layout: {
         'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Regular'], 'text-size': 12,
       }, paint: { 'text-color': '#ffffff' } })
@@ -280,7 +316,14 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       setReady(true)
       setFailed(false)
     })
-    return () => { window.clearTimeout(timeout); observer.disconnect(); mapRef.current = null; map.remove() }
+    return () => {
+      window.clearTimeout(timeout)
+      observer.disconnect()
+      if (updateFallbackClusterCounts) map.off('render', updateFallbackClusterCounts)
+      fallbackClusterCountOverlay?.remove()
+      mapRef.current = null
+      map.remove()
+    }
   }, [attempt, polygons, usingOsmFallback])
 
   useEffect(() => {

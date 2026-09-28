@@ -2,6 +2,8 @@
 .sports-map { position: absolute; inset: 0; }
 .sports-map .maplibregl-canvas { cursor: grab; }
 .sports-map .maplibregl-canvas:active { cursor: grabbing; }
+.sports-map .cluster-count-overlay { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.sports-map .cluster-count-label { position: absolute; color: #fff; font: 500 12px/1 system-ui, sans-serif; text-align: center; white-space: nowrap; user-select: none; }
 .sports-map .maplibregl-ctrl-group { border-radius: 8px; overflow: hidden; }
 .sports-map .maplibregl-ctrl-group button { width: 44px; height: 44px; }
 .sports-map .maplibregl-ctrl-top-right { top: 4px; right: 4px; }

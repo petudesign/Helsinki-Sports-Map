@@ -1,5 +1,6 @@
 import payload from './service-map-kisahalli.json'
 import snapshot from './service-map-helsinki.json'
+import englishOverridesPayload from './service-map-english-overrides.json'
 import type { PriceClass } from './types'
 
 export type TriState = 'yes' | 'no' | 'unknown'
@@ -62,13 +63,18 @@ export type ServiceMapDetails = {
 }
 
 const source = payload as ServiceMapPayload
+const englishOverrides = englishOverridesPayload as unknown as {
+  shortDescriptions: Record<string, string>
+  descriptions: Record<string, string>
+  openingHours: Record<string, string>
+}
 
 function openingHours(value: string | undefined, locale: 'fi' | 'en') {
   if (!value) return undefined
   const cleaned = value.replace(/^Valid for the time being:\s*/i, '').replace(/^Voimassa toistaiseksi:\s*/i, '').replace(/\s*–\s*/g, '\n')
   return cleaned.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
     const translated = locale === 'en'
-      ? line.replace(/ma-pe/gi, 'Mon–Fri').replace(/la-su/gi, 'Sat–Sun').replace(/Sisäänpääsy päättyy kello 21/gi, 'entry ends at 21:00')
+      ? line.replace(/ma-pe/gi, 'Mon–Fri').replace(/la-su/gi, 'Sat–Sun').replace(/ma-su/gi, 'Mon–Sun').replace(/kuntosalin vapaaharjoitteluajat:?/gi, 'Gym free-practice hours:').replace(/voimailusalin vapaaharjoitteluajat:?/gi, 'Strength-training room free-practice hours:').replace(/yleisöluisteluajat:?/gi, 'Public skating hours:').replace(/sisäänpääsy\s+(?:päättyy|loppuu|sulkeutuu)\s+(?:kello|klo)\.?\s*:?\s*(\d{1,2}(?:[.:]\d{2})?)/gi, (_match, time: string) => `entry ends at ${time}`).replace(/kevätkausi/gi, 'Spring season').replace(/syyskausi/gi, 'Autumn season')
       : line.replace(/Mon-Fri/gi, 'Ma–pe').replace(/Sat-Sun/gi, 'La–su').replace(/entry ends at 21:00/gi, 'sisäänpääsy päättyy klo 21')
     return translated.replace(/(\d{1,2})\.(\d{2})/g, '$1:$2').replace(/\s+/g, ' ').trim()
   }).join('\n')
@@ -140,17 +146,21 @@ const snapshotUnits = (snapshot.units ?? []) as ServiceMapSnapshot[]
 const snapshotsByServiceMapId = new Map(snapshotUnits.map((unit) => [unit.serviceMapId, unit]))
 const snapshotsByLipasId = new Map(snapshotUnits.filter((unit) => unit.lipasId !== undefined).map((unit) => [unit.lipasId as number, unit]))
 
+const englishDescriptionTranslations: Record<number, string> = {
+  41444: 'Five of the tennis courts are covered by air domes in winter. The indoor sports hall has a 137 m² spectator stand, equipment rental, a tennis shop and a café. The courts have been under renovation since 2018.',
+}
+
 function detailsFromSnapshot(unit: ServiceMapSnapshot): ServiceMapDetails {
   return {
     id: unit.serviceMapId,
     nameFi: unit.nameFi,
     nameEn: unit.nameEn,
     shortDescriptionFi: unit.shortDescriptionFi,
-    shortDescriptionEn: unit.shortDescriptionEn,
+    shortDescriptionEn: englishOverrides.shortDescriptions[String(unit.serviceMapId)] ?? unit.shortDescriptionEn,
     descriptionFi: unit.descriptionFi,
-    descriptionEn: unit.descriptionEn,
+    descriptionEn: englishOverrides.descriptions[String(unit.serviceMapId)] ?? unit.descriptionEn,
     openingHoursFi: openingHours(unit.openingHoursFi, 'fi'),
-    openingHoursEn: openingHours(unit.openingHoursEn, 'en'),
+    openingHoursEn: openingHours(unit.openingHoursEn ?? englishOverrides.openingHours[String(unit.serviceMapId)], 'en'),
     priceFi: unit.priceFi,
     priceEn: unit.priceEn,
     priceGroups: priceGroups(unit.priceEn ?? unit.priceFi),

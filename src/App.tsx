@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 14381)
-Total output lines: 585
-
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { RiApps2Line, RiArrowDownSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCircleLine, RiCloseLine, RiEqualizer2Line, RiErrorWarningLine, RiFireLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiLeafLine, RiMapPin2Fill, RiMapPin2Line, RiMedal2Line, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
 import type { LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
@@ -267,7 +264,214 @@ function App() {
   const [consentVisible, setConsentVisible] = useState(false)
   const [debugVenues] = useState(() => new URLSearchParams(window.location.search).get('debug') === 'venues')
   const locationRequestRef = useRef(0)
-  const locat…4381 tokens truncated…n className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
+  const locationTimeoutRef = useRef<number | undefined>(undefined)
+  const acceptedStreetRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const closeSportDrawerOnOutsideInteraction = (event: Event) => {
+      const drawer = sportDrawerRef.current
+      if (drawer?.open && !event.composedPath().includes(drawer)) drawer.open = false
+    }
+    document.addEventListener('click', closeSportDrawerOnOutsideInteraction)
+    document.addEventListener('focusin', closeSportDrawerOnOutsideInteraction)
+    return () => {
+      document.removeEventListener('click', closeSportDrawerOnOutsideInteraction)
+      document.removeEventListener('focusin', closeSportDrawerOnOutsideInteraction)
+    }
+  }, [])
+  useEffect(() => {
+    if (reviewMode || wikiMode) return
+    let cancelled = false
+    setLoadError(false)
+    activeCity.loadDataset().then((data) => { if (!cancelled) setMapArea(data) })
+      .catch(() => { if (!cancelled) setLoadError(true) })
+    return () => { cancelled = true }
+  }, [reviewMode, wikiMode, loadAttempt])
+  const selectFeature = useCallback((feature: SportFeature | undefined, expandSidebar = false) => {
+    setSelected(feature)
+    setSidebarView(feature ? 'detail' : 'list')
+    setSidebarExpanded(expandSidebar)
+    setRoutePlannerOpen(false)
+    setReportDialogOpen(false)
+  }, [])
+  useEffect(() => { const stored = getAnalyticsConsent(); setAnalyticsConsentState(stored); setConsentVisible(stored === undefined) }, [])
+  const venuesById = useMemo(() => new Map(mapArea?.venues.map((venue) => [venue.id, venue]) ?? []), [mapArea])
+  const searchIndex = useMemo(() => new Map((mapArea?.sports ?? []).map((feature) => {
+    const venue = venuesById.get(feature.id)
+    const searchable = [feature.name, feature.nameEn, venue?.name, venue?.lipas?.name, venue?.lipas?.parentName, venue?.lipas?.address, feature.facilityType, feature.sport, ...(feature.sports ?? []), ...(venue?.lipas?.facilities ?? []).flatMap(({ name, typeName, typeNameEn, address }) => [name, typeName, typeNameEn, address])]
+      .filter((value): value is string => Boolean(value))
+    const searchText = searchable.flatMap((value) => [value, sportText('en', value), sportText('fi', value)]).map((value) => value.toLocaleLowerCase('fi-FI'))
+    return [feature.id, searchText]
+  })), [mapArea, venuesById])
+  const normalizedSearch = deferredSearchQuery.trim().toLocaleLowerCase('fi-FI')
+  const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
+    if (!matchesFilter(feature, filter)) return false
+    if (!matchesPrice(feature, priceFilter)) return false
+    if (!matchesAccessibility(venuesById.get(feature.id), accessibilityFilter)) return false
+    if (!matchesFamily(venuesById.get(feature.id), familyFilter)) return false
+    if (!normalizedSearch) return true
+    return searchIndex.get(feature.id)?.some((value) => value.includes(normalizedSearch)) ?? false
+  }) ?? [], [mapArea, filter, priceFilter, accessibilityFilter, familyFilter, normalizedSearch, searchIndex, venuesById])
+  const sortedSports = useMemo(() => [...visibleSports].sort((a, b) => featureDisplayName(a, locale).localeCompare(featureDisplayName(b, locale), locale)), [visibleSports, locale])
+  useEffect(() => { setListLimit(60) }, [visibleSports])
+  useEffect(() => { if (selected && !visibleSports.some(({ id }) => id === selected.id)) selectFeature(undefined) }, [visibleSports, selected, selectFeature])
+  const trendingSignals = useMemo(() => new Map<string, TrendingSignal>(mapArea?.sports.map((feature) => [feature.id, previewTrendingSignal(feature)]) ?? []), [mapArea])
+  const topTrending = useMemo(() => visibleSports
+    .map((feature) => ({ feature, signal: trendingSignals.get(feature.id) }))
+    .filter((item): item is { feature: SportFeature; signal: TrendingSignal } => Boolean(item.signal))
+    .sort((a, b) => b.signal.recentChange - a.signal.recentChange || b.signal.interestScore - a.signal.interestScore)
+    .slice(0, 3), [visibleSports, trendingSignals])
+  const trendingIsPreview = topTrending.some(({ signal }) => signal.source === 'preview')
+  const filterOptions = allFilterOptions.filter((option) => option.id === 'all' || mapArea?.sports.some((feature) => matchesFilter(feature, option.id)))
+  const quickFilterOptions = filterOptions.filter((option) => quickFilterIds.includes(option.id) || option.id === filter)
+  const activeFilterCount = Number(priceFilter !== 'all') + Number(accessibilityFilter !== 'all') + Number(familyFilter !== 'all')
+  const venueDiagnostics = useMemo(() => {
+    const names = new Map<string, { name: string; count: number }>()
+    mapArea?.venues.forEach((venue) => { const key = (venue.name ?? '').trim().toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ''); if (key) { const current = names.get(key); names.set(key, { name: current?.name ?? venue.name ?? key, count: (current?.count ?? 0) + 1 }) } })
+    const duplicateNames = [...names.values()].filter(({ count }) => count > 1).sort((a, b) => b.count - a.count).slice(0, 3).map(({ name, count }) => `${name} (${count})`)
+    return { duplicateNames, duplicateNameGroups: [...names.values()].filter(({ count }) => count > 1).length, venueCount: mapArea?.venues.length ?? 0, featureCount: mapArea?.sports.length ?? 0, sourceCount: new Set(mapArea?.venues.map((venue) => venue.source.provider)).size }
+  }, [mapArea])
+  const selectedVenue = selected ? venuesById.get(selected.id) : undefined
+  const selectedTrend = selected ? trendingSignals.get(selected.id) : undefined
+  const route = routes[travelMode]
+  const transitRoute = routes.transit?.transit
+  const transitTicketZones = hslTicketZones(transitRoute?.zones ?? [])
+  const canPlanRoute = routePlannerOpen && Object.keys(routes).length > 0
+  const [addressError, setAddressError] = useState(false)
+  const routeRequestRef = useRef(0)
+  useEffect(() => {
+    routeRequestRef.current += 1
+    setRoutes({})
+    setRouteStatus('idle')
+    setTransitStatus('idle')
+    setAddressError(false)
+  }, [selected?.id, startingPoint, originCoordinates])
+
+  useEffect(() => () => { if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current); locationRequestRef.current += 1 }, [])
+
+  useEffect(() => {
+    const query = startingPoint.trim()
+    if (query.length < 2 || originCoordinates || acceptedStreetRef.current === query) { setOriginSuggestions([]); setSuggestionStatus('idle'); return }
+    const controller = new AbortController()
+    setSuggestionStatus('loading')
+    const timer = window.setTimeout(() => {
+      searchAddresses(query, controller.signal).then((suggestions) => {
+        if (controller.signal.aborted) return
+        setOriginSuggestions(suggestions)
+        setSuggestionStatus(suggestions.length ? 'idle' : 'empty')
+      }).catch(() => {
+        if (controller.signal.aborted) return
+        setOriginSuggestions([])
+        setSuggestionStatus('error')
+      })
+    }, 350)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [startingPoint, originCoordinates, suggestionRetry])
+
+  const selectFilter = (nextFilter: SportFilter) => {
+    setFilter(nextFilter)
+    if (selected && !matchesFilter(selected, nextFilter)) selectFeature(undefined)
+  }
+  const closeRoutePlanner = () => {
+    routeRequestRef.current += 1
+    locationRequestRef.current += 1
+    if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current)
+    acceptedStreetRef.current = undefined
+    setRoutePlannerOpen(false)
+    setStartingPoint('')
+    setOriginCoordinates(undefined)
+    setOriginSuggestions([])
+    setRoutes({})
+    setRouteStatus('idle')
+    setTransitStatus('idle')
+    setLocationStatus('idle')
+  }
+  const calculateRoute = async () => {
+    if (!startingPoint.trim() || !selected?.center) return
+    const requestId = ++routeRequestRef.current
+    setRouteStatus('loading')
+    setTransitStatus('loading')
+    setAddressError(false)
+    let origin = originCoordinates
+    if (!origin) {
+      try { origin = await geocodeAddress(startingPoint.trim()) }
+      catch {
+        if (requestId !== routeRequestRef.current) return
+        setAddressError(true); setRouteStatus('idle'); setTransitStatus('idle'); setRoutes({}); return
+      }
+    }
+    if (requestId !== routeRequestRef.current) return
+    try {
+      setOriginSuggestions([])
+      const results = await Promise.allSettled([
+        routeByMode(origin, selected.center!, 'walk'),
+        routeByMode(origin, selected.center!, 'bike'),
+        routeByTransit(origin, selected.center!, locale),
+        routeByMode(origin, selected.center!, 'car'),
+      ])
+      if (requestId !== routeRequestRef.current) return
+      const nextRoutes: Partial<Record<TravelMode, RouteResult>> = {}
+      results.forEach((result) => { if (result.status === 'fulfilled') nextRoutes[result.value.mode] = result.value })
+      const transitResult = results[2]
+      setTransitStatus(transitResult.status === 'fulfilled' ? 'idle' : transitResult.reason instanceof RouteRequestError && transitResult.reason.code === 'no-route' ? 'no-route' : 'unavailable')
+      if (!Object.keys(nextRoutes).length) {
+        const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected').map((result) => result.reason)
+        const failure = failures.find((reason) => reason instanceof RouteRequestError && reason.code === 'unavailable') ?? failures[0]
+        throw failure instanceof RouteRequestError ? failure : new RouteRequestError('no-route')
+      }
+      // If one provider/profile fails, display a successful route rather than
+      // leaving the selected mode pointing at an empty map layer.
+      if (!nextRoutes[travelMode]) setTravelMode((['walk', 'bike', 'transit', 'car'] as const).find((mode) => nextRoutes[mode])!)
+      setRoutes(nextRoutes); setRouteStatus('idle')
+    } catch (error) {
+      if (requestId === routeRequestRef.current) {
+        setRoutes({})
+        setTransitStatus('unavailable')
+        setRouteStatus(error instanceof RouteRequestError ? error.code : 'error')
+      }
+    }
+  }
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) { setLocationStatus('error'); return }
+    const requestId = ++locationRequestRef.current
+    if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current)
+    setLocationStatus('loading')
+    locationTimeoutRef.current = window.setTimeout(() => { if (requestId === locationRequestRef.current) setLocationStatus('error') }, 12000)
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      if (requestId !== locationRequestRef.current) return
+      if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current)
+      const coordinates: [number, number] = [coords.longitude, coords.latitude]
+      setOriginCoordinates(coordinates)
+      setStartingPoint(text(locale, 'currentLocation'))
+      setOriginSuggestions([])
+      setRoutes({})
+      setRouteStatus('idle')
+      setLocationStatus('idle')
+      reverseGeocode(coordinates).then((suggestion) => { if (requestId === locationRequestRef.current) setStartingPoint(suggestion.label) }).catch(() => undefined)
+    }, (error) => {
+      if (requestId !== locationRequestRef.current) return
+      if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current)
+      setLocationStatus(error.code === error.PERMISSION_DENIED ? 'denied' : 'error')
+    }, { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 })
+  }
+
+  const chooseAnalyticsConsent = (consent: AnalyticsConsent) => {
+    setAnalyticsConsent(consent)
+    setAnalyticsConsentState(consent)
+    setConsentVisible(false)
+  }
+
+  if (reviewMode) return <Suspense fallback={<p>Loading review…</p>}><ReviewWorkbench /></Suspense>
+  if (wikiMode) return <Suspense fallback={<p>Loading wiki…</p>}><WikiWorkbench /></Suspense>
+  if (loadError) return <main className="app-shell loading-shell"><p role="alert">{locale === 'fi' ? 'Kohdetietojen lataus epäonnistui.' : 'Could not load facilities.'}</p><button onClick={() => setLoadAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></main>
+  if (!mapArea) return <main className="app-shell loading-shell"><div className="loading-state"><span className="status-dot" /><strong>{text(locale, 'loading', { city: activeCity.displayName })}</strong><span>{text(locale, 'preparing')}</span></div></main>
+
+  return <main className={`app-shell ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
+    <header className="topbar">
+      <div className="brand-block"><div className="brand-lockup"><img src="/helsinkisportsmaplogo.png" alt="" aria-hidden="true" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></div><p>{extraText(locale, 'areaLabel')}</p></div>
+      <div className="topbar-right"><a className="wiki-entry" href="?wiki=1">Wiki</a><div className="mode-toggle" aria-label={extraText(locale, 'mapProjection')}><button className={mode === '2d' ? 'selected' : ''} aria-pressed={mode === '2d'} onClick={() => setMode('2d')}>{extraText(locale, 'mode2d')}</button><button className={mode === 'iso' ? 'selected' : ''} aria-pressed={mode === 'iso'} onClick={() => setMode('iso')}>{locale === 'fi' ? 'Vino' : 'Tilt'}</button></div><div className="language-toggle" aria-label={String(text(locale, 'language'))}><button className={locale === 'en' ? 'selected' : ''} aria-pressed={locale === 'en'} onClick={() => setLocale('en')}>EN</button><button className={locale === 'fi' ? 'selected' : ''} aria-pressed={locale === 'fi'} onClick={() => setLocale('fi')}>FI</button></div></div>
+    </header>
+    <nav className="filter-bar" aria-label={extraText(locale, 'filterFacilities')}><div className="filter-options filter-quick-options">{quickFilterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div><details ref={sportDrawerRef} className="sport-drawer"><summary className="filter-see-all"><span>{locale === 'fi' ? 'Kaikki kategoriat' : 'All categories'}</span><RiArrowDownSLine aria-hidden="true" size={15} /></summary><div className="sport-drawer-panel">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => { selectFilter(option.id); if (sportDrawerRef.current) sportDrawerRef.current.open = false }}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></details><button type="button" className={'trend-toggle trend-nav-toggle ' + (trendingEnabled ? 'selected' : '')} aria-label={text(locale, 'trending')} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine className="trend-toggle-icon" aria-hidden="true" size={17} /><span className="trend-toggle-text">{text(locale, 'trending')}</span></button><details ref={filterDrawerRef} className="filter-drawer"><summary aria-label={text(locale, 'filters')}><RiEqualizer2Line className="filter-drawer-icon" aria-hidden="true" size={17} /><span className="filter-drawer-summary-text">{text(locale, 'filters')}</span>{activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}</summary><div className="filter-drawer-panel"><div className="filter-drawer-group filter-sport-group"><span className="filter-drawer-label">{text(locale, 'sport')}</span><div className="filter-options filter-drawer-sport-options">{filterOptions.map((option) => <button key={option.id} className={filter === option.id ? 'selected' : ''} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id)}><SportFilterIcon id={option.id} />{option.id === 'all' ? text(locale, 'all') : sportText(locale, option.id)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'priceFilter')}</span><div className="filter-options">{(['all', 'free', 'paid'] as const).map((option) => <button key={option} className={priceFilter === option ? 'selected' : ''} aria-pressed={priceFilter === option} onClick={() => setPriceFilter(option)}>{text(locale, option === 'all' ? 'allPrices' : option === 'free' ? 'priceFree' : 'pricePaid')}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'accessibilityFilter')}</span><div className="filter-options">{(['all', 'stepFreeEntrance', 'accessibleToilet', 'accessibleParking'] as const).map((option) => <button key={option} className={accessibilityFilter === option ? 'selected' : ''} aria-pressed={accessibilityFilter === option} onClick={() => setAccessibilityFilter(option)}>{text(locale, option === 'all' ? 'allAccessibility' : option)}</button>)}</div></div><div className="filter-drawer-group"><span className="filter-drawer-label">{text(locale, 'audienceFilter')}</span><div className="filter-options"><button className={familyFilter === 'all' ? 'selected' : ''} aria-pressed={familyFilter === 'all'} onClick={() => setFamilyFilter('all')}>{text(locale, 'allAudiences')}</button><button className={familyFilter === 'family' ? 'selected' : ''} aria-pressed={familyFilter === 'family'} onClick={() => setFamilyFilter('family')}>{text(locale, 'childrenFamilies')}</button></div></div></div></details><span className="result-count">{visibleSports.length} {text(locale, 'areas')}</span></nav>
     {routePlannerOpen && selected ? <div className="directions-panel" role="group" aria-label={locale === 'fi' ? 'Reittiohjeet' : 'Directions'}>
       <div className="directions-track" aria-hidden="true"><RiCircleLine size={17} /><span /><RiMapPin2Fill size={18} /></div>
       <div className="directions-fields">

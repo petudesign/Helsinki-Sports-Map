@@ -9,7 +9,15 @@ export const activeCity = {
   coverage: [24.7828026, 59.922486, 25.2545116, 60.2978497] as [number, number, number, number],
   loadDataset() {
     dataset ??= Promise.all([import('../data/area'), import('../data/venue-map.json')])
-      .then(([{ createArea }, { default: geometry }]) => createArea(geometry as unknown as StudyAreaGeoJson))
+      .then(async ([{ createArea }, { default: geometry }]) => {
+        const area = createArea(geometry as unknown as StudyAreaGeoJson)
+        if (import.meta.env.DEV) {
+          const { applyStress, stressFlag } = await import('../dev/stress')
+          if (stressFlag('dataerror')) throw new Error('Stress test: dataset unavailable')
+          return applyStress(area)
+        }
+        return area
+      })
       .catch((error) => { dataset = undefined; throw error })
     return dataset
   },

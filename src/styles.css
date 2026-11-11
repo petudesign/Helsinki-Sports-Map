@@ -15,7 +15,7 @@
 :root { color: #2f3330; background: #ede8df; font-family: Satoshi, system-ui, sans-serif; font-synthesis: none; }
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; overflow: hidden; }
-body { margin: 0; min-width: 320px; }
+body { margin: 0; }
 button { font: inherit; color: inherit; }
 .app-shell { height: 100dvh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 20px 28px 15px; gap: 10px; }
 .loading-shell { align-items: center; justify-content: center; }

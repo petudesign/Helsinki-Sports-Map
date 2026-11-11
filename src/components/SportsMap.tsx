@@ -8,6 +8,7 @@ import boundary from '../data/helsinki-boundary.json'
 import type { MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
 import { text, type Locale } from '../i18n'
+import { stressFlag } from '../dev/stress'
 
 export type MapControls = { reset: () => void }
 type Props = {
@@ -23,13 +24,14 @@ type Props = {
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] }
 // Bundle the v6 module worker explicitly for both Vite dev and production URLs.
 setWorkerUrl(workerUrl)
-const styleUrl = import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron'
+const stressMapError = import.meta.env.DEV && stressFlag('maperror')
+const styleUrl = stressMapError ? '/__stress-missing-style.json' : import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron'
 const openStreetMapFallbackStyle = {
   version: 8,
   sources: {
     openstreetmap: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [stressMapError ? '/__stress-missing-tile/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
     },
@@ -198,6 +200,9 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     let fallbackClusterCountOverlay: HTMLElement | undefined
     let updateFallbackClusterCounts: (() => void) | undefined
     // Native gestures animate the camera without any React state updates.
+    // Once the raster fallback's own tiles fail too, the basemap stays marked as
+    // broken: 'idle' fires even when every tile errored, so it must not clear it.
+    let fallbackTilesBroken = false
     map.on('error', (event) => {
       const sourceId = 'sourceId' in event ? String(event.sourceId) : undefined
       if (!usingOsmFallback && (!sourceId || !appSourceIds.has(sourceId))) {
@@ -205,9 +210,10 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         setFailed(false)
         return
       }
+      if (usingOsmFallback && sourceId === 'openstreetmap') fallbackTilesBroken = true
       setFailed(true)
     })
-    map.on('idle', () => { if (map.isStyleLoaded()) setFailed(false) })
+    map.on('idle', () => { if (map.isStyleLoaded() && !fallbackTilesBroken) setFailed(false) })
     map.on('load', () => {
       window.clearTimeout(timeout)
       map.easeTo({ center: activeCity.center, zoom: 11.7, offset: defaultCameraOffset(), duration: 0 })
@@ -385,8 +391,11 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
 
   return <>
     <div ref={container} className="sports-map" data-ready={ready} />
-    {(!ready || failed) && <div className="map-status" role="status">
-      {failed ? <>{locale === 'fi' ? 'Taustakarttaa ei voitu ladata. Voit käyttää kohdelistaa.' : 'The basemap could not load. You can still use the facility list.'}<button onClick={() => { setFailed(false); setUsingOsmFallback(false); setAttempt((value) => value + 1) }}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></> : (locale === 'fi' ? 'Ladataan karttaa…' : 'Loading map…')}
+    {(!ready || failed) && <div className={`map-status ${failed ? 'is-error' : ''}`} role="status">
+      {failed ? <>
+        <span><strong>{locale === 'fi' ? 'Taustakartta ei latautunut.' : 'The background map didn’t load.'}</strong> {ready ? (locale === 'fi' ? 'Paikat näkyvät silti, ja lista toimii.' : 'Places are still shown and the list works.') : (locale === 'fi' ? 'Paikat löytyvät listasta.' : 'You can still browse places in the list.')}</span>
+        <button type="button" onClick={() => { setFailed(false); setUsingOsmFallback(false); setAttempt((value) => value + 1) }}>{locale === 'fi' ? 'Yritä uudelleen' : 'Try again'}</button>
+      </> : (locale === 'fi' ? 'Ladataan karttaa…' : 'Loading map…')}
     </div>}
   </>
 })

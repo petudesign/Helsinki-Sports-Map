@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 .vite/
 tmp/
 .vercel/
+
+# UI overhaul raw screenshots (comparison sheets are committed instead)
+docs/ui-overhaul/**/raw/

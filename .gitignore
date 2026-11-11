@@ -146,3 +146,9 @@ tmp/
 
 # UI overhaul raw screenshots (comparison sheets are committed instead)
 docs/ui-overhaul/**/raw/
+docs/ui-overhaul/phase-2/commuter/
+docs/ui-overhaul/phase-2/design-lead/
+docs/ui-overhaul/phase-2/family/
+docs/ui-overhaul/phase-2/low-vision/
+docs/ui-overhaul/phase-2/newcomer/
+.DS_Store

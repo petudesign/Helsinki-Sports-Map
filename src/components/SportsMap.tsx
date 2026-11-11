@@ -5,7 +5,7 @@ import type { FeatureCollection, LineString, MultiPolygon, Point, Polygon } from
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { activeCity } from '../config/city'
 import boundary from '../data/helsinki-boundary.json'
-import type { MapDataset, SportFeature } from '../data/types'
+import type { GeoPoint, MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
 import { text, type Locale } from '../i18n'
 import { stressFlag } from '../dev/stress'
@@ -20,6 +20,11 @@ type Props = {
   route?: RouteResult
   mode: '2d' | 'iso'
   locale: Locale
+  /** "Near me" / "near address" origin, drawn as a position dot. */
+  origin?: GeoPoint
+  /** When this key changes, the camera fits fitTargets (search, filter or origin changed). */
+  fitKey?: string
+  fitTargets?: GeoPoint[]
 }
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] }
 // Bundle the v6 module worker explicitly for both Vite dev and production URLs.
@@ -38,9 +43,11 @@ const openStreetMapFallbackStyle = {
   },
   layers: [{ id: 'openstreetmap-raster', type: 'raster', source: 'openstreetmap' }],
 } as const
-const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected'])
+const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected', 'origin'])
+const isMobile = () => window.matchMedia('(max-width: 720px)').matches
 const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 350
-const defaultCameraOffset = (): [number, number] => window.matchMedia('(min-width: 721px)').matches ? [-220, 0] : [0, 0]
+// The panel sits beside the map, not over it, so the city is centred in the map itself.
+const defaultCameraOffset = (): [number, number] => [0, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
 const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
 type TransitZoneCollection = FeatureCollection<Polygon | MultiPolygon>
@@ -131,7 +138,7 @@ function routePointData(route: RouteResult | undefined, locale: Locale): Feature
   }
 }
 
-export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale }: Props) {
+export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale, origin, fitKey, fitTargets }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LibreMap | null>(null)
   const latest = useRef({ features, selected, onSelect, locale })
@@ -302,6 +309,9 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         map.addLayer({ id: 'route-point-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['start', 'end'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
         map.addLayer({ id: 'route-stop-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 10, 'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-max-width': 16 }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       }
+      map.addSource('origin', { type: 'geojson', data: empty })
+      map.addLayer({ id: 'origin-halo', type: 'circle', source: 'origin', paint: { 'circle-radius': 16, 'circle-color': '#0755a0', 'circle-opacity': 0.14 } })
+      map.addLayer({ id: 'origin-dot', type: 'circle', source: 'origin', paint: { 'circle-radius': 7, 'circle-color': '#0755a0', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 } })
       map.addSource('selected', { type: 'geojson', data: empty })
       map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 12, 'circle-color': '#b9543e', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 4 } })
       map.on('click', async (event) => {
@@ -349,17 +359,46 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     }
   }, [route, ready])
 
+  // The view before a place was opened, restored when the place is closed so the
+  // user gets back the overview they were comparing, not a 100 m zoom.
+  const cameraBeforeSelection = useRef<{ center: [number, number]; zoom: number } | undefined>(undefined)
   useEffect(() => {
     const map = mapRef.current
     if (!ready || !map) return
     ;(map.getSource('selected') as GeoJSONSource | undefined)?.setData(pointData(selected && !route ? [selected] : [], locale))
     if (selected?.center) {
-      const mobile = window.matchMedia('(max-width: 720px)').matches
-      map.easeTo({ center: selected.center, zoom: Math.max(map.getZoom(), 15),
-        offset: mobile ? [0, -map.getContainer().clientHeight * 0.2] : [-100, 0], duration: duration(),
+      if (!cameraBeforeSelection.current) cameraBeforeSelection.current = { center: map.getCenter().toArray() as [number, number], zoom: map.getZoom() }
+      // On a phone the detail sheet covers the lower ~55 % of the map, so the place is centred in the strip above it.
+      map.easeTo({ center: selected.center, zoom: Math.max(map.getZoom(), 14.5),
+        offset: isMobile() ? [0, -map.getContainer().clientHeight * 0.28] : [0, 0], duration: duration(),
       })
+    } else if (!selected && !route && cameraBeforeSelection.current) {
+      map.easeTo({ ...cameraBeforeSelection.current, duration: duration() })
+      cameraBeforeSelection.current = undefined
     }
   }, [selected, route, ready])
+
+  useEffect(() => {
+    if (ready) (mapRef.current?.getSource('origin') as GeoJSONSource | undefined)?.setData(origin ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: origin } }] } : empty)
+  }, [origin, ready])
+
+  const latestFitTargets = useRef(fitTargets)
+  latestFitTargets.current = fitTargets
+  const lastFitKey = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map || fitKey === undefined) return
+    const firstRun = lastFitKey.current === undefined
+    lastFitKey.current = fitKey
+    if (firstRun || latestFitTargets.current === undefined) return
+    const targets = latestFitTargets.current
+    if (!targets.length || latestFitTargets.current.length === area.sports.length) return
+    cameraBeforeSelection.current = undefined
+    const bounds = new LngLatBounds(targets[0], targets[0])
+    targets.forEach((point) => bounds.extend(point))
+    const mobile = isMobile()
+    map.fitBounds(bounds, { padding: mobile ? { top: 56, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: 48 }, maxZoom: 15, duration: duration() })
+  }, [fitKey, ready, area.sports.length])
 
   useEffect(() => {
     const map = mapRef.current

@@ -622,3 +622,39 @@ button:focus-visible, summary:focus-visible, .maplibregl-canvas:focus-visible { 
 /* At narrow widths or 200 % zoom the title wraps onto its own row instead of being squeezed between icon buttons. */
 .facility-sidebar-header { flex-wrap: wrap; }
 .facility-sidebar-heading { flex: 1 1 12rem; }
+
+/* Phase 2 — fixes for findings repeated across personas (see DECISIONS.md). */
+.search-row { flex-wrap: wrap; }
+.search-control input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.near-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--hsm-color-border-soft); border-radius: 10px; background: var(--hsm-color-surface); color: var(--hsm-color-ink); font: 600 13px Satoshi, sans-serif; white-space: nowrap; cursor: pointer; transition: transform var(--hsm-duration-press) var(--hsm-ease-out), background-color var(--hsm-duration-press) var(--hsm-ease-out); }
+.near-button:active { transform: scale(.97); }
+.near-button.selected { border-color: var(--hsm-color-brand); background: var(--hsm-color-brand-soft); color: var(--hsm-color-brand-dark); }
+.near-button:disabled { cursor: wait; opacity: .7; }
+@media (hover: hover) and (pointer: fine) { .near-button:not(.selected):hover { background: var(--hsm-color-surface-muted); } }
+.near-status { flex-basis: 100%; margin: 0; color: var(--hsm-color-danger); font-size: 13px; line-height: 1.4; }
+.list-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 15px 4px; padding: 8px 8px 8px 12px; border-radius: 8px; background: var(--hsm-color-surface-muted); color: var(--hsm-color-ink-muted); font-size: 13px; line-height: 1.4; }
+.list-note strong { color: var(--hsm-color-ink); font-weight: 600; }
+.list-note button { flex: 0 0 auto; min-height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--hsm-color-brand-dark); font: 600 13px Satoshi, sans-serif; cursor: pointer; }
+.empty-state-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.empty-state .empty-state-filters button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; margin: 0; padding: 0 10px; }
+.facility-official-link { display: inline-flex; align-items: center; min-height: 44px; margin: 4px 0 8px; color: var(--hsm-color-brand-dark); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.facility-facts dd { white-space: pre-line; }
+.facility-sidebar-heading h2:focus { outline: none; }
+.facility-sidebar-heading h2:focus-visible { outline: 3px solid var(--hsm-color-focus); outline-offset: 2px; border-radius: 4px; }
+/* The consent notice comes first in the DOM (reachable with the first Tab) but sits in the flow above the footer, so it never covers the map or the list. */
+.app-shell > .consent-banner { order: 9; position: static; width: auto; max-height: none; display: flex; align-items: center; gap: 16px; padding: 10px 14px; border-top: 1px solid var(--hsm-color-border-soft); border-radius: 12px; box-shadow: none; }
+.app-shell > .consent-banner > div:first-child { flex: 1 1 auto; min-width: 0; }
+.app-shell > .consent-banner p { font-size: 13px; }
+.app-shell > .consent-banner .consent-actions button { min-height: 44px; }
+.app-shell > .footer { order: 10; }
+@media (max-width: 720px) {
+  .near-button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .near-button { width: 44px; justify-content: center; padding: 0; }
+  .search-row { flex-wrap: nowrap; }
+  .search-row .search-control { flex: 1 1 auto; }
+  .near-status { position: absolute; z-index: 9; left: 8px; right: 8px; padding: 8px 12px; border-radius: 8px; background: var(--hsm-color-surface); box-shadow: 0 8px 24px rgb(36 49 41 / 14%); }
+  .facility-sidebar.is-expanded.is-detail { height: min(56dvh, calc(100% - 42px)); }
+  .app-shell > .consent-banner { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+  .app-shell > .consent-banner .consent-kicker, .app-shell > .consent-banner #privacy-consent-body { display: none; }
+  .list-note { margin: 4px 12px; }
+}

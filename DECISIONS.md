@@ -80,3 +80,51 @@ Emil Kowalski's `break-ui` skill was used as the checklist (catalog rows: long t
 
 - RTL and dark mode: the product supports neither, so they were not tested.
 - 400 % zoom (WCAG reflow at 320 CSS px): covered indirectly by the 320 px pass.
+
+## Phase 2 — Persona evaluations
+
+Five independent agents used the phase-1 build only through screenshots (Playwright), each with its own task, device and constraints. Full reports, in Finnish, are in `docs/ui-overhaul/phase-2/<persona>.md`. Their screenshots (~42 MB) stay local and are git-ignored; the committed comparison sheets are in `docs/ui-overhaul/phase-2/compare/`.
+
+| Persona | Task | Result | Clarity | Trust | Task | Speed | Mobile |
+|---|---|---|---|---|---|---|---|
+| Commuter, phone, 60 s | Free basketball court nearby tonight | Partly: 15 steps, ~75 s, court 29 min away | 3 | 2 | 3 | 2 | 3 |
+| Family, laptop + phone | Nearest swimming hall, prices, Saturday hours | Partly: no prices, no hours, "nearest" impossible | 3 | 2 | 1 | 3 | 3 |
+| English-speaking newcomer | Football or gym near Central Station, by transit | Partly: walking route only, transit never worked | 3 | 2 | 3 | 3 | 3 |
+| Design lead, 2 min | Would I interview? | Maybe, leaning no at Linear/Wolt level | 3 | 2 | 4 | 4 | 3 |
+| Low vision: 200 %, VoiceOver, deuteranopia | Tennis court via keyboard only | Partly: ~40 key presses, focus lost on open and close | 4 | 3 | 3 | 2 | 3 |
+
+**Average trust was 2.2 / 5.** It was the lowest score for four of the five personas. That shaped the order of the fixes: first stop the UI from hiding or misrepresenting things, then speed and polish.
+
+### Findings repeated across personas, and what was done
+
+Ordered by how many personas hit them.
+
+| Finding | Personas | Decision |
+|---|---|---|
+| The detail panel covers the map on a phone, and the selected place disappears | design lead, commuter, family, newcomer | On a phone the detail opens as a 56 dvh sheet, and the camera centres the place in the strip above it. Full snap points and drag come in phase 4. |
+| "Official details" and "Check access" links go to a provider's front page (liikunta.hel.fi, hel.fi) | design lead, commuter, family, newcomer | Front-page URLs (path `/`, `/fi`, `/en`, `/sv`) are no longer presented as the place's page. The panel shows one link: the place's own page when one exists, otherwise "Find on Helsinki Service Map", which searches for the place's name. "Check access" only appears when it leads somewhere different and specific. |
+| No "near me", no distances, no way to tell what is nearest | commuter, family, newcomer | A "Near me" button next to search sorts by walking distance and shows "80 m · address" on every row. A search with no results for something like "Central Station" or "Hiihtäjäntie 1" offers "Show places near …", which geocodes it and sorts by distance from there. The origin is drawn on the map, and the map fits it plus the eight nearest results. Clear removes it. |
+| Missing hours and prices are not mentioned, and the hours that do exist are hidden in a collapsed section | family, commuter, newcomer | Opening hours, when present, are a visible fact next to price and access. What is missing is said once ("Prices and opening hours aren't listed here yet. Check the official page before you go."), followed by the official link. Data check: the Service Map snapshot covers 256 units, mostly in north Helsinki. Itäkeskus swimming hall is not one of them, so the gap is in the data, not the UI. |
+| Indoor and outdoor places can't be told apart; "Swimming" mixes in gyms | commuter, family, newcomer | List rows now lead with the facility type ("Swimming hall", "School gym hall", "Outdoor gym") before the sports. Group records typed "3 sports facilities" don't show that count as a type. **Not done:** an Indoor/Outdoor filter. It needs a reliable classification in the data pipeline, so it is logged for the data side rather than guessed in the UI. |
+| Filters remove places without saying so | commuter (Free: 284 → 35), family ("Children and families" removed every swimming hall, and the empty state blamed the search word) | With a price filter on, the list says "249 places with no listed price are hidden · Show them". The empty state names each active filter as a removable button and no longer blames the search when a filter is the cause. |
+| The map doesn't follow the results | design lead, family | Changing search, filters or the near origin fits the map to the results (max zoom 15). Closing a place restores the view from before it was opened, instead of leaving the user at 100 m. The default camera is no longer shifted 220 px left: the panel sits beside the map, not over it. |
+| Opens in English for Finnish browsers | family, low vision | The initial language comes from `navigator.languages`, and the user's choice is remembered in `localStorage`. |
+| The privacy banner covers the map, the list and focused controls; it is the last Tab stop | commuter, low vision, brief | The banner is the first Tab stop in the DOM, but it sits in the page flow above the footer (`order`), so it never overlaps the map or list. On a phone it shows the title, the details toggle and two equal buttons only. After a choice, focus goes to search. Visual redesign in phase 3. |
+| Search and directions lose state | commuter (closing directions emptied the search), newcomer (Directions wiped "football") | Opening directions keeps the search and filters. The near origin, if set, prefills the starting point. On mouse/trackpad devices the starting-point field gets focus. |
+| Transit is greyed out with no reason | commuter, newcomer | When public-transport routing fails, the explanation and a link are shown whichever mode is selected. The link now says honestly where it goes ("Open transit directions in Google Maps"); it was labelled as an HSL link before. Note: locally there is no `.env`, so Digitransit and Paikkatieto calls fail in dev. The production keys were not tested. |
+
+### Single-persona findings fixed because phase 5 needs them anyway
+
+- **Focus:** opening a place moves focus to its heading (`tabindex=-1`). Back or Escape returns focus to the list row that opened it. "Show more" focuses the first new row and says how many are left. The report dialog closes with Escape. Verified with Playwright at 1440 and 390.
+- **Screen reader:** the detail card is no longer a live region (it would have been read out in full on every change). One visually hidden status line announces "N places" or "Opened: name".
+- **The report button** uses a flag icon instead of "(!)", which read as "more info".
+- **The list description** (screen readers only) no longer claims the list follows the visible map area.
+
+### Deferred, with reason
+
+- **Colour discipline, chip and filter popover styling, uppercase micro-labels, "Work in progress" in the header, mobile "All" + "All categories" duplication** (design lead): this is the token and component work of phase 3, not patches.
+- **Smooth camera move without a blank frame** (design lead): phase 4 motion.
+- **2D/Tilt missing at 200 % zoom and on phones, and no arrow keys in segmented controls** (low vision): phase 5, with the segmented-control component from phase 3.
+- **Peek bar tap target, drag and fast-swipe dismiss** (commuter): phase 4 sheet gestures.
+- **Search relevance** ("tennis" also matching table tennis; school halls ranked like public courts): needs a ranking model in the data layer. Logged, not patched.
+- **Landmarks in English on the basemap** (newcomer): basemap labels come from OpenFreeMap; considered in phase 3 together with the map style.

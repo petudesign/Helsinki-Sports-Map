@@ -237,3 +237,68 @@ Stress scenarios (`all`, `long`, `empty`, `maperror`, `dataerror`) at 320 px and
 - Bottom-sheet drag, snap points and fling dismiss, and camera move without a blank frame: phase 4.
 - English names for basemap landmarks: OpenFreeMap's Positron labels are Finnish/Swedish. Switching label language needs a style edit per label layer. Deferred to phase 6, where the style is loaded and measured anyway.
 - `src/design-system/canvasTheme.ts` and `src/renderer/*` belong to the earlier custom canvas renderer, which the MapLibre map no longer uses. Left untouched; removing dead code is a separate change.
+
+## Phase 4 — Interaction (Emil Kowalski's principles)
+
+Checked against Emil Kowalski's `emil-design-eng`, `mobile-native` and the gesture rules in his skills repo.
+
+### Audit of what phase 3 already set
+
+- **Press feedback:** `transform: scale(.97)` on `:active` for buttons, icon buttons, chips and the near-me button. Icon buttons were at .94 and are now .97, matching the rest.
+- **Hover** exists only inside `@media (hover: hover) and (pointer: fine)`, MapLibre's controls included.
+- **Curves:** `--ease-out cubic-bezier(.23,1,.32,1)` for UI, `--ease-drawer cubic-bezier(.32,.72,0,1)` for the sheet, ease-in-out for on-screen camera moves. No `ease-in` and no `transition: all` anywhere (grep-verified). UI durations run 120–260 ms.
+- **Reduced motion:** `prefers-reduced-motion: reduce` sets every transition and animation to 0 ms. MapLibre camera moves already use duration 0 there.
+- **Phones:** 16 px inputs, `dvh` for the shell, `viewport-fit=cover` + `env(safe-area-inset-*)`, no tap highlight, `touch-action: manipulation`, `overscroll-behavior: none` on the root and `contain` on scrollers. `user-select: none` is set on controls only, never on content.
+
+### Decision: the phone sheet moves with transform, not height
+
+Before this phase the sheet animated `height`, which forces a layout on every frame. Now the sheet is always full height and sits at one of three snap offsets: peek (header only, measured), half (56 dvh, for a place) and full. Only `transform: translate3d()` changes. The offsets live in CSS (`data-snap`), so resting states never depend on JavaScript.
+
+### Decision: the sheet follows the finger and closes on a fast swipe
+
+`src/ui/useSheetDrag.ts`, dragging from the sheet header:
+
+- Tracks the finger 1:1 with no transition while dragging. Pointer capture keeps the drag going outside the header, and a second finger is ignored.
+- A 6 px dead zone means a tap on the back, report or collapse buttons still clicks. A drag that started on a button doesn't fire it afterwards.
+- On release: a flick faster than 0.4 px/ms moves one snap in its direction, whatever the distance. Faster than 1.2 px/ms downward closes to the peek from any height. Otherwise the nearest snap wins.
+- Past the top or below the peek, the movement is damped (square root) instead of stopping hard.
+- The collapsed content is `inert`, so it is out of the tab order and the accessibility tree while only the peek shows.
+
+Verified in a 390 × 844 touch viewport:
+
+| Gesture | Result |
+|---|---|
+| Slow 300 px drag up | half |
+| Fast flick up | full |
+| Fast flick down | peek |
+| Tap the toggle | full |
+| Open a place | half, with the place centred in the visible strip above |
+| Back | list, selection cleared |
+
+Sheets: `docs/ui-overhaul/phase-4/1-sheet-snaps-and-drag.png`.
+
+### Decision: every selection can be undone, and opening something else clears it
+
+- **Sport chips:** tapping the selected chip returns to All. Accessibility and audience filters are toggles. The price filter has an explicit "All", and "Clear all" resets every filter.
+- **Places on the map:** tapping the selected place again deselects it, and so does tapping empty map. Back in the panel now also deselects (before, it left the place highlighted on the map). The camera returns to the view from before the place was opened.
+- **Trending items** toggle the same way. "Near me" toggles off.
+- **Typing a search, choosing a filter that excludes the place, or switching "Near me"** clears the selection. Opening directions keeps it on purpose, since the route needs a destination.
+
+### Decision: no blank frames
+
+- **Camera move:** the design lead caught an empty beige map about 120 ms after opening a place (phase-2 screenshot). Tile requests were cancelled while zooming, and the tile cache was small (128). Now `cancelPendingTileRequestsWhileZooming: false`, `maxTileCacheSize: 512` and a 150 ms tile fade. Frames captured 60–600 ms after a click always show the overzoomed parent tiles, never an empty frame (`2-camera-move-before-after.png`). The camera uses ease-in-out over 420 ms. That is longer than the 300 ms UI limit, deliberately: a camera move is spatial movement across the city, not a UI response, and 420 ms keeps it readable.
+- **Panel content swaps** in place with no exit animation or empty intermediate state. Facility photos reserve 16:9 and fade in on load instead of popping.
+- **Geist is preloaded** (`<link rel="preload">`), so text doesn't visibly swap fonts on first paint.
+
+### Decision: touch targets reach 44 px without looking bigger
+
+On `(pointer: coarse)`, icon buttons, segmented items, small buttons and chips get an invisible `::after` hit area of at least 44 × 44, and MapLibre's zoom buttons become 44 px. On desktop they keep the denser 36 px.
+
+### Enter motion
+
+The filters popover and the report dialog enter with opacity + `scale(.97)` → 1 in 160 ms ease-out, using `@starting-style`. The popover grows from its trigger (top-left origin) and the dialog from its centre. Exits are instant: closing should feel faster than opening.
+
+### Not done
+
+- **Dragging from inside the list** (pull down when scrolled to the top). Only the header drags, which avoids fighting the list's own scroll. Common in native sheets, but it needs scroll-position handling that is easy to get wrong. Logged for later.
+- **Real-device check:** the drag, safe areas and tap behaviour were verified in Chromium's touch emulation. Per the `mobile-native` rules, sticky hover, rubber-banding and the notch must be confirmed on an actual iPhone before calling this done.

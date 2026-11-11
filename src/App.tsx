@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { RiApps2Line, RiArrowLeftLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
 import type { GeoPoint, LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
 import { SportsMap, type MapControls } from './components/SportsMap'
 import { Segmented } from './ui/Segmented'
+import { useSheetDrag, type SheetSnap } from './ui/useSheetDrag'
 import { extraText, formatPlaceCount, sportText, text, type Locale } from './i18n'
 import { geocodeAddress, reverseGeocode, routeByMode, routeByTransit, RouteRequestError, searchAddresses, transitDirectionsUrl, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
 import { installStressEnvironment, stressInitialSearch } from './dev/stress'
@@ -57,7 +58,7 @@ function FacilityDetails({ feature, venue, trend, trendingEnabled, locale, route
   const hasOfficialDetails = Boolean(officialShortDescription?.trim() || officialDescription?.trim() || officialServices.length || officialPrice?.trim() || serviceMap?.links.length)
   return <div className="facility-card">
     {venue?.lipas?.parentName && <span className="facility-parent-name">{venue.lipas.parentName}</span>}
-    {serviceMap?.pictureUrl && !photoFailed && <figure className="facility-photo"><img src={serviceMap.pictureUrl} alt={photoCaption ?? featureDisplayName(feature, locale, venue?.name)} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />{(photoCaption || serviceMap.sourceUrl) && <figcaption>{photoCaption && <span>{photoCaption}</span>}{serviceMap.sourceUrl && <a href={serviceMap.sourceUrl} target="_blank" rel="noreferrer">{locale === 'fi' ? 'Helsingin palvelukartta' : 'Helsinki Service Map'} ↗</a>}</figcaption>}</figure>}
+    {serviceMap?.pictureUrl && !photoFailed && <figure className="facility-photo"><img onLoad={(event) => { event.currentTarget.dataset.loaded = 'true' }} src={serviceMap.pictureUrl} alt={photoCaption ?? featureDisplayName(feature, locale, venue?.name)} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />{(photoCaption || serviceMap.sourceUrl) && <figcaption>{photoCaption && <span>{photoCaption}</span>}{serviceMap.sourceUrl && <a href={serviceMap.sourceUrl} target="_blank" rel="noreferrer">{locale === 'fi' ? 'Helsingin palvelukartta' : 'Helsinki Service Map'} ↗</a>}</figcaption>}</figure>}
     {trend && trendingEnabled && <section className={`trend-summary trend-${trend.stage}`}><div><span>{text(locale, trend.source === 'preview' ? 'previewScore' : 'interestSignal')}</span><strong>{trend.interestScore}</strong></div><div className="trend-summary-bar"><span style={{ '--trend-progress': trend.interestScore / 100 } as CSSProperties} /></div><small>+{trend.recentChange}% · {text(locale, trend.stage === 'new' ? 'newOnList' : trend.stage === 'rising' ? 'risingInterest' : 'popularNow')}</small></section>}
     <div className="facility-location-row">
       {venue?.lipas?.address && <p className="facility-address"><RiMapPin2Line className="location-icon" aria-hidden="true" size={16} />{venue.lipas.address}</p>}
@@ -298,7 +299,12 @@ function App() {
   const [loadError, setLoadError] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [sidebarView, setSidebarView] = useState<'list' | 'detail'>('list')
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>('peek')
+  const sheetRef = useRef<HTMLElement>(null)
+  const sheetHeaderRef = useRef<HTMLElement>(null)
+  const [isPhone, setIsPhone] = useState(() => window.matchMedia('(max-width: 720px)').matches)
+  useEffect(() => { const query = window.matchMedia('(max-width: 720px)'); const update = () => setIsPhone(query.matches); query.addEventListener('change', update); return () => query.removeEventListener('change', update) }, [])
+  const sheetExpanded = sheetSnap !== 'peek'
   const [listLimit, setListLimit] = useState(60)
   const [mapArea, setMapArea] = useState<MapDataset>()
   const [mode, setMode] = useState<Mode>('2d')
@@ -362,7 +368,9 @@ function App() {
     if (feature) { returnFocusIdRef.current = feature.id; focusDetailRef.current = true }
     setSelected(feature)
     setSidebarView(feature ? 'detail' : 'list')
-    setSidebarExpanded(expandSidebar)
+    // Opening a place shows it at half height with the pin above; closing keeps the sheet where it was.
+    if (feature) setSheetSnap('half')
+    void expandSidebar
     setRoutePlannerOpen(false)
     setReportDialogOpen(false)
   }, [])
@@ -400,6 +408,16 @@ function App() {
   const mapFitTargets = useMemo<GeoPoint[]>(() => nearOrigin
     ? [nearOrigin.coordinates, ...sortedSports.slice(0, 8).flatMap((feature) => feature.center ? [feature.center] : [])]
     : visibleSports.flatMap((feature) => feature.center ? [feature.center] : []), [nearOrigin, sortedSports, visibleSports])
+  const sheetDrag = useSheetDrag(sheetRef, sheetSnap, setSheetSnap, isPhone)
+  // The peek shows the sheet header (and the consent card while it is open); its height is measured, not guessed.
+  useLayoutEffect(() => {
+    const header = sheetHeaderRef.current, app = sheetRef.current?.closest<HTMLElement>('.app')
+    if (!header || !app) return
+    const update = () => app.style.setProperty('--sheet-peek-px', `${header.offsetTop + header.offsetHeight}px`)
+    update()
+    const observer = new ResizeObserver(update); observer.observe(header); if (header.parentElement) observer.observe(header.parentElement)
+    return () => observer.disconnect()
+  }, [consentVisible, sidebarView, selected?.id, mapArea])
   const announcement = sidebarView === 'detail' && selected ? `${locale === 'fi' ? 'Avattu' : 'Opened'}: ${featureDisplayName(selected, locale)}` : formatPlaceCount(locale, visibleSports.length)
   useEffect(() => { setListLimit(60) }, [visibleSports])
   // Focus follows the panel: opening a place moves focus to its heading, going back returns it to the row.
@@ -576,7 +594,8 @@ function App() {
     } catch { setNearStatus('notfound') }
   }
   const clearNear = () => { setNearOrigin(undefined); setNearStatus('idle') }
-  const closeDetail = () => { setSidebarView('list'); setSidebarExpanded(true) }
+  // Back is also "deselect": the map highlight and the camera return with the list.
+  const closeDetail = () => selectFeature(undefined)
 
   const chooseAnalyticsConsent = (consent: AnalyticsConsent) => {
     setAnalyticsConsent(consent)
@@ -677,7 +696,7 @@ function App() {
         {canPlanRoute && !transitRoute && transitStatus === 'no-route' && <p className="inline-status" role="status">{text(locale, 'transitNoRoute')}</p>}
       </header>
 
-      <aside className={`sheet ${sidebarExpanded ? 'is-expanded' : ''} ${sidebarView === 'detail' && selected ? 'is-detail' : ''}`} aria-label={text(locale, 'facilityList')} onKeyDown={(event) => { if (event.key === 'Escape' && sidebarView === 'detail' && !reportDialogOpen) { event.preventDefault(); closeDetail() } }}>
+      <aside ref={sheetRef} data-snap={sheetSnap} className={`sheet ${sheetExpanded ? 'is-expanded' : ''} ${sidebarView === 'detail' && selected ? 'is-detail' : ''}`} aria-label={text(locale, 'facilityList')} onKeyDown={(event) => { if (event.key === 'Escape' && sidebarView === 'detail' && !reportDialogOpen) { event.preventDefault(); closeDetail() } }}>
         {consentVisible && <section className="consent" aria-labelledby="privacy-consent-title">
           <div className="consent-copy">
             <h2 id="privacy-consent-title">{text(locale, 'analyticsConsentTitle')}</h2>
@@ -689,7 +708,7 @@ function App() {
             <button type="button" className="btn btn-secondary consent-primary" onClick={() => chooseAnalyticsConsent('granted')}>{text(locale, 'allowAnalytics')}</button>
           </div>
         </section>}
-        <header className="sheet-header">
+        <header ref={sheetHeaderRef} className="sheet-header" {...sheetDrag}>
           <span className="sheet-handle" aria-hidden="true" />
           {sidebarView === 'detail' && selected && <button type="button" className="icon-btn" onClick={closeDetail} aria-label={locale === 'fi' ? 'Takaisin listaan' : 'Back to the list'}><RiArrowLeftLine aria-hidden="true" size={20} /></button>}
           <div className="sheet-title">
@@ -697,10 +716,10 @@ function App() {
             {sidebarView === 'list' && <span>{formatPlaceCount(locale, visibleSports.length)}{nearOrigin ? (locale === 'fi' ? ' · lähimmät ensin' : ' · nearest first') : ''}</span>}
           </div>
           {sidebarView === 'detail' && selected && !routePlannerOpen && <button className="icon-btn" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}><RiFlagLine aria-hidden="true" size={18} /></button>}
-          <button type="button" className="icon-btn sheet-toggle" onClick={() => setSidebarExpanded((value) => !value)} aria-expanded={sidebarExpanded} aria-label={sidebarExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowUpSLine aria-hidden="true" size={20} /></button>
+          <button type="button" className="icon-btn sheet-toggle" onClick={() => setSheetSnap(sheetExpanded ? 'peek' : sidebarView === 'detail' ? 'half' : 'full')} aria-expanded={sheetExpanded} aria-label={sheetExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowUpSLine aria-hidden="true" size={20} /></button>
         </header>
-        <div key={sidebarView === 'detail' && selected ? selected.id : 'facility-list'} className="sheet-body">
-          {sidebarView === 'detail' && selected ? <FacilityDetails feature={selected} venue={selectedVenue} trend={selectedTrend} trendingEnabled={trendingEnabled} locale={locale} route={route} travelMode={travelMode} onDirections={() => { setRoutePlannerOpen(true); setSidebarExpanded(false); if (nearOrigin && !startingPoint) { setStartingPoint(nearOrigin.label); setOriginCoordinates(nearOrigin.coordinates) } }} /> : <>
+        <div key={sidebarView === 'detail' && selected ? selected.id : 'facility-list'} className="sheet-body" inert={isPhone && !sheetExpanded}>
+          {sidebarView === 'detail' && selected ? <FacilityDetails feature={selected} venue={selectedVenue} trend={selectedTrend} trendingEnabled={trendingEnabled} locale={locale} route={route} travelMode={travelMode} onDirections={() => { setRoutePlannerOpen(true); setSheetSnap('peek'); if (nearOrigin && !startingPoint) { setStartingPoint(nearOrigin.label); setOriginCoordinates(nearOrigin.coordinates) } }} /> : <>
             <p className="sr-only">{text(locale, 'facilityListHint')}</p>
             {nearOrigin && <div className="note"><span>{locale === 'fi' ? 'Etäisyys kohteesta ' : 'Distance from '}<strong>{nearOrigin.label}</strong></span><button type="button" className="btn btn-ghost btn-sm" onClick={clearNear}>{locale === 'fi' ? 'Poista' : 'Clear'}</button></div>}
             {hiddenUnknownPrice > 0 && <div className="note"><span>{locale === 'fi' ? `${formatPlaceCount(locale, hiddenUnknownPrice)}, joiden hintaa ei ole ilmoitettu, on piilotettu.` : `${formatPlaceCount(locale, hiddenUnknownPrice)} with no listed price are hidden.`}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setPriceFilter('all')}>{locale === 'fi' ? 'Näytä nekin' : 'Show them'}</button></div>}
@@ -759,7 +778,7 @@ function App() {
         <div className="trending-items">{topTrending.map(({ feature, signal }) => {
           const venue = venuesById.get(feature.id)
           const stageKey = signal.stage === 'new' ? 'newOnList' : signal.stage === 'rising' ? 'risingInterest' : 'popularNow'
-          return <button key={feature.id} type="button" className={`trending-item ${selected?.id === feature.id ? 'selected' : ''}`} onClick={() => selectFeature(feature)} aria-pressed={selected?.id === feature.id}>
+          return <button key={feature.id} type="button" className={`trending-item ${selected?.id === feature.id ? 'selected' : ''}`} onClick={() => selectFeature(selected?.id === feature.id ? undefined : feature)} aria-pressed={selected?.id === feature.id}>
             <span className="trending-item-copy"><strong>{featureDisplayName(feature, locale, venue?.name)}</strong><small>{text(locale, stageKey)} · {venue?.sports[0] ? venueActivityLabel(locale, venue.sports[0]) : venue?.facilityType ?? text(locale, 'sportsAreas')}</small></span>
             <span className="trending-score"><strong>{signal.interestScore}</strong><small>+{signal.recentChange}%</small></span>
           </button>

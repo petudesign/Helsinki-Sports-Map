@@ -46,7 +46,9 @@ const openStreetMapFallbackStyle = {
 } as const
 const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected', 'origin'])
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches
-const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 350
+const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420
+// Camera moves are on-screen movement, so ease-in-out (the --ease-in-out curve, cubic approximation).
+const easing = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 // On desktop the panel floats over the left 424 px of a full-width map, so the
 // camera centres content in the visible area to its right.
 const PANEL_INSET = 424
@@ -181,7 +183,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   }, [route?.transit?.zones?.join('|')])
 
   useImperativeHandle(ref, () => ({ reset() {
-    mapRef.current?.easeTo({ center: activeCity.center, zoom: 11.7, bearing: 0, pitch: mode === 'iso' ? 45 : 0, offset: defaultCameraOffset(), padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: duration() })
+    mapRef.current?.easeTo({ center: activeCity.center, zoom: 11.7, bearing: 0, pitch: mode === 'iso' ? 45 : 0, offset: defaultCameraOffset(), padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: duration(), easing })
   } }), [mode])
 
   useEffect(() => {
@@ -193,7 +195,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map = new LibreMap({
         container: container.current, style: usingOsmFallback ? openStreetMapFallbackStyle : styleUrl, center: activeCity.center, zoom: 11.7,
         minZoom: 9, maxZoom: 19, maxBounds: [[24.35, 59.85], [25.65, 60.65]],
-        renderWorldCopies: false, maxTileCacheSize: 128, pixelRatio: Math.min(window.devicePixelRatio, 2),
+        renderWorldCopies: false, maxTileCacheSize: 512, cancelPendingTileRequestsWhileZooming: false, fadeDuration: 150, pixelRatio: Math.min(window.devicePixelRatio, 2),
         dragRotate: false, touchPitch: false, pitchWithRotate: false,
         attributionControl: false,
         canvasContextAttributes: { antialias: false },
@@ -333,10 +335,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         if (hit?.properties?.cluster_id !== undefined && hit.geometry.type === 'Point') {
           try {
             const zoom = await (map.getSource('facilities') as GeoJSONSource).getClusterExpansionZoom(Number(hit.properties.cluster_id))
-            if (mapRef.current === map) map.easeTo({ center: hit.geometry.coordinates as [number, number], zoom, duration: duration() })
+            if (mapRef.current === map) map.easeTo({ center: hit.geometry.coordinates as [number, number], zoom, duration: duration(), easing })
           } catch { /* A filter may replace the cluster while the click resolves. */ }
         } else if (hit) {
-          latest.current.onSelect(latest.current.features.find((feature) => feature.id === hit.properties.id))
+          // Tapping the selected place again deselects it.
+          const id = hit.properties.id
+          latest.current.onSelect(latest.current.selected?.id === id ? undefined : latest.current.features.find((feature) => feature.id === id))
         } else latest.current.onSelect(undefined)
       })
       for (const layer of ['clusters', 'facility-hit-area', 'selected-point']) {
@@ -394,10 +398,10 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       if (!cameraBeforeSelection.current) cameraBeforeSelection.current = { center: map.getCenter().toArray() as [number, number], zoom: map.getZoom() }
       // On a phone the detail sheet covers the lower ~55 % of the map, so the place is centred in the strip above it.
       map.easeTo({ center: selected.center, zoom: Math.max(map.getZoom(), 14.5),
-        offset: isMobile() ? [0, -map.getContainer().clientHeight * 0.28] : defaultCameraOffset(), duration: duration(),
+        offset: isMobile() ? [0, -map.getContainer().clientHeight * 0.28] : defaultCameraOffset(), duration: duration(), easing,
       })
     } else if (!selected && !route && cameraBeforeSelection.current) {
-      map.easeTo({ ...cameraBeforeSelection.current, duration: duration() })
+      map.easeTo({ ...cameraBeforeSelection.current, duration: duration(), easing })
       cameraBeforeSelection.current = undefined
     }
   }, [selected, route, ready])
@@ -421,7 +425,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const bounds = new LngLatBounds(targets[0], targets[0])
     targets.forEach((point) => bounds.extend(point))
     const mobile = isMobile()
-    map.fitBounds(bounds, { padding: mobile ? { top: 140, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: PANEL_INSET + 48 }, maxZoom: 15, duration: duration() })
+    map.fitBounds(bounds, { padding: mobile ? { top: 140, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: PANEL_INSET + 48 }, maxZoom: 15, duration: duration(), easing })
   }, [fitKey, ready, area.sports.length])
 
   useEffect(() => {
@@ -441,12 +445,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         padding: mobile
           ? { top: mobileTopPadding, left: 28, right: 65, bottom: mobileBottomPadding }
           : { top: 80, left: PANEL_INSET + 40, right: 80, bottom: 65 },
-        maxZoom: 15, duration: duration(),
+        maxZoom: 15, duration: duration(), easing,
       })
     }
   }, [route, ready, locale])
 
-  useEffect(() => { if (ready) mapRef.current?.easeTo({ pitch: mode === 'iso' ? 45 : 0, duration: duration() }) }, [mode, ready])
+  useEffect(() => { if (ready) mapRef.current?.easeTo({ pitch: mode === 'iso' ? 45 : 0, duration: duration(), easing }) }, [mode, ready])
   useEffect(() => {
     const canvas = mapRef.current?.getCanvas()
     canvas?.setAttribute('aria-label', locale === 'fi' ? 'Liikuntapaikkakartta. Liiku nuolinäppäimillä ja zoomaa plus- ja miinusnäppäimillä. Kohteet löytyvät myös listasta.' : 'Sports map. Use arrow keys to pan and plus or minus to zoom. Facilities are also available in the list.')

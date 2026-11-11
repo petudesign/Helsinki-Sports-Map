@@ -68,7 +68,7 @@ a { color: inherit; }
   border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-2);
   transition: transform var(--duration-press) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 }
-.icon-btn:active:not(:disabled) { transform: scale(0.94); background: var(--surface-pressed); }
+.icon-btn:active:not(:disabled) { transform: scale(0.97); background: var(--surface-pressed); }
 .icon-btn-sm { width: var(--control-sm); height: var(--control-sm); }
 
 .link-btn { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -413,7 +413,7 @@ a { color: inherit; }
 
 /* ----------------------------------------------------------- phones */
 @media (max-width: 720px) {
-  :root { --sheet-peek: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .app { --sheet-peek: calc(var(--sheet-peek-px, 64px) + env(safe-area-inset-bottom, 0px)); }
   .side { display: contents; }
   .topbar {
     position: absolute; z-index: 20; top: calc(env(safe-area-inset-top, 0px) + var(--space-2)); left: var(--space-2); right: var(--space-2);
@@ -436,29 +436,34 @@ a { color: inherit; }
   .route-planner-open .brand, .route-planner-open .lang-switch { display: none; }
   .chip-row { margin: 0 calc(-1 * var(--space-2)); padding-left: var(--space-2); }
   .chip-row .chip { min-height: var(--control-md); box-shadow: var(--shadow-2); }
-  .chip-row .chip::after { content: ''; position: absolute; inset: -4px 0; }
   .chip-scroller { padding-right: var(--space-6); }
   .filters-panel { position: fixed; top: auto; left: var(--space-2); right: var(--space-2); width: auto; max-height: calc(100dvh - 140px); overflow-y: auto; margin-top: var(--space-2); }
   .filters[open] .filters-panel { position: absolute; top: 100%; }
   .travel-modes, .transit-guidance { background: var(--surface); box-shadow: var(--shadow-2); }
   .route-planner-open .topbar .inline-status:not(.directions-panel .inline-status) { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); }
 
+  /* The sheet is always full height and moves with transform only: peek / half / full. */
   .sheet {
+    --sheet-full: calc(100dvh - env(safe-area-inset-top, 0px) - 112px);
     position: absolute; z-index: 15; left: 0; right: 0; bottom: 0;
-    height: var(--sheet-peek); max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 120px);
+    height: var(--sheet-full);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0; background: var(--surface); box-shadow: var(--shadow-3);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    transition: height var(--duration-panel) var(--ease-drawer);
+    transform: translate3d(0, var(--sheet-y, 0px), 0);
+    transition: transform var(--duration-panel) var(--ease-drawer);
+    will-change: transform;
   }
-  .sheet.is-expanded { height: calc(100dvh - env(safe-area-inset-top, 0px) - 120px); }
-  .sheet.is-expanded.is-detail { height: 56dvh; }
-  .sheet:not(.is-expanded):has(.consent) { height: auto; }
+  .sheet[data-snap="peek"] { --sheet-y: calc(var(--sheet-full) - var(--sheet-peek-px, 64px) - env(safe-area-inset-bottom, 0px)); }
+  .sheet[data-snap="half"] { --sheet-y: calc(var(--sheet-full) - 56dvh); }
+  .sheet[data-snap="full"] { --sheet-y: 0px; }
+  .sheet[data-dragging] { transition: none; }
+  .sheet-header { touch-action: none; cursor: grab; }
+  .sheet[data-dragging] .sheet-header { cursor: grabbing; }
   .sheet-header { min-height: 64px; padding-top: var(--space-3); }
   .sheet-handle { display: block; position: absolute; top: 6px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: var(--radius-full); background: var(--gray-300); }
   .sheet-toggle { display: inline-grid; }
   .sheet-toggle svg { transition: transform var(--duration-fast) var(--ease-out); }
   .sheet.is-expanded .sheet-toggle svg { transform: rotate(180deg); }
-  .sheet:not(.is-expanded) .sheet-body { display: none; }
   .sheet:not(.is-expanded) .sheet-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .consent { order: 0; margin: var(--space-3) var(--space-3) 0; }
   .consent > .consent-copy > p { display: none; }
@@ -477,8 +482,25 @@ a { color: inherit; }
 
 /* Short landscape phones: let the page scroll instead of crushing the map */
 @media (max-height: 480px) and (max-width: 950px) {
-  .sheet.is-expanded { height: calc(100dvh - 72px); }
+  .sheet { --sheet-full: calc(100dvh - 72px); }
 }
+
+/* Coarse pointers: every target reaches 44 px without growing visually. */
+@media (pointer: coarse) {
+  .icon-btn, .segmented-item, .btn-sm, .chip { position: relative; }
+  .icon-btn::after, .segmented-item::after, .btn-sm::after, .chip::after { content: ''; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+  .chip-scroller { padding-block: 4px; margin-block: -4px; }
+  .sports-map .maplibregl-ctrl-group button { width: var(--control-lg); height: var(--control-lg); }
+  .map-reset { width: var(--control-lg); height: var(--control-lg); }
+}
+
+/* Enter motion: origin-aware, ease-out, under 200 ms; exits are instant (details/conditional render). */
+.filters[open] .filters-panel, .dialog { transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); }
+.filters[open] .filters-panel { transform-origin: top left; @starting-style { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+.dialog { @starting-style { opacity: 0; transform: scale(0.97); } }
+.dialog-backdrop { transition: opacity var(--duration-fast) var(--ease-out); @starting-style { opacity: 0; } }
+.facility-photo img { transition: opacity var(--duration-base) var(--ease-out); }
+.facility-photo img:not([data-loaded]) { opacity: 0; }
 
 /* ---------------------------------------------------- motion preferences */
 @media (prefers-reduced-motion: reduce) {

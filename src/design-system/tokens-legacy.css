@@ -1,0 +1,80 @@
+@font-face { font-family: Satoshi; src: url("/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; font-display: swap; }
+/*
+ * HSM design tokens
+ *
+ * Keep visual decisions here so a palette or density change does not require
+ * hunting through component styles. The names describe the role of a value,
+ * not the current color, which keeps future themes and cities possible.
+ */
+:root {
+  color-scheme: light;
+
+  /* Typography */
+  --hsm-font-body: Satoshi, system-ui, sans-serif;
+  --hsm-font-mono: Satoshi, system-ui, sans-serif;
+  --hsm-font-size-label: .58rem;
+  --hsm-font-size-caption: .68rem;
+  --hsm-font-size-body: .76rem;
+
+  /* Core palette */
+  --hsm-color-page: #f7faf6;
+  --hsm-color-surface: #ffffff;
+  --hsm-color-surface-muted: #f1f4ef;
+  --hsm-color-surface-soft: #e8f0e9;
+  --hsm-color-ink: #243129;
+  --hsm-color-ink-muted: #526057;
+  --hsm-color-ink-subtle: #66736a;
+  --hsm-color-border: #cbd6cd;
+  --hsm-color-border-soft: #d7e0d8;
+  --hsm-color-border-subtle: #e1e7e1;
+
+  /* Brand and semantic states */
+  --hsm-color-brand: #0755a0;
+  --hsm-color-brand-dark: #043d7c;
+  --hsm-color-brand-soft: #e7f2fb;
+  --hsm-color-accent: #b9543e;
+  --hsm-color-accent-dark: #a84c38;
+  --hsm-color-accent-soft: #f8ebe5;
+  /* Legacy token names kept as aliases while the primary UI adopts logo blue. */
+  --hsm-color-teal: var(--hsm-color-brand);
+  --hsm-color-teal-dark: var(--hsm-color-brand-dark);
+  --hsm-color-teal-soft: var(--hsm-color-brand-soft);
+  --hsm-color-success: #2f654f;
+  --hsm-color-success-soft: #e6efe4;
+  --hsm-color-success-border: #b9ccbb;
+  --hsm-color-danger: #963d32;
+  --hsm-color-danger-soft: #f3d3d0;
+  --hsm-color-danger-border: #d69b93;
+  --hsm-color-warning: #816326;
+  --hsm-color-warning-soft: #eee2c9;
+  --hsm-color-warning-border: #d5be8c;
+  --hsm-color-focus: var(--hsm-color-brand-dark);
+
+  /* Map canvas roles. The renderer mirrors these values in its TypeScript theme
+     because an OffscreenCanvas cannot resolve CSS custom properties. */
+  --hsm-color-map-ground: #dfe7e1;
+  --hsm-color-map-water: #acd8df;
+  --hsm-color-map-park: #b7c8b0;
+  --hsm-color-map-sport: #82966f;
+  --hsm-color-map-swimming: #8fbabd;
+
+  /* Shape, spacing and depth */
+  --hsm-radius-sm: 2px;
+  --hsm-radius-pill: 999px;
+  --hsm-space-1: 4px;
+  --hsm-space-2: 8px;
+  --hsm-space-3: 12px;
+  --hsm-space-4: 16px;
+  --hsm-space-5: 24px;
+  --hsm-space-6: 32px;
+  --hsm-shadow-panel: 0 10px 26px rgba(35, 76, 90, .08);
+  --hsm-shadow-floating: 0 12px 30px rgba(35, 76, 90, .16);
+
+  /* Motion: shared curves keep UI feedback crisp and cohesive. */
+  --hsm-ease-out: cubic-bezier(.23, 1, .32, 1);
+  --hsm-ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --hsm-ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --hsm-duration-press: 160ms;
+  --hsm-duration-popover: 200ms;
+  --hsm-duration-panel: 240ms;
+}

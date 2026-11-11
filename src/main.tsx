@@ -4,8 +4,7 @@ import App from './App'
 const StressToggle = lazy(() => import('./dev/StressToggle').then((module) => ({ default: module.StressToggle })))
 const DesignSystemPreview = lazy(() => import('./design-system/DesignSystemPreview').then((module) => ({ default: module.DesignSystemPreview })))
 import './design-system/tokens.css'
-import './styles.css'
-import './map.css'
+import './ui/ui.css'
 
 const designSystemMode = new URLSearchParams(window.location.search).get('design-system') === '1'
 

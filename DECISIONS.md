@@ -128,3 +128,112 @@ Ordered by how many personas hit them.
 - **Peek bar tap target, drag and fast-swipe dismiss** (commuter): phase 4 sheet gestures.
 - **Search relevance** ("tennis" also matching table tennis; school halls ranked like public courts): needs a ranking model in the data layer. Logged, not patched.
 - **Landmarks in English on the basemap** (newcomer): basemap labels come from OpenFreeMap; considered in phase 3 together with the map style.
+
+## Phase 3 — One token set, one component model (light)
+
+### Decision: replace the cascade instead of re-skinning it
+
+Before this phase, `styles.css` (708 lines) and `map.css` (595 lines) defined the same components three times: a beige palette, a blue–teal re-skin halfway down, then overrides on top. That cascade is gone. The app now loads two files:
+
+- `src/design-system/tokens.css`: every colour, radius, shadow, space, type size and motion value.
+- `src/ui/ui.css`: one rule set per component, built only from tokens.
+
+The review workbench and the old preview still use the legacy palette, so they moved to `src/review/review.css`, which imports `tokens-legacy.css`, and they no longer load with the map. `?design-system=1` is now a live gallery of the new components (`DesignSystemPreview.tsx`), using the same classes as the app.
+
+### Font: Geist, not Satoshi
+
+Compared on the real UI at 2× (`docs/ui-overhaul/phase-3/4-font-satoshi-vs-geist.png`). Satoshi has more personality: geometric, round "a", brand-like at title size. But the product is mostly 12–14 px list text, distances and counts. At those sizes Geist has the larger x-height, more open apertures and true tabular figures, so "330 m" and "1,368 places" line up and don't jitter. It also covers more of Latin Extended for names. Satoshi is kept only for the review tool. Self-hosted, 57 kB variable woff2, OFL licence in `public/fonts/Geist-LICENSE.txt`.
+
+Considered and rejected: Inter (too close to the system default to give any identity) and keeping Satoshi for titles only (two families would be the opposite of "one system").
+
+### Colour
+
+- **Neutrals:** a cool zinc ramp (`#fafafa` → `#18181b`). The greenish tint (`#f7faf6`, `#cbd6cd`, …) and the radial gradients behind the app are gone.
+- **One accent:** the logo blue `#0755a0`. It is used for primary buttons, the selected state (chips, rows), links, and every place on the map. Before, five hues competed for attention: brick-red pins, navy clusters, petrol consent button, dark-green toggles and a bright-blue chip. The design lead flagged this as the most serious finding.
+- **Text in three levels.** Contrast was measured on every surface each level appears on:
+
+| Token | Value | White | Subtle | Muted | Accent soft |
+|---|---|---|---|---|---|
+| `--text-1` | #18181b | 17.7 | 17.0 | 16.1 | 16.0 |
+| `--text-2` | #52525b | 7.7 | 7.4 | 7.0 | 7.0 |
+| `--text-3` | #66666e | 5.7 | 5.5 | 5.2 | 5.1 |
+| `--accent` (as text) | #0755a0 | 7.5 | 7.1 | 6.8 | 6.7 |
+
+  White on the accent is 7.5:1. Error text (`#b42318`) is 6.6:1 and is never the only signal.
+- **Route lines keep per-mode colours** (walk, bike, transit, car). They are data encoding on the map, not UI chrome, and each mode is also named in the controls.
+
+### Scales
+
+- **Radius:** 4 / 6 / 8 / 12 / 16. Controls and rows use 8, popovers 12, panels 16. Nested surfaces follow outer radius minus padding: a 16 px panel with 8 px padding holds 8 px rows, and an 8 px control holds 6 px segments. `999px` is left only for dots and the sheet handle, so there are no more pills.
+- **Elevation:** three levels. Each is a translucent hairline, layered soft shadows and, on levels 2–3, a faint inset top light. Borders are translucent (`rgb(24 24 27 / .1)`), so they read the same on any surface.
+- **Space:** 4 / 8 grid (4, 8, 12, 16, 20, 24, 32). Control heights are 32 / 36 / 44.
+
+### Components (one model each, all in `ui.css`)
+
+| Component | Model |
+|---|---|
+| Button | primary (filled accent), secondary (white with hairline shadow), ghost. Heights 36, or 44 where touch matters. |
+| Icon button | 36 × 36 ghost, same radius. Every one has an accessible name. |
+| Chip / filter | 36 px, 8 px radius, white with hairline. Selected is accent-soft with accent text (`aria-pressed`). Clicking a selected sport chip deselects it. The chip row is one toolbar: one Tab stop, arrow keys inside. |
+| Segmented control | `src/ui/Segmented.tsx`. Grey track, white raised thumb, radio-group semantics, arrow keys and Home/End. Used for 2D/Tilt, EN/FI and price. |
+| Search field | 44 px, 16 px text (no iOS zoom), icon inside, clear button only when there is text. |
+| Badge | 20 px, 6 px radius, neutral. Only for facts that exist ("Free", "Preview data"). |
+| Card / panel | 16 px radius, shadow-3. On desktop, one floating panel; on phones, a top bar and a bottom sheet. |
+| List row | Name (14/500), type · sports (13, text-2), address (13, text-3). Distance and price on the right only when known. Selected is accent-soft. |
+| Popover | Filters panel: 12 px radius, shadow-3, groups with sentence-case legends, "Clear all" ghost button and "Show N places" primary. |
+| Disclosure | One chevron component for "Facilities", "Official information", "How data is handled" and transit steps. |
+| Map tooltip | Hover (mouse only): the place name on a dark 8 px card. |
+| Map places and clusters | Accent fill, white 2 px ring, soft accent halo. The cluster count sets the size; there is no second colour. Selection is a larger dot, a 3 px ring, a halo and a bold label. The "near here" origin is ink, not accent, so it never reads as a place. |
+
+### Icons: stay with Remix Icon
+
+The brief suggested Lucide. Lucide has no football, basketball, ice hockey or boxing glyphs, so the sport chips would have mixed two sets with different construction. The app keeps Remix's line set and uses it consistently: 16 px inline and in chips, 18–20 px in icon buttons, colour from text tokens.
+
+### Layout: full-width map with floating panels
+
+- **Desktop:** the map fills the viewport. One 400 px floating panel on the left holds brand, language, search, chips, the list or detail, and the footer. The camera is offset by half the panel width (212 px), so fits and selections centre in the visible map. Zoom, 2D/Tilt and reset are one control column on the right, same radius and shadow.
+- **Phone:** the panel splits in two (`display: contents` on the wrapper). The top bar holds logo, search, near-me, and the chip row as floating controls. The list and detail live in a bottom sheet with peek, half-height (detail) and full height. Safe areas now work: the viewport meta gained `viewport-fit=cover`, and before this every `env(safe-area-inset-*)` resolved to 0. 2D/Tilt now exists on phones and at 200 % zoom; it was hidden before (low-vision finding).
+- **The language switch moved to the sheet footer on phones** so search gets the width. The language already follows the browser and is remembered.
+
+### Removed "AI tells"
+
+- Uppercase, letter-spaced micro-labels are gone everywhere ("1368 AREAS", "PRIVACY SETTINGS", "SPORTS", "OPEN OFFICIAL DETAILS", the footer). Section labels are real `h3` headings in sentence case.
+- Coloured side and top borders are gone (facility card top border, access note, trend summary, consent banner).
+- Pills are gone, except dots and the sheet handle.
+- "Price not listed" on every row is gone (phase 1). Missing facts are said once (phase 2).
+- Visible helper sentences are gone ("Keyboard-friendly list…", "Select a place to lift it from the map."). They stay screen-reader-only only where they help.
+- "Work in progress" in the header is gone; the panel footer says "Independent project · Not an official City of Helsinki website".
+- The mobile "All" + "All categories" duplicate is gone: one scrolling chip row on every breakpoint.
+
+### Consent
+
+It is a small card inside the panel flow: at the bottom of the panel on desktop and at the top of the sheet on phones. It never overlaps the map. Both choices are the same secondary button, equally visible. The copy is shortened to one honest sentence, with the full explanation behind "How data is handled". In the DOM it comes right after the search controls, so it is the 7th–9th Tab stop instead of the 91st.
+
+### Also fixed while rebuilding
+
+- **Search matches every word separately:** "Itäkeskus uimahalli" finds "Itäkeskuksen uimahalli".
+- **The sheet header no longer shrinks under a long title.** Its `min-height` had replaced the flex `auto` minimum, so a six-line name overlapped the body.
+- **Map labels cap at 36 characters.** The panel always has the full name.
+- **The "Near me" accessible name matches its visible text** (WCAG 2.5.3).
+- **The panel comes before the map in the DOM,** so the first Tab is the brand, not the map canvas.
+
+### Verified
+
+Playwright at 1440 and 390, locale fi-FI:
+- `lang="fi"` on load
+- consent choice → focus to search
+- near-me rows show distances
+- open → focus on the heading; Escape → focus back on the row
+- Show more → focus on row 61
+- ArrowDown in 2D/Tilt switches and keeps focus
+- chip select → deselect returns to All
+- the Free filter shows the hidden-count note and closes the popover
+- no page errors
+
+Stress scenarios (`all`, `long`, `empty`, `maperror`, `dataerror`) at 320 px and 200 % zoom: no horizontal overflow. The heading focus ring shows for keyboard and not for mouse (`:focus-visible`).
+
+### Not done here
+
+- Bottom-sheet drag, snap points and fling dismiss, and camera move without a blank frame: phase 4.
+- English names for basemap landmarks: OpenFreeMap's Positron labels are Finnish/Swedish. Switching label language needs a style edit per label layer. Deferred to phase 6, where the style is loaded and measured anyway.
+- `src/design-system/canvasTheme.ts` and `src/renderer/*` belong to the earlier custom canvas renderer, which the MapLibre map no longer uses. Left untouched; removing dead code is a separate change.

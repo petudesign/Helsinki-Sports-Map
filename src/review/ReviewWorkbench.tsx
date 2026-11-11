@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import './review.css'
 import { confidenceScore, reviewCandidates, type ApprovedReviewRecord, type PriceOption, type ReviewCandidate, type ReviewDecision } from './reviewData'
 
 type StoredReview = { decision: ReviewDecision; editedPrice?: string; note?: string; acceptedPrices?: PriceOption[]; reviewedAt?: string }

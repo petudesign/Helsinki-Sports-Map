@@ -1,5 +1,5 @@
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react'
-import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
+import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { FeatureCollection, LineString, MultiPolygon, Point, Polygon } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -9,6 +9,7 @@ import type { GeoPoint, MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
 import { text, type Locale } from '../i18n'
 import { stressFlag } from '../dev/stress'
+import { mapTheme as t } from '../design-system/mapTheme'
 
 export type MapControls = { reset: () => void }
 type Props = {
@@ -46,8 +47,10 @@ const openStreetMapFallbackStyle = {
 const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected', 'origin'])
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches
 const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 350
-// The panel sits beside the map, not over it, so the city is centred in the map itself.
-const defaultCameraOffset = (): [number, number] => [0, 0]
+// On desktop the panel floats over the left 424 px of a full-width map, so the
+// camera centres content in the visible area to its right.
+const PANEL_INSET = 424
+const defaultCameraOffset = (): [number, number] => isMobile() ? [0, 0] : [PANEL_INSET / 2, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
 const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
 type TransitZoneCollection = FeatureCollection<Polygon | MultiPolygon>
@@ -67,10 +70,13 @@ async function loadTransitZones(): Promise<TransitZoneCollection> {
   }
 }
 
+// Map labels stay short; the full name is always in the panel.
+const mapLabel = (name: string) => name.length > 36 ? `${name.slice(0, 34).trimEnd()}…` : name
+
 function pointData(features: SportFeature[], locale: Locale): FeatureCollection<Point> {
   return { type: 'FeatureCollection', features: features.flatMap((feature) => feature.center ? [{
     type: 'Feature' as const, id: feature.id,
-    properties: { id: feature.id, name: locale === 'en' ? feature.nameEn ?? feature.name ?? '' : feature.name ?? '', sport: feature.sport },
+    properties: { id: feature.id, name: mapLabel(locale === 'en' ? feature.nameEn ?? feature.name ?? '' : feature.name ?? ''), sport: feature.sport },
     geometry: { type: 'Point' as const, coordinates: feature.center },
   }] : []) }
 }
@@ -228,9 +234,9 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       if (attributionButton?.parentElement?.classList.contains('maplibregl-compact-show')) attributionButton.click()
       // Keep the quiet basemap; make water/parks match the product palette.
       for (const layer of map.getStyle().layers) {
-        if (layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', '#f4f1e9')
-        if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'water') map.setPaintProperty(layer.id, 'fill-color', '#bedade')
-        if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'park') map.setPaintProperty(layer.id, 'fill-color', '#dce3d2')
+        if (layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', t.ground)
+        if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'water') map.setPaintProperty(layer.id, 'fill-color', t.water)
+        if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'park') map.setPaintProperty(layer.id, 'fill-color', t.park)
       }
       map.addSource('helsinki', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: boundary[0].geojson as Polygon } })
       map.addSource('outside-helsinki', { type: 'geojson', data: {
@@ -238,8 +244,8 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
           [[20, 58], [30, 58], [30, 63], [20, 63], [20, 58]], boundary[0].geojson.coordinates[0],
         ] },
       } })
-      map.addLayer({ id: 'outside-helsinki', type: 'fill', source: 'outside-helsinki', paint: { 'fill-color': '#737b82', 'fill-opacity': 0.24 } })
-      map.addLayer({ id: 'helsinki-boundary', type: 'line', source: 'helsinki', paint: { 'line-color': '#68797b', 'line-width': 1.5, 'line-dasharray': [4, 3] } })
+      map.addLayer({ id: 'outside-helsinki', type: 'fill', source: 'outside-helsinki', paint: { 'fill-color': t.outside, 'fill-opacity': 0.07 } })
+      map.addLayer({ id: 'helsinki-boundary', type: 'line', source: 'helsinki', paint: { 'line-color': t.boundary, 'line-width': 1.25, 'line-dasharray': [3, 3] } })
       map.addSource('pitches', { type: 'geojson', data: polygons })
       map.addLayer({ id: 'pitches', type: 'fill', source: 'pitches', minzoom: 13, paint: { 'fill-color': '#82966f', 'fill-opacity': 0.3 } })
       map.addSource('transit-zones', { type: 'geojson', data: emptyTransitZones })
@@ -250,8 +256,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map.addLayer({ id: 'transit-zone-boundary', type: 'line', source: 'transit-zones', paint: { 'line-color': '#2f73a7', 'line-width': 1.4, 'line-opacity': 0.68, 'line-dasharray': [2, 2] } })
       if (!usingOsmFallback) map.addLayer({ id: 'transit-zone-labels', type: 'symbol', source: 'transit-zones', layout: { 'text-field': ['get', 'zone'], 'text-font': ['Noto Sans Bold'], 'text-size': 18, 'text-allow-overlap': true }, paint: { 'text-color': '#235b87', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('facilities', { type: 'geojson', data: pointData(latest.current.features, latest.current.locale), cluster: true, clusterMaxZoom: 14, clusterRadius: 42, attribution: 'LIPAS, University of Jyväskylä · CC BY 4.0' })
+      // Clusters and places are one family: the accent, a white ring and a soft halo. Size carries the count.
+      map.addLayer({ id: 'cluster-halo', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
+        'circle-color': t.accentHalo, 'circle-radius': ['step', ['get', 'point_count'], 20, 20, 24, 80, 28], 'circle-blur': 0.4,
+      } })
       map.addLayer({ id: 'clusters', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
-        'circle-color': '#0755a0', 'circle-radius': ['step', ['get', 'point_count'], 18, 20, 23, 80, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
+        'circle-color': t.accent, 'circle-radius': ['step', ['get', 'point_count'], 15, 20, 18, 80, 21], 'circle-stroke-color': t.onAccent, 'circle-stroke-width': 2,
       } })
       if (usingOsmFallback) {
         // The raster fallback has no glyph source. Draw count labels in HTML so
@@ -288,16 +298,16 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         map.on('render', updateFallbackClusterCounts)
       }
       if (!usingOsmFallback) map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'facilities', filter: ['has', 'point_count'], layout: {
-        'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Regular'], 'text-size': 12,
-      }, paint: { 'text-color': '#ffffff' } })
+        'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true,
+      }, paint: { 'text-color': t.onAccent } })
       map.addLayer({ id: 'facility-hit-area', type: 'circle', source: 'facilities', filter: ['!', ['has', 'point_count']], paint: { 'circle-radius': 22, 'circle-opacity': 0 } })
       map.addLayer({ id: 'facility-points', type: 'circle', source: 'facilities', filter: ['!', ['has', 'point_count']], paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 6, 16, 9],
-        'circle-color': '#b9543e', 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 2,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 5, 16, 7],
+        'circle-color': t.accent, 'circle-stroke-color': t.onAccent, 'circle-stroke-width': 2,
       } })
       if (!usingOsmFallback) map.addLayer({ id: 'facility-labels', type: 'symbol', source: 'facilities', minzoom: 15, filter: ['!', ['has', 'point_count']], layout: {
         'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-anchor': 'top', 'text-offset': [0, 1.2], 'text-max-width': 12,
-      }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      }, paint: { 'text-color': t.ink, 'text-halo-color': t.halo, 'text-halo-width': 1.5 } })
       map.addSource('route', { type: 'geojson', data: empty })
       map.addLayer({ id: 'route-casing', type: 'line', source: 'route', paint: { 'line-color': '#fffdf9', 'line-width': 8 } })
       map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': ['match', ['get', 'mode'], 'walk', routeColors.walk, 'bike', routeColors.bike, 'car', routeColors.car, routeColors.transit], 'line-width': 4 } })
@@ -310,10 +320,14 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         map.addLayer({ id: 'route-stop-labels', type: 'symbol', source: 'route-points', filter: ['match', ['get', 'kind'], ['board', 'alight', 'transfer'], true, false], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 10, 'text-anchor': 'top', 'text-offset': [0, 1.1], 'text-max-width': 16 }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       }
       map.addSource('origin', { type: 'geojson', data: empty })
-      map.addLayer({ id: 'origin-halo', type: 'circle', source: 'origin', paint: { 'circle-radius': 16, 'circle-color': '#0755a0', 'circle-opacity': 0.14 } })
-      map.addLayer({ id: 'origin-dot', type: 'circle', source: 'origin', paint: { 'circle-radius': 7, 'circle-color': '#0755a0', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 } })
+      // "You are here / near here": ink, not accent, so it never reads as a place.
+      map.addLayer({ id: 'origin-halo', type: 'circle', source: 'origin', paint: { 'circle-radius': 16, 'circle-color': t.ink, 'circle-opacity': 0.1 } })
+      map.addLayer({ id: 'origin-dot', type: 'circle', source: 'origin', paint: { 'circle-radius': 6, 'circle-color': t.ink, 'circle-stroke-color': t.halo, 'circle-stroke-width': 3 } })
       map.addSource('selected', { type: 'geojson', data: empty })
-      map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 12, 'circle-color': '#b9543e', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 4 } })
+      // Selection is shown by size and a ring, not by a second colour.
+      map.addLayer({ id: 'selected-halo', type: 'circle', source: 'selected', paint: { 'circle-radius': 22, 'circle-color': t.accentHalo } })
+      map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 10, 'circle-color': t.accent, 'circle-stroke-color': t.onAccent, 'circle-stroke-width': 3 } })
+      if (!usingOsmFallback) map.addLayer({ id: 'selected-label', type: 'symbol', source: 'selected', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-anchor': 'top', 'text-offset': [0, 1.4], 'text-max-width': 14, 'text-allow-overlap': true }, paint: { 'text-color': t.ink, 'text-halo-color': t.halo, 'text-halo-width': 2 } })
       map.on('click', async (event) => {
         const hit = map.queryRenderedFeatures(event.point, { layers: ['selected-point', 'clusters', 'facility-hit-area'] })[0]
         if (hit?.properties?.cluster_id !== undefined && hit.geometry.type === 'Point') {
@@ -328,6 +342,16 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       for (const layer of ['clusters', 'facility-hit-area', 'selected-point']) {
         map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
         map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
+      }
+      // Hover tooltip (mouse only): the place's name, in the same surface as the panel.
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        const tooltip = new Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'map-tooltip', maxWidth: '240px' })
+        map.on('mousemove', 'facility-hit-area', (event) => {
+          const hit = event.features?.[0]
+          if (!hit || hit.geometry.type !== 'Point') return
+          tooltip.setLngLat(hit.geometry.coordinates as [number, number]).setText(String(hit.properties?.name || '')).addTo(map)
+        })
+        map.on('mouseleave', 'facility-hit-area', () => tooltip.remove())
       }
       setReady(true)
       setFailed(false)
@@ -354,7 +378,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const map = mapRef.current
     if (!ready || !map) return
     const visibility = route ? 'none' : 'visible'
-    for (const layer of ['clusters', 'cluster-count', 'facility-hit-area', 'facility-points', 'facility-labels']) {
+    for (const layer of ['cluster-halo', 'clusters', 'cluster-count', 'facility-hit-area', 'facility-points', 'facility-labels']) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibility)
     }
   }, [route, ready])
@@ -370,7 +394,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       if (!cameraBeforeSelection.current) cameraBeforeSelection.current = { center: map.getCenter().toArray() as [number, number], zoom: map.getZoom() }
       // On a phone the detail sheet covers the lower ~55 % of the map, so the place is centred in the strip above it.
       map.easeTo({ center: selected.center, zoom: Math.max(map.getZoom(), 14.5),
-        offset: isMobile() ? [0, -map.getContainer().clientHeight * 0.28] : [0, 0], duration: duration(),
+        offset: isMobile() ? [0, -map.getContainer().clientHeight * 0.28] : defaultCameraOffset(), duration: duration(),
       })
     } else if (!selected && !route && cameraBeforeSelection.current) {
       map.easeTo({ ...cameraBeforeSelection.current, duration: duration() })
@@ -397,7 +421,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const bounds = new LngLatBounds(targets[0], targets[0])
     targets.forEach((point) => bounds.extend(point))
     const mobile = isMobile()
-    map.fitBounds(bounds, { padding: mobile ? { top: 56, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: 48 }, maxZoom: 15, duration: duration() })
+    map.fitBounds(bounds, { padding: mobile ? { top: 140, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: PANEL_INSET + 48 }, maxZoom: 15, duration: duration() })
   }, [fitKey, ready, area.sports.length])
 
   useEffect(() => {
@@ -416,7 +440,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map.fitBounds(bounds, {
         padding: mobile
           ? { top: mobileTopPadding, left: 28, right: 65, bottom: mobileBottomPadding }
-          : { top: 80, left: 40, right: 350, bottom: 65 },
+          : { top: 80, left: PANEL_INSET + 40, right: 80, bottom: 65 },
         maxZoom: 15, duration: duration(),
       })
     }

@@ -325,6 +325,10 @@ function App() {
   const focusDetailRef = useRef(false)
   const showMoreFromRef = useRef<number | undefined>(undefined)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const reportButtonRef = useRef<HTMLButtonElement>(null)
+  const wasReportOpen = useRef(false)
+  // Focus returns to the button that opened the dialog.
+  useEffect(() => { if (wasReportOpen.current && !reportDialogOpen) reportButtonRef.current?.focus(); wasReportOpen.current = reportDialogOpen }, [reportDialogOpen])
   const [searchQuery, setSearchQuery] = useState(() => import.meta.env.DEV ? stressInitialSearch() : '')
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [startingPoint, setStartingPoint] = useState('')
@@ -649,7 +653,7 @@ function App() {
           {(nearStatus === 'denied' || nearStatus === 'error') && <p className="inline-status is-error near-status" role="status">{text(locale, nearStatus === 'denied' ? 'locationDenied' : 'locationError')}</p>}
         </div>}
         {!routePlannerOpen && <nav className="chip-row" aria-label={extraText(locale, 'filterFacilities')}>
-          <details ref={filterDrawerRef} className="filters">
+          <details ref={filterDrawerRef} className="filters" onKeyDown={(event) => { if (event.key === 'Escape' && event.currentTarget.open) { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus() } }}>
             <summary className={`chip chip-filters ${activeFilterCount ? 'is-active' : ''}`} aria-label={activeFilterCount ? `${text(locale, 'filters')}, ${activeFilterCount}` : text(locale, 'filters')}><RiEqualizer2Line aria-hidden="true" size={16} /><span>{text(locale, 'filters')}</span>{activeFilterCount > 0 && <span className="chip-count" aria-hidden="true">{activeFilterCount}</span>}</summary>
             <div className="popover filters-panel">
               <fieldset className="filter-group"><legend>{text(locale, 'priceFilter')}</legend><Segmented label={text(locale, 'priceFilter')} value={priceFilter} onChange={setPriceFilter} options={[{ value: 'all', label: text(locale, 'allPrices') }, { value: 'free', label: text(locale, 'priceFree') }, { value: 'paid', label: text(locale, 'pricePaid') }]} /></fieldset>
@@ -696,7 +700,11 @@ function App() {
         {canPlanRoute && !transitRoute && transitStatus === 'no-route' && <p className="inline-status" role="status">{text(locale, 'transitNoRoute')}</p>}
       </header>
 
-      <aside ref={sheetRef} data-snap={sheetSnap} className={`sheet ${sheetExpanded ? 'is-expanded' : ''} ${sidebarView === 'detail' && selected ? 'is-detail' : ''}`} aria-label={text(locale, 'facilityList')} onKeyDown={(event) => { if (event.key === 'Escape' && sidebarView === 'detail' && !reportDialogOpen) { event.preventDefault(); closeDetail() } }}>
+      <aside ref={sheetRef} data-snap={sheetSnap} className={`sheet ${sheetExpanded ? 'is-expanded' : ''} ${sidebarView === 'detail' && selected ? 'is-detail' : ''}`} aria-label={text(locale, 'facilityList')} onKeyDown={(event) => { if (event.key === 'Escape' && sidebarView === 'detail' && !reportDialogOpen) { event.preventDefault(); closeDetail() } }}
+        onFocus={(event) => {
+          // Keyboard focus reaching the collapsed sheet opens it, so the (otherwise inert) results are the next Tab stop.
+          if (isPhone && sheetSnap === 'peek' && (event.target as HTMLElement).matches(':focus-visible')) setSheetSnap(sidebarView === 'detail' ? 'half' : 'full')
+        }}>
         {consentVisible && <section className="consent" aria-labelledby="privacy-consent-title">
           <div className="consent-copy">
             <h2 id="privacy-consent-title">{text(locale, 'analyticsConsentTitle')}</h2>
@@ -715,7 +723,7 @@ function App() {
             <h2 ref={detailHeadingRef} tabIndex={-1}>{sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
             {sidebarView === 'list' && <span>{formatPlaceCount(locale, visibleSports.length)}{nearOrigin ? (locale === 'fi' ? ' · lähimmät ensin' : ' · nearest first') : ''}</span>}
           </div>
-          {sidebarView === 'detail' && selected && !routePlannerOpen && <button className="icon-btn" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}><RiFlagLine aria-hidden="true" size={18} /></button>}
+          {sidebarView === 'detail' && selected && !routePlannerOpen && <button ref={reportButtonRef} className="icon-btn" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}><RiFlagLine aria-hidden="true" size={18} /></button>}
           <button type="button" className="icon-btn sheet-toggle" onClick={() => setSheetSnap(sheetExpanded ? 'peek' : sidebarView === 'detail' ? 'half' : 'full')} aria-expanded={sheetExpanded} aria-label={sheetExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowUpSLine aria-hidden="true" size={20} /></button>
         </header>
         <div key={sidebarView === 'detail' && selected ? selected.id : 'facility-list'} className="sheet-body" inert={isPhone && !sheetExpanded}>
@@ -788,7 +796,15 @@ function App() {
     </section>
 
     {reportDialogOpen && selected && !routePlannerOpen && <div className="dialog-backdrop" role="presentation" onClick={() => setReportDialogOpen(false)}>
-      <section className="dialog" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); setReportDialogOpen(false) } }}>
+      <section className="dialog" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
+        if (event.key === 'Escape') { event.stopPropagation(); setReportDialogOpen(false); return }
+        if (event.key !== 'Tab') return
+        // Focus trap: aria-modal promises the rest of the page is out of reach.
+        const focusable = [...event.currentTarget.querySelectorAll<HTMLElement>('button, a[href]')]
+        const first = focusable[0], last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }}>
         <h2 id="report-dialog-title">{locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}</h2>
         <p>{locale === 'fi' ? 'Seuraavaksi avataan GitHub, jossa voit kertoa, mikä tiedoissa on väärin tai vanhentunutta.' : 'The next step opens GitHub, where you can describe what is incorrect or out of date.'}</p>
         <div className="dialog-actions">

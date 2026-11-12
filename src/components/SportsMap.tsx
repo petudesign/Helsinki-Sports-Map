@@ -451,6 +451,14 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   }, [route, ready, locale])
 
   useEffect(() => { if (ready) mapRef.current?.easeTo({ pitch: mode === 'iso' ? 45 : 0, duration: duration(), easing }) }, [mode, ready])
+  // MapLibre's own buttons are labelled in English; keep them in the UI language.
+  useEffect(() => {
+    const root = container.current
+    if (!ready || !root) return
+    const labels: Record<string, [string, string]> = { '.maplibregl-ctrl-zoom-in': ['Zoom in', 'Lähennä'], '.maplibregl-ctrl-zoom-out': ['Zoom out', 'Loitonna'], '.maplibregl-ctrl-attrib-button': ['Show map attribution', 'Näytä kartan lähdetiedot'] }
+    for (const [selector, [en, fi]] of Object.entries(labels)) root.querySelectorAll<HTMLElement>(selector).forEach((button) => { const label = locale === 'fi' ? fi : en; button.setAttribute('aria-label', label); button.title = label })
+  }, [locale, ready])
+
   useEffect(() => {
     const canvas = mapRef.current?.getCanvas()
     canvas?.setAttribute('aria-label', locale === 'fi' ? 'Liikuntapaikkakartta. Liiku nuolinäppäimillä ja zoomaa plus- ja miinusnäppäimillä. Kohteet löytyvät myös listasta.' : 'Sports map. Use arrow keys to pan and plus or minus to zoom. Facilities are also available in the list.')

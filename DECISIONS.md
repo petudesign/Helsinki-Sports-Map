@@ -302,3 +302,48 @@ The filters popover and the report dialog enter with opacity + `scale(.97)` → 
 
 - **Dragging from inside the list** (pull down when scrolled to the top). Only the header drags, which avoids fighting the list's own scroll. Common in native sheets, but it needs scroll-position handling that is easy to get wrong. Logged for later.
 - **Real-device check:** the drag, safe areas and tap behaviour were verified in Chromium's touch emulation. Per the `mobile-native` rules, sticky hover, rubber-banding and the notch must be confirmed on an actual iPhone before calling this done.
+
+## Phase 5 — Accessibility
+
+### Method
+
+- **Automated:** axe-core (WCAG 2.0/2.1/2.2 A and AA + best practice) on home, filters and detail, at 1440 px and 390 px. The map canvas is excluded, because axe cannot judge WebGL content.
+- **Manual:** the phase-2 low-vision task again, keyboard only, at 200 % zoom (1280 × 800 → 640 × 400 CSS px), Finnish browser. The accessibility tree (`ariaSnapshot`) stands in for VoiceOver. Colour-vision deficiency was simulated with Chromium's `Emulation.setEmulatedVisionDeficiency` (deuteranopia and protanopia), on the original (63d56f4) and the current build in the same state.
+
+### Results
+
+| Check | Original | Now |
+|---|---|---|
+| axe violations, 1440 home / filters / detail | 2 / 1 / 1 (target-size, aria-allowed-role) | 0 / 0 / 0 |
+| axe violations, 390 home / filters / detail | 1 / 0 / 0 | 0 / 0 / 0 |
+| Keyboard task at 200 %: find a tennis court, open, read, close | ~40 key presses, focus lost twice, Escape did nothing | 17 key presses |
+| Tab stops to reach the privacy choice | 18 (200 %) / 91 (1280 px) | 7 |
+| Focus after opening a place | `body` (nothing announced) | the place's `h2`, plus "Opened: name" in the status region |
+| Focus after Back / Escape | `body` | the list row that opened it |
+| Tab stops with a visible focus ring (first 16) | not measured | 16 / 16 |
+| 2D/Tilt at 200 % | hidden (zero width) | visible, arrow keys work |
+
+Automated tools found almost none of the real problems. The serious ones (lost focus, Escape, the banner, unreachable results) came from the persona and the keyboard walkthrough. Both kinds of check are kept for that reason.
+
+### Fixes in this phase
+
+- **Focus rings were invisible on every shadowed component.** `:focus-visible` drew the ring with `box-shadow`, and the secondary buttons, chips and segmented thumbs set their own `box-shadow` in a later rule, so the ring disappeared. The keyboard walkthrough screenshot caught it on "Only necessary". The ring is now an `outline` (2 px accent, 2 px offset, 7.5:1 against white), which no component shadow can override. The chip scroller got 4 px of internal padding so the outline isn't clipped. The search and starting-point fields show focus as a 2 px accent ring on the field itself.
+- **Results were unreachable by keyboard in the narrow layout.** The collapsed sheet's content is `inert` (correctly), but at 200 % zoom the desktop gets the phone layout. Tab went from the chips straight past every result. Now, when keyboard focus reaches the collapsed sheet (`:focus-visible` only, not a tap), the sheet opens, so the next Tab is the first result.
+- **Report dialog:** the focus is trapped (Tab and Shift+Tab cycle "Cancel" ↔ "Continue to GitHub", as `aria-modal` promises). Escape closes it, and focus returns to the report button.
+- **Filters popover:** Escape closes it and returns focus to "Filters".
+- **MapLibre's own buttons** ("Zoom in", "Zoom out", attribution) now follow the UI language. They were always English.
+- **Selected chips no longer rely on colour alone.** Selected means semibold text and a 1.5 px accent ring (7.5:1), not just a tinted background. The near-me toggle follows the same rule.
+
+### Already in place from earlier phases (re-verified)
+
+- **Every place is reachable without the map:** the list (alphabetical or nearest first), search on every word, "Show more" with focus moved to the first new row.
+- **Open moves focus to the heading; close returns it. The closed sheet is `inert`.**
+- **Arrow keys:** segmented controls (2D/Tilt, EN/FI, price) are radio groups with arrows and Home/End. The sport chips are one toolbar with arrows.
+- **Every icon button has a name** (back, report, collapse, reset view, use location, clear search, zoom). "Near me" keeps its visible text as its accessible name (WCAG 2.5.3).
+- **Language:** `<html lang>` follows the UI language, and the EN/FI options carry their own `lang` and full names ("English", "Suomi").
+- **Colour:** places are the logo blue, which survives both red–green deficiencies. In the original, brick-red pins turned olive under deuteranopia and protanopia and sank into the beige map and parks. Selection is size + ring + bold label, not a second hue. The "near here" origin differs from places by colour and by shape (ink dot with a wide halo), and the list states "Distance from …" in text. Comparison: `docs/ui-overhaul/phase-5/2-colour-vision-before-after.png`.
+
+### Not verified
+
+- **Real VoiceOver on macOS/iOS** was not run. The accessibility tree shows the right names, roles, states and headings, but announcement timing and verbosity need a person with a screen reader.
+- **Route lines** use per-mode colours (green walk, orange bike), which are close under deuteranopia. Only one mode is drawn at a time, and the selected mode is named in the controls and the legend, so the colour is never the only cue. A real route couldn't be drawn locally without the routing API keys.

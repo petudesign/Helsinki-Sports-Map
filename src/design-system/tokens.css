@@ -79,8 +79,7 @@
   --danger: #b42318;             /* 6.6:1 */
   --danger-soft: #fdf1f0;
 
-  /* Focus */
-  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+  /* Focus: drawn as an outline in ui.css (2 px --accent, 2 px offset), 7.5:1 against white */
 
   /* Radius: one scale. Nested surface = outer radius − padding. */
   --radius-xs: 4px;

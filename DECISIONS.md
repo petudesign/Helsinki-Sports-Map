@@ -409,3 +409,17 @@ Desktop is at 98–99, and accessibility, best practices and SEO are at 100 on b
 - **Filters:** chip deselect returns to All, and Escape closes the popover.
 - **Map:** the controls are visible and the canvas fills the viewport.
 - **axe:** 0 violations in all six states.
+
+## Batch 7: review feedback from the preview
+
+| Change | Why |
+|---|---|
+| Finnish name is "Helsingin liikuntakartta" (new `appName` key), also in the consent title | "Helsinki Liikuntakartta" is not idiomatic Finnish; English stays "Helsinki Sports Map". |
+| "Salli analytiikka" is a primary button; "Vain välttämättömät" stays a same-size secondary button next to it | Guides towards the option that helps the project while declining stays as easy and visible (one click, equal size). |
+| Selected chip and active "Near me" are filled accent buttons (white on #0755a0, 7.5:1) | The soft-blue ring read as a hover state, not as "on". Weight still changes, so selection isn't colour alone. |
+| Chip row scrolls with a mouse: vertical wheel scrolls sideways, round arrow buttons appear on the side with more chips (fine pointers only), fades only on that side | The row had no visible way to scroll on desktop without a trackpad. Touch swipe was already native. Arrow buttons are `aria-hidden` and out of the Tab order because the toolbar already moves with arrow keys. |
+| Default desktop view shifted 220 px east | The first frame showed the Espoo border and empty western water; Helsinki's places now fill the visible map. |
+| Search field text is 14 px for mouse users | The placeholder was cut off. Touch keeps 16 px so iOS doesn't zoom into the field. |
+| 2D / Vino toggle is exactly as wide as the zoom buttons (36 px, 44 px on touch), 12 px labels; the three control groups sit 8 px apart | The toggle was wider than every other map control and drew the eye. On touch it also overlapped the zoom-out button because its offset assumed 36 px buttons; the offset now follows the actual button size. |
+
+axe: 0 violations in all six states. Images: `docs/ui-overhaul/phase-7/`.

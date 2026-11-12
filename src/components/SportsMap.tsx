@@ -50,9 +50,11 @@ const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').mat
 // Camera moves are on-screen movement, so ease-in-out (the --ease-in-out curve, cubic approximation).
 const easing = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 // On desktop the panel floats over the left 424 px of a full-width map, so the
-// camera centres content in the visible area to its right.
+// camera centres content in the visible area to its right. The default view
+// then nudges 220 px east so the Espoo border stays out of the first frame.
 const PANEL_INSET = 424
-const defaultCameraOffset = (): [number, number] => isMobile() ? [0, 0] : [PANEL_INSET / 2, 0]
+const DEFAULT_VIEW_EAST = 220
+const defaultCameraOffset = (): [number, number] => isMobile() ? [0, 0] : [PANEL_INSET / 2 - DEFAULT_VIEW_EAST, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
 const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
 type TransitZoneCollection = FeatureCollection<Polygon | MultiPolygon>

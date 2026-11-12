@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { RiApps2Line, RiArrowLeftLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
+import { RiApps2Line, RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
 import type { GeoPoint, LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
@@ -9,6 +9,7 @@ const sportsMapModule = import('./components/SportsMap')
 const SportsMap = lazy(() => sportsMapModule.then((module) => ({ default: module.SportsMap })))
 import { Segmented } from './ui/Segmented'
 import { useSheetDrag, type SheetSnap } from './ui/useSheetDrag'
+import { useHorizontalScroll } from './ui/useHorizontalScroll'
 import { extraText, formatPlaceCount, sportText, text, type Locale } from './i18n'
 import { geocodeAddress, reverseGeocode, routeByMode, routeByTransit, RouteRequestError, searchAddresses, transitDirectionsUrl, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
 import { installStressEnvironment, stressInitialSearch } from './dev/stress'
@@ -354,6 +355,7 @@ function App() {
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'denied' | 'error'>('idle')
   const [, setAnalyticsConsentState] = useState<AnalyticsConsent>()
   const [consentVisible, setConsentVisible] = useState(false)
+  const chipScroll = useHorizontalScroll<HTMLDivElement>()
   const [debugVenues] = useState(() => new URLSearchParams(window.location.search).get('debug') === 'venues')
   const locationRequestRef = useRef(0)
   useEffect(() => { document.documentElement.lang = locale; try { localStorage.setItem(LOCALE_KEY, locale) } catch { /* storage blocked */ } }, [locale])
@@ -462,6 +464,8 @@ function App() {
   const trendingIsPreview = topTrending.some(({ signal }) => signal.source === 'preview')
   // Which sport chips exist depends only on the data, so it is computed once, not on every keystroke.
   const filterOptions = useMemo(() => allFilterOptions.filter((option) => option.id === 'all' || !mapArea || mapArea.sports.some((feature) => matchesFilter(feature, option.id))), [mapArea])
+  const measureChips = chipScroll.measure
+  useEffect(() => { measureChips() }, [measureChips, filterOptions, locale, routePlannerOpen])
   const activeFilterCount = Number(priceFilter !== 'all') + Number(accessibilityFilter !== 'all') + Number(familyFilter !== 'all')
   const venueDiagnostics = useMemo(() => {
     if (!debugVenues) return { duplicateNames: [] as string[], duplicateNameGroups: 0, venueCount: 0, featureCount: 0, sourceCount: 0 }
@@ -635,7 +639,7 @@ function App() {
 
     <div className="side">
       <header className="topbar">
-        <a className="brand" href="/"><img src="/logo-32.png" srcSet="/logo-32.png 1x, /logo-64.png 2x" alt="" width="32" height="32" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></a>
+        <a className="brand" href="/"><img src="/logo-32.png" srcSet="/logo-32.png 1x, /logo-64.png 2x" alt="" width="32" height="32" /><h1>{text(locale, 'appName')}</h1></a>
         <Segmented className="lang-switch" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: <>EN<span className="sr-only"> English</span></>, lang: 'en' }, { value: 'fi', label: <>FI<span className="sr-only"> Suomi</span></>, lang: 'fi' }]} />
         {routePlannerOpen && selected ? <div className="directions-panel" role="group" aria-label={locale === 'fi' ? 'Reittiohjeet' : 'Directions'}>
           <div className="directions-fields">
@@ -681,7 +685,8 @@ function App() {
             </div>
           </details>
           {/* One Tab stop for the whole row; arrow keys move between chips (WAI-ARIA toolbar). */}
-          <div className="chip-scroller" role="toolbar" aria-label={text(locale, 'sport')} onKeyDown={(event) => {
+          <div className="chip-scroll" data-start={chipScroll.canStart || undefined} data-end={chipScroll.canEnd || undefined}>
+          <div ref={chipScroll.ref} className="chip-scroller" role="toolbar" aria-label={text(locale, 'sport')} onKeyDown={(event) => {
             if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return
             const chips = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('.chip')]
             const index = chips.indexOf(document.activeElement as HTMLButtonElement)
@@ -690,6 +695,10 @@ function App() {
           }}>
             {filterOptions.map((option) => <button key={option.id} type="button" className="chip" tabIndex={filter === option.id ? 0 : -1} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id === filter && option.id !== 'all' ? 'all' : option.id)}><SportFilterIcon id={option.id} />{sportChipLabel(option.id)}</button>)}
             <button type="button" className="chip" tabIndex={-1} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine aria-hidden="true" size={16} />{text(locale, 'trending')}</button>
+          </div>
+          {/* Mouse affordance only: keyboard users move with the arrow keys, touch users swipe. */}
+          <button type="button" className="chip-scroll-button is-start" tabIndex={-1} aria-hidden="true" onClick={() => chipScroll.page(-1)}><RiArrowLeftSLine size={18} /></button>
+          <button type="button" className="chip-scroll-button is-end" tabIndex={-1} aria-hidden="true" onClick={() => chipScroll.page(1)}><RiArrowRightSLine size={18} /></button>
           </div>
         </nav>}
         {canPlanRoute && <div className="travel-modes" role="group" aria-label={text(locale, 'travelMode')}>{(['walk', 'bike', 'transit', 'car'] as const).map((modeOption) => { const result = routes[modeOption]; const label = text(locale, modeOption); const ModeIcon = modeOption === 'walk' ? RiWalkLine : modeOption === 'bike' ? RiBikeLine : modeOption === 'transit' ? RiBus2Line : RiCarLine; return <button key={modeOption} className="travel-mode" type="button" aria-pressed={travelMode === modeOption} disabled={routeStatus === 'loading' || !result} aria-label={result ? `${label}, ${formatRouteDuration(locale, result.durationSeconds)}` : `${label}, ${locale === 'fi' ? 'ei saatavilla' : 'not available'}`} onClick={() => setTravelMode(modeOption)}><ModeIcon aria-hidden="true" size={18} /><small>{result ? formatRouteDuration(locale, result.durationSeconds) : '–'}</small></button> })}</div>}
@@ -728,7 +737,7 @@ function App() {
           </div>
           <div className="consent-actions">
             <button type="button" className="btn btn-secondary consent-secondary" onClick={() => chooseAnalyticsConsent('denied')}>{text(locale, 'onlyNecessary')}</button>
-            <button type="button" className="btn btn-secondary consent-primary" onClick={() => chooseAnalyticsConsent('granted')}>{text(locale, 'allowAnalytics')}</button>
+            <button type="button" className="btn btn-primary consent-primary" onClick={() => chooseAnalyticsConsent('granted')}>{text(locale, 'allowAnalytics')}</button>
           </div>
         </section>}
         <header ref={sheetHeaderRef} className="sheet-header" {...sheetDrag}>

@@ -317,8 +317,12 @@ a { color: inherit; }
 .directions-destination { display: grid; align-content: center; min-height: 52px; padding: 18px var(--space-3) 6px; }
 .directions-destination strong { overflow: hidden; font-size: var(--text-md); font-weight: var(--weight-regular); text-overflow: ellipsis; white-space: nowrap; }
 .directions-actions { display: flex; gap: var(--space-2); }
-.address-suggestions { position: absolute; z-index: 30; top: calc(100% + var(--space-1)); left: 0; right: 0; display: grid; max-height: 260px; overflow-y: auto; padding: var(--space-1); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-3); }
-.address-suggestions button { min-height: var(--control-lg); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; text-align: left; }
+.address-suggestions { position: absolute; z-index: 30; top: calc(100% + var(--space-1)); left: 0; right: 0; display: grid; max-height: 320px; overflow-y: auto; padding: var(--space-1); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-3); }
+.address-suggestions button { display: flex; align-items: center; gap: var(--space-3); min-height: var(--control-lg); padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; text-align: left; }
+.address-suggestions .suggestion-icon { flex: 0 0 auto; color: var(--text-3); }
+.suggestion-text { display: grid; min-width: 0; }
+.suggestion-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-text small { overflow: hidden; color: var(--text-3); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
 .address-suggestions button:focus-visible { background: var(--surface-muted); }
 .travel-modes { grid-area: route; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: var(--radius-md); background: var(--gray-100); box-shadow: inset 0 0 0 1px var(--border); }
 .travel-mode { display: grid; justify-items: center; gap: 2px; min-height: var(--control-lg); padding: var(--space-1) 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-2); transition: background-color var(--duration-fast) var(--ease-out); }

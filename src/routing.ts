@@ -29,7 +29,8 @@ export type RouteResult = {
   transit?: TransitDetails
 }
 
-export type AddressSuggestion = { label: string; coordinates?: GeoPoint; streetName?: string }
+export type PlaceKind = 'area' | 'place' | 'station'
+export type AddressSuggestion = { label: string; coordinates?: GeoPoint; streetName?: string; kind?: PlaceKind; detail?: string }
 
 export type RouteFailureCode = 'unavailable' | 'no-route' | 'outside-area' | 'invalid'
 
@@ -49,6 +50,7 @@ const GEOCODE_PROXY = '/api/geocode'
 const REVERSE_GEOCODE_PROXY = '/api/reverse-geocode'
 const ROUTE_PROXY = '/api/route'
 const TRANSIT_ROUTE_PROXY = '/api/transit-route'
+const PLACES_PROXY = '/api/places'
 const MAX_STREET_SUGGESTIONS = 8
 
 class HttpRequestError extends Error {
@@ -230,29 +232,62 @@ async function searchNominatim(query: string, signal?: AbortSignal): Promise<Add
   }))
 }
 
-export async function searchAddresses(query: string, signal?: AbortSignal): Promise<AddressSuggestion[]> {
+// Districts, venues and stations ("Kamppi", "Kauppakeskus Redi", "Pasila").
+// Optional: without the server key (or on any failure) the field falls back to streets only.
+export async function searchPlaces(query: string, locale: 'fi' | 'en', signal?: AbortSignal): Promise<AddressSuggestion[]> {
+  const text = query.trim()
+  if (text.length < 2) return []
+  try {
+    const params = new URLSearchParams({ text, lang: locale })
+    const { places } = await requestJson<{ places?: { name: string; kind: PlaceKind; detail?: string; coordinates: GeoPoint }[] }>(`${PLACES_PROXY}?${params}`, signal, 5_000)
+    return (places ?? []).map((place) => ({ label: place.name, kind: place.kind, detail: place.detail || undefined, coordinates: place.coordinates }))
+  } catch (error) {
+    if (signal?.aborted) throw error
+    return []
+  }
+}
+
+const PLACE_ORDER: Record<PlaceKind, number> = { area: 0, station: 1, place: 2 }
+
+export async function searchAddresses(query: string, signal?: AbortSignal, locale: 'fi' | 'en' = 'fi'): Promise<AddressSuggestion[]> {
   const trimmedQuery = query.trim()
   if (!trimmedQuery) return []
   const parsed = parseAddressQuery(trimmedQuery)
 
   if (!parsed.streetnumber) {
+    // A visitor often knows only the district or the landmark, so places come first, then streets.
+    const placesRequest = searchPlaces(trimmedQuery, locale, signal)
+    let streets: AddressSuggestion[] = []
+    let streetsFailed = false
     try {
       const streetNames = await searchHelsinkiStreetNames(parsed.streetname, signal)
-      const prefixResults = streetNames
+      streets = streetNames
         .map((streetName) => ({ label: streetName, streetName }))
         .filter((suggestion) => matchesAddressQuery(suggestion, trimmedQuery))
-      return prefixResults
     } catch (error) {
       if (signal?.aborted) throw error
+      streetsFailed = true
     }
+    const places = (await placesRequest)
+      .map((place, index) => ({ place, index }))
+      .sort((a, b) => PLACE_ORDER[a.place.kind!] - PLACE_ORDER[b.place.kind!] || a.index - b.index)
+      .map(({ place }) => place)
+    const streetLabels = new Set(streets.map((street) => normalizeSearchText(street.label)))
+    const merged = [...places.filter((place) => !streetLabels.has(normalizeSearchText(place.label))).slice(0, 5), ...streets]
+    if (merged.length || !streetsFailed) return merged.slice(0, MAX_STREET_SUGGESTIONS)
   }
 
   // Only a successful empty response means no matches. Let failures reach the UI.
   return (await searchPaikkatieto(trimmedQuery, signal)).filter((suggestion) => matchesAddressQuery(suggestion, trimmedQuery))
 }
 
-export async function geocodeAddress(query: string): Promise<GeoPoint> {
+export async function geocodeAddress(query: string, locale: 'fi' | 'en' = 'fi'): Promise<GeoPoint> {
   let first: AddressSuggestion | undefined
+  // A bare name ("Kamppi") is more likely a district or landmark than a street.
+  if (!parseAddressQuery(query).streetnumber) {
+    const [place] = await searchPlaces(query, locale)
+    if (place?.coordinates && normalizeSearchText(place.label) === normalizeSearchText(query)) return place.coordinates
+  }
   try {
     [first] = await searchPaikkatieto(query)
   } catch {

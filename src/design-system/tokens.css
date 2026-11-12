@@ -1,79 +1,125 @@
 /*
- * HSM design tokens
+ * Helsinki Sports Map — design tokens (UI overhaul, phase 3)
  *
- * Keep visual decisions here so a palette or density change does not require
- * hunting through component styles. The names describe the role of a value,
- * not the current color, which keeps future themes and cities possible.
+ * Every visual value in the app resolves to one of these. Components never
+ * use raw hex, px radii or ad-hoc shadows. Rationale and contrast figures are
+ * in DECISIONS.md → Phase 3.
+ *
+ * Neutrals are a cool zinc ramp (no green cast), one accent (the logo blue),
+ * three text levels, all ≥ 4.5:1 on every surface they appear on.
  */
+@font-face {
+  font-family: Geist;
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
 
-  /* Typography */
-  --hsm-font-body: Satoshi, system-ui, sans-serif;
-  --hsm-font-mono: Satoshi, system-ui, sans-serif;
-  --hsm-font-size-label: .58rem;
-  --hsm-font-size-caption: .68rem;
-  --hsm-font-size-body: .76rem;
+  /* Type ------------------------------------------------------------- */
+  --font-sans: Geist, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-xs: 0.75rem;    /* 12 — badges, captions */
+  --text-sm: 0.8125rem;  /* 13 — secondary lines */
+  --text-base: 0.875rem; /* 14 — UI default */
+  --text-md: 1rem;       /* 16 — inputs (no iOS zoom), detail body */
+  --text-lg: 1.125rem;   /* 18 — panel titles */
+  --text-xl: 1.25rem;    /* 20 — brand */
+  --leading-tight: 1.25;
+  --leading-normal: 1.45;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --tracking-tight: -0.011em;
+  --tracking-title: -0.02em;
 
-  /* Core palette */
-  --hsm-color-page: #f7faf6;
-  --hsm-color-surface: #ffffff;
-  --hsm-color-surface-muted: #f1f4ef;
-  --hsm-color-surface-soft: #e8f0e9;
-  --hsm-color-ink: #243129;
-  --hsm-color-ink-muted: #526057;
-  --hsm-color-ink-subtle: #66736a;
-  --hsm-color-border: #cbd6cd;
-  --hsm-color-border-soft: #d7e0d8;
-  --hsm-color-border-subtle: #e1e7e1;
+  /* Neutrals ---------------------------------------------------------- */
+  --gray-0: #ffffff;
+  --gray-25: #fafafa;
+  --gray-50: #f4f4f5;
+  --gray-100: #ececee;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-600: #52525b;
+  --gray-650: #66666e;
+  --gray-900: #18181b;
 
-  /* Brand and semantic states */
-  --hsm-color-brand: #0755a0;
-  --hsm-color-brand-dark: #043d7c;
-  --hsm-color-brand-soft: #e7f2fb;
-  --hsm-color-accent: #b9543e;
-  --hsm-color-accent-dark: #a84c38;
-  --hsm-color-accent-soft: #f8ebe5;
-  /* Legacy token names kept as aliases while the primary UI adopts logo blue. */
-  --hsm-color-teal: var(--hsm-color-brand);
-  --hsm-color-teal-dark: var(--hsm-color-brand-dark);
-  --hsm-color-teal-soft: var(--hsm-color-brand-soft);
-  --hsm-color-success: #2f654f;
-  --hsm-color-success-soft: #e6efe4;
-  --hsm-color-success-border: #b9ccbb;
-  --hsm-color-danger: #963d32;
-  --hsm-color-danger-soft: #f3d3d0;
-  --hsm-color-danger-border: #d69b93;
-  --hsm-color-warning: #816326;
-  --hsm-color-warning-soft: #eee2c9;
-  --hsm-color-warning-border: #d5be8c;
-  --hsm-color-focus: var(--hsm-color-brand-dark);
+  /* Surfaces */
+  --surface-page: var(--gray-50);
+  --surface: var(--gray-0);
+  --surface-subtle: var(--gray-25);
+  --surface-muted: var(--gray-50);
+  --surface-hover: rgb(24 24 27 / 0.045);
+  --surface-pressed: rgb(24 24 27 / 0.08);
+  --surface-overlay: rgb(255 255 255 / 0.92);
 
-  /* Map canvas roles. The renderer mirrors these values in its TypeScript theme
-     because an OffscreenCanvas cannot resolve CSS custom properties. */
-  --hsm-color-map-ground: #dfe7e1;
-  --hsm-color-map-water: #acd8df;
-  --hsm-color-map-park: #b7c8b0;
-  --hsm-color-map-sport: #82966f;
-  --hsm-color-map-swimming: #8fbabd;
+  /* Borders: hairlines are translucent so they sit on any surface */
+  --border: rgb(24 24 27 / 0.1);
+  --border-strong: rgb(24 24 27 / 0.16);
+  --hairline: 0 0 0 1px var(--border);
 
-  /* Shape, spacing and depth */
-  --hsm-radius-sm: 2px;
-  --hsm-radius-pill: 999px;
-  --hsm-space-1: 4px;
-  --hsm-space-2: 8px;
-  --hsm-space-3: 12px;
-  --hsm-space-4: 16px;
-  --hsm-space-5: 24px;
-  --hsm-space-6: 32px;
-  --hsm-shadow-panel: 0 10px 26px rgba(35, 76, 90, .08);
-  --hsm-shadow-floating: 0 12px 30px rgba(35, 76, 90, .16);
+  /* Text: three levels (contrast on white / on --surface-muted) */
+  --text-1: var(--gray-900); /* 17.7 / 16.1 */
+  --text-2: var(--gray-600); /*  7.7 /  7.0 */
+  --text-3: var(--gray-650); /*  5.7 /  5.2 */
 
-  /* Motion: shared curves keep UI feedback crisp and cohesive. */
-  --hsm-ease-out: cubic-bezier(.23, 1, .32, 1);
-  --hsm-ease-in-out: cubic-bezier(.77, 0, .175, 1);
-  --hsm-ease-drawer: cubic-bezier(.32, .72, 0, 1);
-  --hsm-duration-press: 160ms;
-  --hsm-duration-popover: 200ms;
-  --hsm-duration-panel: 240ms;
+  /* Accent: one colour, for primary actions, selection and the map's places */
+  --accent: #0755a0;             /* 7.5:1 on white; white on accent 7.5:1 */
+  --accent-hover: #06498a;
+  --accent-pressed: #053e75;
+  --accent-soft: #eef4fb;
+  --accent-soft-hover: #e1ecf8;
+  --accent-text: #0755a0;
+  --on-accent: #ffffff;
+
+  /* Status (text only, never the sole carrier of meaning) */
+  --danger: #b42318;             /* 6.6:1 */
+  --danger-soft: #fdf1f0;
+
+  /* Focus: drawn as an outline in ui.css (2 px --accent, 2 px offset), 7.5:1 against white */
+
+  /* Radius: one scale. Nested surface = outer radius − padding. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;   /* badges, inner rows of an 8 px-padded card */
+  --radius-md: 8px;   /* controls: buttons, inputs, chips, list rows */
+  --radius-lg: 12px;  /* popovers, dialogs, mobile cards */
+  --radius-xl: 16px;  /* floating panels, the sheet */
+  --radius-full: 999px; /* dots and the drag handle only */
+
+  /* Elevation: hairline + layered soft shadows + faint top light */
+  --shadow-1: 0 0 0 1px rgb(24 24 27 / 0.08), 0 1px 2px rgb(24 24 27 / 0.06);
+  --shadow-2: 0 0 0 1px rgb(24 24 27 / 0.07), 0 1px 2px rgb(24 24 27 / 0.05), 0 4px 12px -2px rgb(24 24 27 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --shadow-3: 0 0 0 1px rgb(24 24 27 / 0.07), 0 2px 4px rgb(24 24 27 / 0.05), 0 12px 32px -6px rgb(24 24 27 / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.7);
+
+  /* Space: 4 / 8 grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Sizes */
+  --control-sm: 32px;
+  --control-md: 36px;
+  --control-lg: 44px;  /* touch minimum */
+  --panel-width: 400px;
+
+  /* Motion: custom ease-out curves, UI under 300 ms, no ease-in */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-press: 120ms;
+  --duration-fast: 160ms;
+  --duration-base: 200ms;
+  --duration-panel: 260ms;
+
+  /* Map (MapLibre reads these through src/design-system/mapTheme.ts) */
+  --map-ground: #f2f2f0;
+  --map-water: #d5e3ec;
+  --map-park: #e2ebdf;
 }

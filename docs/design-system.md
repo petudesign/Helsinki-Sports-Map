@@ -1,43 +1,22 @@
 # HSM design system
 
-The HSM design system is code-first. Its source of truth is the token file in
-`src/design-system/tokens.css`; Paper can be used as a visual canvas, but is
-not part of the runtime or the canonical design data.
+Code-first. The source of truth is two files:
 
-## What belongs here
+- `src/design-system/tokens.css`: colour, type, radius, elevation, space, motion and map roles. Components never use raw values.
+- `src/ui/ui.css`: one rule set per component (button, icon button, chip, segmented control, field, badge, popover, disclosure, note, list row, panel and sheet, dialog, map controls and tooltip).
 
-- semantic color roles, not component-specific color names
-- typography families and UI text sizes
-- spacing, radius and elevation primitives
-- shared component states such as focus, selected, approved, rejected and skipped
-- map canvas roles with a TypeScript counterpart for Canvas and OffscreenCanvas
+MapLibre layers cannot read CSS variables, so the map mirrors its roles in `src/design-system/mapTheme.ts`. Keep the two in sync.
 
-Components should consume these tokens instead of inventing new values. A
-future city should inherit the same system; city-specific visual changes belong
-in an explicit theme layer, not in copied component styles.
+Live reference: `?design-system=1` renders every component with the same classes as the app.
 
-## Current first layer
+Rules, with reasoning in `DECISIONS.md` → Phase 3:
 
-The first layer centralizes the current HSM palette and the repeated values used
-by the map and reviewer workbench. The map and review surfaces are different
-tools, but they share the same page/surface colors, ink hierarchy, accents,
-controls, borders, spacing and semantic states. Feature-specific density and
-layout remain local to each surface. We will add component variants only when a
-real repeated pattern appears. Renderer-only canvas colors have a matching
-semantic file in `src/design-system/canvasTheme.ts` because workers cannot
-resolve CSS custom properties.
+- One accent (`--accent`, the logo blue) for primary actions, selection, links and places on the map. Everything else is neutral.
+- Three text levels, each ≥ 4.5:1 on every surface it is used on.
+- Radius 4 / 6 / 8 / 12 / 16. A nested surface is the outer radius minus its padding. No pills except dots and the sheet handle.
+- Elevation 1–3: a translucent hairline, layered soft shadows and a faint top light.
+- 4 / 8 spacing grid; 44 px minimum touch target; inputs at 16 px.
+- Sentence case everywhere. No tracked uppercase labels, no coloured side borders.
+- Hover only under `(hover: hover) and (pointer: fine)`. Press feedback is `scale(.97)`. Custom ease-out curves, UI motion under 300 ms, transitions name their properties.
 
-The component and state preview is available locally at
-`http://localhost:4181/?design-system=1`. It is an implementation reference,
-not a second production route: interactive examples use the same state classes
-and semantic tokens as the real UI.
-
-To change the visual direction, edit the values in `tokens.css` first and then
-check the map and reviewer routes. The design system does not require Figma.
-
-## Paper workflow
-
-Paper may import these CSS variables through its MCP connection and can be used
-to explore layouts or component states. Changes made in Paper should come back
-through MCP as reviewed code changes. The production app continues to consume
-the code tokens directly.
+The review workbench (`?review=1`) still uses the legacy palette through `tokens-legacy.css` and is not part of this system yet.

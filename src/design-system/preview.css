@@ -1,0 +1,19 @@
+/* Layout for the ?design-system=1 reference page only. Components come from src/ui/ui.css. */
+html, body, #root { overflow: auto; height: auto; min-height: 100%; }
+.ds { width: min(960px, 100%); margin: 0 auto; padding: var(--space-8) var(--space-4) 64px; }
+.ds-head { margin-bottom: var(--space-8); }
+.ds-head h1 { font-size: var(--text-xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-title); }
+.ds-head p { margin-top: var(--space-2); color: var(--text-2); }
+.ds-section { padding: var(--space-6) 0; border-top: 1px solid var(--border); }
+.ds-section h2 { margin-bottom: var(--space-4); font-size: var(--text-base); font-weight: var(--weight-semibold); }
+.ds-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.ds-narrow { max-width: 560px; }
+.ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.ds-swatches figure { display: grid; gap: var(--space-2); }
+.ds-swatches span { height: 48px; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--border); }
+.ds-swatches figcaption { display: grid; color: var(--text-2); font-size: var(--text-sm); }
+.ds-swatches code { color: var(--text-3); font-size: var(--text-xs); }
+.ds-tile { display: grid; place-items: center; width: 112px; height: 72px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); color: var(--text-2); font-size: var(--text-xs); }
+.ds-tile[style*="shadow"] { border-radius: var(--radius-lg); }
+.ds-panel { max-width: 400px; padding: var(--space-2) 0; border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-3); }
+.ds-pad { padding: var(--space-4); }

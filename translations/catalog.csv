@@ -26,7 +26,7 @@ tennis,Tennis,Tennis,网球,,Sport name
 padel,Padel,Padel,板式网球,,Sport name
 outdoorFitness,Outdoor gym,Ulkokuntosali,户外健身,,Sport name
 trending,Trending,Trendit,热门,,Filter toggle
-areas,areas,aluetta,处场地,,Result count unit
+areas,places,paikkaa,处场地,,Result count unit
 sportsAreas,sports areas,liikunta-aluetta,处运动场地,,Footer result count unit
 loading,Loading {city} sports area,Ladataan kaupungin {city} liikuntapaikkoja,正在加载 {city} 的运动场地,,Preserve {city}
 preparing,Preparing the map geometry.,Valmistellaan karttageometriaa.,正在准备地图几何数据。,,Loading state

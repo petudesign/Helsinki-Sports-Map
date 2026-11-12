@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import transitRouteHandler from './api/transit-route.mjs'
+import placesHandler from './api/places.mjs'
 
 function transitDevApiPlugin(apiKey: string) {
   if (apiKey) process.env.DIGITRANSIT_API_KEY = apiKey
@@ -27,6 +28,17 @@ function transitDevApiPlugin(apiKey: string) {
           try { await transitRouteHandler({ ...request, body }, apiResponse) }
           catch { response.statusCode = 502; response.end(JSON.stringify({ error: 'transit_service_unavailable' })) }
         })
+      })
+      // Same serverless handler as production, so the dev server needs no separate proxy rules.
+      server.middlewares.use('/api/places', async (request, response) => {
+        const apiResponse = {
+          status(code: number) { response.statusCode = code; return apiResponse },
+          setHeader(name: string, value: string) { response.setHeader(name, value) },
+          json(payload: unknown) { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(payload)) },
+        }
+        // Connect strips the mount path; the handler only reads the query string.
+        try { await placesHandler({ ...request, method: request.method, headers: request.headers, url: request.originalUrl ?? request.url }, apiResponse) }
+        catch { response.statusCode = 502; response.end(JSON.stringify({ error: 'places_service_unavailable' })) }
       })
     },
   }

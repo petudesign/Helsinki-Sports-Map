@@ -423,3 +423,23 @@ Desktop is at 98–99, and accessibility, best practices and SEO are at 100 on b
 | 2D / Vino toggle is exactly as wide as the zoom buttons (36 px, 44 px on touch), 12 px labels; the three control groups sit 8 px apart | The toggle was wider than every other map control and drew the eye. On touch it also overlapped the zoom-out button because its offset assumed 36 px buttons; the offset now follows the actual button size. |
 
 axe: 0 violations in all six states. Images: `docs/ui-overhaul/phase-7/`.
+
+## Batch 8: places and districts as starting points
+
+**Problem.** The starting-point field only knew Helsinki's street register. "Kamppi" offered "Kamppiaistie", but not the district, the metro station or Kamppi Center. A visitor often knows only "I'm in Kamppi".
+
+**Decision.** A new serverless proxy `api/places.mjs` queries Digitransit's geocoder (`/geocoding/v1/autocomplete`).
+- Layers: `neighbourhood`, `localadmin`, `venue`, `station`. Individual bus stops are left out, because "Kamppi" would otherwise list a dozen stop codes before the district.
+- Results are biased towards central Helsinki and bounded to the capital region.
+- It uses the same server-only `DIGITRANSIT_API_KEY` as transit routing, so no new secret or vendor is needed. HSL's geocoder is also built for autocomplete; Nominatim's usage policy forbids autocomplete.
+- Suggestions list up to five places first (area, station, place, in that order), then the matching streets. Each row has an icon and a secondary line ("Alue · Helsinki", "Paikka · Urho Kekkosen katu 1, Helsinki"), so the two "Kamppi" rows can be told apart.
+- Pressing "Laske reitti" without picking a suggestion, and "Near me" with a typed place, first try an exact place-name match, then fall back to the address lookup.
+- Without the key, or on any failure, the field falls back to streets only, exactly as before, and shows no error.
+
+**Checked.**
+- Handler unit test with a mocked upstream: layer filtering, broken coordinates dropped, 400 for a too-short query or an unsupported language, 503 without the key.
+- UI test at 1600 px and 390 px with a mocked place response.
+- No-key fallback against the real street register.
+- axe: 0 violations with the suggestion list open.
+
+**Not checked.** The live Digitransit response, because there is no key locally. It is verified on the preview or in production once the key is available there.

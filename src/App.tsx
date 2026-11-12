@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { RiApps2Line, RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
+import { RiApps2Line, RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiCommunityLine, RiRoadMapLine, RiStore2Line, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
 import type { GeoPoint, LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
@@ -303,6 +303,16 @@ function venueActivityLabel(locale: Locale, sport: string) {
 
 if (import.meta.env.DEV) installStressEnvironment()
 
+const placeKindLabel = (locale: Locale, kind: NonNullable<AddressSuggestion['kind']>) => ({
+  area: locale === 'fi' ? 'Alue' : 'Area',
+  station: locale === 'fi' ? 'Asema' : 'Station',
+  place: locale === 'fi' ? 'Paikka' : 'Place',
+})[kind]
+function SuggestionIcon({ kind }: { kind?: AddressSuggestion['kind'] }) {
+  const Icon = kind === 'area' ? RiCommunityLine : kind === 'station' ? RiSubwayLine : kind === 'place' ? RiStore2Line : RiRoadMapLine
+  return <Icon aria-hidden="true" size={16} className="suggestion-icon" />
+}
+
 function App() {
   const reviewMode = new URLSearchParams(window.location.search).get('review') === '1'
   const wikiMode = new URLSearchParams(window.location.search).get('wiki') === '1'
@@ -498,7 +508,7 @@ function App() {
     const controller = new AbortController()
     setSuggestionStatus('loading')
     const timer = window.setTimeout(() => {
-      searchAddresses(query, controller.signal).then((suggestions) => {
+      searchAddresses(query, controller.signal, locale).then((suggestions) => {
         if (controller.signal.aborted) return
         setOriginSuggestions(suggestions)
         setSuggestionStatus(suggestions.length ? 'idle' : 'empty')
@@ -509,7 +519,7 @@ function App() {
       })
     }, 350)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [startingPoint, originCoordinates, suggestionRetry])
+  }, [startingPoint, originCoordinates, suggestionRetry, locale])
 
   const selectFilter = (nextFilter: SportFilter) => {
     setFilter(nextFilter)
@@ -537,7 +547,7 @@ function App() {
     setAddressError(false)
     let origin = originCoordinates
     if (!origin) {
-      try { origin = await geocodeAddress(startingPoint.trim()) }
+      try { origin = await geocodeAddress(startingPoint.trim(), locale) }
       catch {
         if (requestId !== routeRequestRef.current) return
         setAddressError(true); setRouteStatus('idle'); setTransitStatus('idle'); setRoutes({}); return
@@ -611,7 +621,7 @@ function App() {
   const findNearAddress = async (query: string) => {
     setNearStatus('geocoding')
     try {
-      const coordinates = await geocodeAddress(query)
+      const coordinates = await geocodeAddress(query, locale)
       setNearOrigin({ coordinates, label: query })
       setSearchQuery('')
       setNearStatus('idle')
@@ -647,7 +657,7 @@ function App() {
               <label className="field-label" htmlFor="starting-point">{text(locale, 'startingPoint')}</label>
               <input id="starting-point" autoFocus={window.matchMedia('(pointer: fine)').matches} value={startingPoint} onChange={(event) => { locationRequestRef.current += 1; acceptedStreetRef.current = undefined; setStartingPoint(event.target.value); setOriginCoordinates(undefined); setOriginSuggestions([]); setRoutes({}); setRouteStatus('idle'); setLocationStatus('idle') }} placeholder={text(locale, 'startingPointPlaceholder')} autoComplete="off" enterKeyHint="go" onKeyDown={(event) => { if (event.key === 'Enter') calculateRoute() }} />
               <button className="icon-btn location-button" type="button" onClick={useCurrentLocation} disabled={locationStatus === 'loading'} aria-label={text(locale, 'useCurrentLocation')} title={text(locale, 'useCurrentLocation')}><RiFocus3Line aria-hidden="true" size={18} /></button>
-              {originSuggestions.length > 0 && <div className="address-suggestions" role="listbox" aria-label={text(locale, 'addressSuggestions')}>{originSuggestions.map((suggestion) => <button key={`${suggestion.coordinates?.join(',') ?? suggestion.label}-${suggestion.label}`} type="button" role="option" aria-selected="false" onClick={() => { acceptedStreetRef.current = suggestion.coordinates ? undefined : suggestion.label; setStartingPoint(suggestion.label); setOriginCoordinates(suggestion.coordinates); setOriginSuggestions([]) }}>{suggestion.label}</button>)}</div>}
+              {originSuggestions.length > 0 && <div className="address-suggestions" role="listbox" aria-label={text(locale, 'addressSuggestions')}>{originSuggestions.map((suggestion) => <button key={`${suggestion.coordinates?.join(',') ?? suggestion.label}-${suggestion.label}`} type="button" role="option" aria-selected="false" onClick={() => { acceptedStreetRef.current = suggestion.coordinates ? undefined : suggestion.label; setStartingPoint(suggestion.label); setOriginCoordinates(suggestion.coordinates); setOriginSuggestions([]) }}><SuggestionIcon kind={suggestion.kind} /><span className="suggestion-text"><span>{suggestion.label}</span>{(suggestion.kind || suggestion.detail) && <small>{[suggestion.kind && placeKindLabel(locale, suggestion.kind), suggestion.detail].filter(Boolean).join(' · ')}</small>}</span></button>)}</div>}
             </div>
             <div className="field directions-destination"><span className="field-label">{locale === 'fi' ? 'Määränpää' : 'Destination'}</span><strong>{featureDisplayName(selected, locale, selectedVenue?.lipas?.name)}</strong></div>
           </div>

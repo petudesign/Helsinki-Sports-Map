@@ -5,11 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#f2f2f0" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="icon" type="image/png" href="/helsinkisportsmaplogo.png" />
+    <link rel="icon" type="image/png" href="/logo-64.png" />
+    <link rel="apple-touch-icon" href="/logo-192.png" />
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
+    <meta name="description" content="Find sports places in Helsinki: courts, pools, fields and gyms on one map, with prices, opening hours and routes where the data has them." />
     <title>Helsinki Sports Map</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static first paint: the same panel React renders, so text is on screen before any script runs. -->
+      <main class="app"><div class="side">
+        <header class="topbar">
+          <a class="brand" href="/"><img src="/logo-32.png" srcset="/logo-32.png 1x, /logo-64.png 2x" alt="" width="32" height="32" /><h1>Helsinki Sports Map</h1></a>
+          <div class="search-row"><label class="search-field"><input type="search" placeholder="Search by place or sport" aria-label="Search by place or sport" disabled /></label></div>
+          <div class="chip-row chip-row-placeholder"></div>
+        </header>
+        <aside class="sheet" data-snap="peek"><header class="sheet-header"><div class="sheet-title"><h2>Places</h2><span>Loading places…</span></div></header></aside>
+      </div></main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

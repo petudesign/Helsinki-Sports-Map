@@ -15,4 +15,12 @@ export const mapTheme = {
   park: '#e2ebdf',        // --map-park
   outside: '#18181b',     // mask outside Helsinki, used at low opacity
   boundary: '#a1a1aa',    // --gray-400
+  label: '#66666e',       // --text-3: place names
+  labelSoft: '#8a8a93',   // street names, one step quieter
+  waterLabel: '#5f7d91',
+  road: '#ffffff',
+  roadCasing: '#e4e4e7',  // --gray-200
+  building: '#e7e7e9',
+  residential: '#efefed',
+  shadow: 'rgba(24, 24, 27, 0.22)',
 } as const

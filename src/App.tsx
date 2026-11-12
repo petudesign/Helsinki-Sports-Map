@@ -3,7 +3,10 @@ import { RiApps2Line, RiArrowLeftLine, RiArrowUpSLine, RiBasketballLine, RiBikeL
 import type { GeoPoint, LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
-import { SportsMap, type MapControls } from './components/SportsMap'
+import type { MapControls } from './components/SportsMap'
+// MapLibre is ~1 MB: load it in its own chunk, starting immediately, so the panel can paint first.
+const sportsMapModule = import('./components/SportsMap')
+const SportsMap = lazy(() => sportsMapModule.then((module) => ({ default: module.SportsMap })))
 import { Segmented } from './ui/Segmented'
 import { useSheetDrag, type SheetSnap } from './ui/useSheetDrag'
 import { extraText, formatPlaceCount, sportText, text, type Locale } from './i18n'
@@ -160,6 +163,14 @@ const sportIcons: Record<SportFilter, RemixiconComponentType> = {
   padel: RiPingPongLine,
   martial_arts: RiBoxingLine,
   skateboarding: RiFootprintLine,
+}
+
+// The row's leading tile shows the most specific sport the place offers; specific sports win over "gym" and "outdoor".
+const tilePriority: SportFilter[] = ['swimming', 'outdoor_swimming', 'ice_hockey', 'tennis', 'padel', 'basketball', 'football', 'athletics', 'skateboarding', 'martial_arts', 'gym']
+function PlaceTile({ feature }: { feature: SportFeature }) {
+  const id = tilePriority.find((option) => matchesFilter(feature, option))
+  const Icon = id ? sportIcons[id] : RiMapPin2Line
+  return <span className="place-tile" aria-hidden="true"><Icon size={18} /></span>
 }
 
 function SportFilterIcon({ id }: { id: SportFilter }) {
@@ -380,19 +391,22 @@ function App() {
   }, [])
   useEffect(() => { const stored = getAnalyticsConsent(); setAnalyticsConsentState(stored); setConsentVisible(stored === undefined) }, [])
   const venuesById = useMemo(() => new Map(mapArea?.venues.map((venue) => [venue.id, venue]) ?? []), [mapArea])
-  const searchIndex = useMemo(() => new Map((mapArea?.sports ?? []).map((feature) => {
+  const hasSearch = deferredSearchQuery.trim().length > 0
+  const searchIndex = useMemo(() => new Map((hasSearch ? mapArea?.sports ?? [] : []).map((feature) => {
     const venue = venuesById.get(feature.id)
     const searchable = [feature.name, feature.nameEn, venue?.name, venue?.lipas?.name, venue?.lipas?.parentName, venue?.lipas?.address, feature.facilityType, feature.sport, ...(feature.sports ?? []), ...(venue?.lipas?.facilities ?? []).flatMap(({ name, typeName, typeNameEn, address }) => [name, typeName, typeNameEn, address])]
       .filter((value): value is string => Boolean(value))
     const searchText = searchable.flatMap((value) => [value, sportText('en', value), sportText('fi', value)]).map((value) => value.toLocaleLowerCase('fi-FI'))
     return [feature.id, searchText]
-  })), [mapArea, venuesById])
+  })), [mapArea, venuesById, hasSearch])
   const normalizedSearch = deferredSearchQuery.trim().toLocaleLowerCase('fi-FI')
   // Every word must match somewhere (name, type, sport, address), so "Pirkkolan uimahalli" finds "Pirkkolan liikuntapuisto / Uimahalli".
   const matchesSearch = useCallback((id: string) => {
     if (!normalizedSearch) return true
     const values = searchIndex.get(id)
-    return values ? normalizedSearch.split(/\s+/).every((word) => values.some((value) => value.includes(word))) : false
+    // Finnish inflects the stem ("Itäkeskus" → "Itäkeskuksen"), so long words also match with one or two letters trimmed.
+    const variants = (word: string) => [word, word.length >= 6 ? word.slice(0, -1) : '', word.length >= 8 ? word.slice(0, -2) : ''].filter(Boolean)
+    return values ? normalizedSearch.split(/\s+/).every((word) => variants(word).some((variant) => values.some((value) => value.includes(variant)))) : false
   }, [normalizedSearch, searchIndex])
   const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
     if (!matchesFilter(feature, filter)) return false
@@ -439,21 +453,23 @@ function App() {
     showMoreFromRef.current = undefined
   }, [listLimit])
   useEffect(() => { if (selected && !visibleSports.some(({ id }) => id === selected.id)) selectFeature(undefined) }, [visibleSports, selected, selectFeature])
-  const trendingSignals = useMemo(() => new Map<string, TrendingSignal>(mapArea?.sports.map((feature) => [feature.id, previewTrendingSignal(feature)]) ?? []), [mapArea])
+  const trendingSignals = useMemo(() => new Map<string, TrendingSignal>(trendingEnabled ? mapArea?.sports.map((feature) => [feature.id, previewTrendingSignal(feature)]) ?? [] : []), [mapArea, trendingEnabled])
   const topTrending = useMemo(() => visibleSports
     .map((feature) => ({ feature, signal: trendingSignals.get(feature.id) }))
     .filter((item): item is { feature: SportFeature; signal: TrendingSignal } => Boolean(item.signal))
     .sort((a, b) => b.signal.recentChange - a.signal.recentChange || b.signal.interestScore - a.signal.interestScore)
     .slice(0, 3), [visibleSports, trendingSignals])
   const trendingIsPreview = topTrending.some(({ signal }) => signal.source === 'preview')
-  const filterOptions = allFilterOptions.filter((option) => option.id === 'all' || mapArea?.sports.some((feature) => matchesFilter(feature, option.id)))
+  // Which sport chips exist depends only on the data, so it is computed once, not on every keystroke.
+  const filterOptions = useMemo(() => allFilterOptions.filter((option) => option.id === 'all' || !mapArea || mapArea.sports.some((feature) => matchesFilter(feature, option.id))), [mapArea])
   const activeFilterCount = Number(priceFilter !== 'all') + Number(accessibilityFilter !== 'all') + Number(familyFilter !== 'all')
   const venueDiagnostics = useMemo(() => {
+    if (!debugVenues) return { duplicateNames: [] as string[], duplicateNameGroups: 0, venueCount: 0, featureCount: 0, sourceCount: 0 }
     const names = new Map<string, { name: string; count: number }>()
     mapArea?.venues.forEach((venue) => { const key = (venue.name ?? '').trim().toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ''); if (key) { const current = names.get(key); names.set(key, { name: current?.name ?? venue.name ?? key, count: (current?.count ?? 0) + 1 }) } })
     const duplicateNames = [...names.values()].filter(({ count }) => count > 1).sort((a, b) => b.count - a.count).slice(0, 3).map(({ name, count }) => `${name} (${count})`)
     return { duplicateNames, duplicateNameGroups: [...names.values()].filter(({ count }) => count > 1).length, venueCount: mapArea?.venues.length ?? 0, featureCount: mapArea?.sports.length ?? 0, sourceCount: new Set(mapArea?.venues.map((venue) => venue.source.provider)).size }
-  }, [mapArea])
+  }, [mapArea, debugVenues])
   const selectedVenue = selected ? venuesById.get(selected.id) : undefined
   const selectedTrend = selected ? trendingSignals.get(selected.id) : undefined
   const route = routes[travelMode]
@@ -610,8 +626,7 @@ function App() {
 
   if (reviewMode) return <Suspense fallback={<p>Loading review…</p>}><ReviewWorkbench /></Suspense>
   if (wikiMode) return <Suspense fallback={<p>Loading wiki…</p>}><WikiWorkbench /></Suspense>
-  if (loadError) return <main className="app-shell loading-shell"><div className="state-panel" role="alert"><img src="/helsinkisportsmaplogo.png" alt="" width="40" height="40" /><h1>{locale === 'fi' ? 'Liikuntapaikkoja ei voitu ladata' : 'Sports places couldn’t load'}</h1><p>{locale === 'fi' ? 'Yhteys katkesi tai palvelu ei vastannut. Tietojasi ei menetetty.' : 'The connection dropped or the service didn’t respond. Nothing you entered was lost.'}</p><button type="button" className="state-panel-action" onClick={() => setLoadAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Try again'}</button></div></main>
-  if (!mapArea) return <main className="app-shell loading-shell"><div className="loading-state"><span className="status-dot" /><strong>{text(locale, 'loading', { city: activeCity.displayName })}</strong><span>{text(locale, 'preparing')}</span></div></main>
+  if (loadError) return <main className="app-shell loading-shell"><div className="state-panel" role="alert"><img src="/logo-64.png" alt="" width="40" height="40" /><h1>{locale === 'fi' ? 'Liikuntapaikkoja ei voitu ladata' : 'Sports places couldn’t load'}</h1><p>{locale === 'fi' ? 'Yhteys katkesi tai palvelu ei vastannut. Tietojasi ei menetetty.' : 'The connection dropped or the service didn’t respond. Nothing you entered was lost.'}</p><button type="button" className="state-panel-action" onClick={() => setLoadAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Try again'}</button></div></main>
 
   const sportChipLabel = (id: SportFilter) => id === 'all' ? text(locale, 'all') : sportText(locale, id)
   const clearAllFilters = () => { setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }
@@ -620,8 +635,8 @@ function App() {
 
     <div className="side">
       <header className="topbar">
-        <a className="brand" href="/"><img src="/helsinkisportsmaplogo.png" alt="" width="32" height="32" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></a>
-        <Segmented className="lang-switch" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: 'EN', ariaLabel: 'English', lang: 'en' }, { value: 'fi', label: 'FI', ariaLabel: 'Suomi', lang: 'fi' }]} />
+        <a className="brand" href="/"><img src="/logo-32.png" srcSet="/logo-32.png 1x, /logo-64.png 2x" alt="" width="32" height="32" /><h1>{activeCity.displayName} {text(locale, 'sportsMap')}</h1></a>
+        <Segmented className="lang-switch" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: <>EN<span className="sr-only"> English</span></>, lang: 'en' }, { value: 'fi', label: <>FI<span className="sr-only"> Suomi</span></>, lang: 'fi' }]} />
         {routePlannerOpen && selected ? <div className="directions-panel" role="group" aria-label={locale === 'fi' ? 'Reittiohjeet' : 'Directions'}>
           <div className="directions-fields">
             <div className="field directions-origin">
@@ -721,7 +736,8 @@ function App() {
           {sidebarView === 'detail' && selected && <button type="button" className="icon-btn" onClick={closeDetail} aria-label={locale === 'fi' ? 'Takaisin listaan' : 'Back to the list'}><RiArrowLeftLine aria-hidden="true" size={20} /></button>}
           <div className="sheet-title">
             <h2 ref={detailHeadingRef} tabIndex={-1}>{sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
-            {sidebarView === 'list' && <span>{formatPlaceCount(locale, visibleSports.length)}{nearOrigin ? (locale === 'fi' ? ' · lähimmät ensin' : ' · nearest first') : ''}</span>}
+            {sidebarView === 'detail' && selected && (venueTypeLabel(selectedVenue, locale) || distances?.get(selected.id) !== undefined) && <span>{[venueTypeLabel(selectedVenue, locale), distances?.get(selected.id) !== undefined ? formatDistance(locale, distances.get(selected.id)!) : undefined].filter(Boolean).join(' · ')}</span>}
+            {sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{nearOrigin ? (locale === 'fi' ? ' · lähimmät ensin' : ' · nearest first') : ''}</span>}
           </div>
           {sidebarView === 'detail' && selected && !routePlannerOpen && <button ref={reportButtonRef} className="icon-btn" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}><RiFlagLine aria-hidden="true" size={18} /></button>}
           <button type="button" className="icon-btn sheet-toggle" onClick={() => setSheetSnap(sheetExpanded ? 'peek' : sidebarView === 'detail' ? 'half' : 'full')} aria-expanded={sheetExpanded} aria-label={sheetExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowUpSLine aria-hidden="true" size={20} /></button>
@@ -731,7 +747,8 @@ function App() {
             <p className="sr-only">{text(locale, 'facilityListHint')}</p>
             {nearOrigin && <div className="note"><span>{locale === 'fi' ? 'Etäisyys kohteesta ' : 'Distance from '}<strong>{nearOrigin.label}</strong></span><button type="button" className="btn btn-ghost btn-sm" onClick={clearNear}>{locale === 'fi' ? 'Poista' : 'Clear'}</button></div>}
             {hiddenUnknownPrice > 0 && <div className="note"><span>{locale === 'fi' ? `${formatPlaceCount(locale, hiddenUnknownPrice)}, joiden hintaa ei ole ilmoitettu, on piilotettu.` : `${formatPlaceCount(locale, hiddenUnknownPrice)} with no listed price are hidden.`}</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setPriceFilter('all')}>{locale === 'fi' ? 'Näytä nekin' : 'Show them'}</button></div>}
-            {visibleSports.length === 0 && (() => {
+            {!mapArea && <ul className="place-list" aria-hidden="true">{Array.from({ length: 7 }, (_, index) => <li key={index} className="place-row place-row-skeleton"><span className="place-tile" /><span className="place-row-main"><span className="skeleton-bar" style={{ width: `${62 - (index % 3) * 12}%` }} /><span className="skeleton-bar skeleton-bar-sm" style={{ width: `${44 + (index % 2) * 18}%` }} /></span></li>)}</ul>}
+            {mapArea && visibleSports.length === 0 && (() => {
               const query = searchQuery.trim()
               const activeFilters = [
                 filter !== 'all' && { label: sportText(locale, filter), clear: () => setFilter('all') },
@@ -755,6 +772,7 @@ function App() {
               const distance = distances?.get(feature.id)
               const price = feature.priceClass && feature.priceClass !== 'unknown' ? text(locale, priceLabelKey(feature.priceClass)) : undefined
               return <li key={feature.id}><button type="button" data-feature-id={feature.id} className="place-row" aria-current={selected?.id === feature.id ? 'true' : undefined} onClick={() => selectFeature(feature, true)}>
+                <PlaceTile feature={feature} />
                 <span className="place-row-main">
                   <strong>{featureDisplayName(feature, locale, venue?.lipas?.name)}</strong>
                   <span className="place-row-meta">{kind || text(locale, 'missingSports')}</span>
@@ -765,19 +783,19 @@ function App() {
             })}</ul>
             {listLimit < sortedSports.length && <button className="btn btn-secondary load-more" onClick={() => { showMoreFromRef.current = listLimit; setListLimit((value) => value + 60) }}>{locale === 'fi' ? `Näytä lisää (${formatPlaceCount(locale, sortedSports.length - listLimit)} jäljellä)` : `Show more (${formatPlaceCount(locale, sortedSports.length - listLimit)} left)`}</button>}
           </>}
-          <footer className="panel-footer">
-            <Segmented className="lang-switch lang-switch-footer" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: 'EN', ariaLabel: 'English', lang: 'en' }, { value: 'fi', label: 'FI', ariaLabel: 'Suomi', lang: 'fi' }]} />
+          {mapArea && <footer className="panel-footer">
+            <Segmented className="lang-switch lang-switch-footer" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: <>EN<span className="sr-only"> English</span></>, lang: 'en' }, { value: 'fi', label: <>FI<span className="sr-only"> Suomi</span></>, lang: 'fi' }]} />
             <span>{extraText(locale, 'officialDisclaimer')}</span>
-            <span><a href={mapArea.source} target="_blank" rel="noreferrer">© OpenStreetMap</a> · <a href="https://www.lipas.fi/" target="_blank" rel="noreferrer">LIPAS</a> · <a href="?wiki=1">Wiki</a> · <button className="link-btn privacy-link" type="button" onClick={() => setConsentVisible(true)}>{locale === 'fi' ? 'Yksityisyys' : 'Privacy'}</button></span>
-          </footer>
+            <span><a href={mapArea?.source ?? 'https://www.openstreetmap.org/copyright'} target="_blank" rel="noreferrer">© OpenStreetMap</a> · <a href="https://www.lipas.fi/" target="_blank" rel="noreferrer">LIPAS</a> · <a href="?wiki=1">Wiki</a> · <button className="link-btn privacy-link" type="button" onClick={() => setConsentVisible(true)}>{locale === 'fi' ? 'Yksityisyys' : 'Privacy'}</button></span>
+          </footer>}
         </div>
       </aside>
     </div>
 
     <section className="map-stage" aria-label={locale === 'fi' ? 'Kartta ja kohteet' : 'Map and facilities'}>
-      <SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} fitKey={mapFitKey} fitTargets={mapFitTargets} />
+      {mapArea && <Suspense fallback={null}><SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} fitKey={mapFitKey} fitTargets={mapFitTargets} /></Suspense>}
       <div className="map-controls">
-        <Segmented className="segmented-vertical" orientation="vertical" label={extraText(locale, 'mapProjection')} value={mode} onChange={setMode} options={[{ value: '2d', label: '2D', ariaLabel: locale === 'fi' ? '2D-näkymä' : '2D view' }, { value: 'iso', label: locale === 'fi' ? 'Vino' : 'Tilt', ariaLabel: locale === 'fi' ? 'Vino näkymä' : 'Tilted view' }]} />
+        <Segmented className="segmented-vertical" orientation="vertical" label={extraText(locale, 'mapProjection')} value={mode} onChange={setMode} options={[{ value: '2d', label: '2D' }, { value: 'iso', label: locale === 'fi' ? 'Vino' : 'Tilt' }]} />
         <button type="button" className="icon-btn map-reset" onClick={() => { selectFeature(undefined); mapRef.current?.reset() }} aria-label={locale === 'fi' ? 'Palauta koko kaupungin näkymä' : 'Reset to the whole city'} title={locale === 'fi' ? 'Palauta näkymä' : 'Reset view'}><RiFullscreenExitLine aria-hidden="true" size={18} /></button>
       </div>
       {travelMode === 'transit' && transitRoute && <div className="transit-map-legend" aria-label={`${text(locale, 'hslZoneMap')}: ${transitRoute.zones.join(' · ')}`}><div className="transit-zone-key"><span className="transit-map-legend-swatch" /><strong>{text(locale, 'hslZoneMap')}</strong><span>{transitRoute.zones.join(' · ') || text(locale, 'hslZonesUnknown')}</span><small>{text(locale, 'hslZoneMapSource')}</small></div><div className="transit-route-key"><span><i className="transit-route-key-line transit-route-key-walk" />{text(locale, 'walkMode')}</span><span><i className="transit-route-key-line transit-route-key-transit" />{text(locale, 'transitMode')}</span></div></div>}

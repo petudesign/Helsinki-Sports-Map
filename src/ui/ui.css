@@ -224,6 +224,9 @@ a { color: inherit; }
 .place-row[aria-current="true"] { background: var(--accent-soft); }
 .place-row[aria-current="true"] strong { color: var(--accent-text); }
 .place-row-main { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+/* Leading tile: same radius rule as everything else (row 8 px, tile 6 px inside its padding). */
+.place-tile { display: grid; place-items: center; flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--surface-muted); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--border); transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+.place-row[aria-current="true"] .place-tile { background: var(--surface); color: var(--accent-text); }
 .place-row strong { color: var(--text-1); font-size: var(--text-base); font-weight: var(--weight-medium); line-height: var(--leading-tight); overflow-wrap: anywhere; hyphens: auto; }
 .place-row-meta { color: var(--text-2); font-size: var(--text-sm); line-height: var(--leading-tight); }
 .place-row-address { color: var(--text-3); font-size: var(--text-sm); line-height: var(--leading-tight); overflow-wrap: anywhere; }
@@ -337,28 +340,29 @@ a { color: inherit; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
 /* --------------------------------------------------------- map overlays */
-.sports-map { position: absolute; inset: 0; }
-.sports-map .maplibregl-canvas { cursor: grab; }
-.sports-map .maplibregl-canvas:active { cursor: grabbing; }
+.app .sports-map { position: absolute; inset: 0; }
+.app .sports-map .maplibregl-canvas { cursor: grab; }
+.app .sports-map .maplibregl-canvas:active { cursor: grabbing; }
 .map-controls { position: absolute; z-index: 5; top: calc(var(--space-3) + 2 * var(--control-md) + var(--space-2) + 4px); right: var(--space-3); display: grid; justify-items: end; gap: var(--space-2); }
 .map-controls .segmented { background: var(--surface-overlay); box-shadow: var(--shadow-2); backdrop-filter: blur(8px); }
 .map-reset { width: var(--control-md); height: var(--control-md); background: var(--surface); box-shadow: var(--shadow-2); color: var(--text-2); }
-/* MapLibre's own controls, restyled to the same model */
-.sports-map .maplibregl-ctrl-top-right { top: var(--space-3); right: var(--space-3); }
-.sports-map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0; }
-.sports-map .maplibregl-ctrl-group { border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); overflow: hidden; }
-.sports-map .maplibregl-ctrl-group button { width: var(--control-md); height: var(--control-md); }
-.sports-map .maplibregl-ctrl-group button + button { border-top: 1px solid var(--border); }
-.sports-map .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sports-map .maplibregl-ctrl-bottom-left { left: calc(var(--panel-width) + 2 * var(--space-3)); bottom: var(--space-2); }
-.sports-map .maplibregl-ctrl-scale { border-color: var(--text-3); background: var(--surface-overlay); color: var(--text-2); font: var(--weight-medium) 11px var(--font-sans); }
-.sports-map .maplibregl-ctrl-bottom-right { right: var(--space-2); bottom: var(--space-2); }
-.sports-map .maplibregl-ctrl-attrib { border-radius: var(--radius-sm); background: var(--surface-overlay); color: var(--text-2); font: 11px/1.4 var(--font-sans); }
+/* MapLibre's own controls, restyled to the same model. Prefixed with .app: maplibre-gl.css loads later
+   (lazy chunk), so equal-specificity rules would lose to it in production. */
+.app .sports-map .maplibregl-ctrl-top-right { top: var(--space-3); right: var(--space-3); }
+.app .sports-map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0; }
+.app .sports-map .maplibregl-ctrl-group { border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); overflow: hidden; }
+.app .sports-map .maplibregl-ctrl-group button { width: var(--control-md); height: var(--control-md); }
+.app .sports-map .maplibregl-ctrl-group button + button { border-top: 1px solid var(--border); }
+.app .sports-map .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.app .sports-map .maplibregl-ctrl-bottom-left { left: calc(var(--panel-width) + 2 * var(--space-3)); bottom: var(--space-2); }
+.app .sports-map .maplibregl-ctrl-scale { border-color: var(--text-3); background: var(--surface-overlay); color: var(--text-2); font: var(--weight-medium) 11px var(--font-sans); }
+.app .sports-map .maplibregl-ctrl-bottom-right { right: var(--space-2); bottom: var(--space-2); }
+.app .sports-map .maplibregl-ctrl-attrib { border-radius: var(--radius-sm); background: var(--surface-overlay); color: var(--text-2); font: 11px/1.4 var(--font-sans); }
 .map-tooltip { pointer-events: none; }
 .map-tooltip .maplibregl-popup-content { padding: 6px 10px; border-radius: var(--radius-md); background: var(--gray-900); color: var(--gray-0); box-shadow: var(--shadow-2); font: var(--weight-medium) var(--text-sm)/var(--leading-tight) var(--font-sans); }
 .map-tooltip .maplibregl-popup-tip { display: none; }
-.sports-map .cluster-count-overlay { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
-.sports-map .cluster-count-label { position: absolute; color: var(--on-accent); font: var(--weight-semibold) 12px/1 var(--font-sans); white-space: nowrap; user-select: none; }
+.app .sports-map .cluster-count-overlay { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.app .sports-map .cluster-count-label { position: absolute; color: var(--on-accent); font: var(--weight-semibold) 12px/1 var(--font-sans); white-space: nowrap; user-select: none; }
 
 .map-status { position: absolute; z-index: 6; top: var(--space-3); left: calc(var(--panel-width) + 2 * var(--space-3)); right: calc(var(--control-md) + 2 * var(--space-3)); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); max-width: 480px; margin-inline: auto; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-2); color: var(--text-1); font-size: var(--text-sm); }
 .map-status strong { font-weight: var(--weight-semibold); }
@@ -410,7 +414,7 @@ a { color: inherit; }
   .address-suggestions button:hover { background: var(--surface-muted); }
   .text-link:hover { text-decoration-color: currentColor; }
   .map-reset:hover { color: var(--text-1); }
-  .sports-map .maplibregl-ctrl-group button:hover { background: var(--surface-subtle); }
+  .app .sports-map .maplibregl-ctrl-group button:hover { background: var(--surface-subtle); }
 }
 
 /* ----------------------------------------------------------- phones */
@@ -471,9 +475,9 @@ a { color: inherit; }
   .consent > .consent-copy > p { display: none; }
 
   .map-controls { top: calc(env(safe-area-inset-top, 0px) + 112px + 2 * var(--control-md) + var(--space-2)); right: var(--space-2); }
-  .sports-map .maplibregl-ctrl-top-right { top: calc(env(safe-area-inset-top, 0px) + 112px); right: var(--space-2); }
-  .sports-map .maplibregl-ctrl-bottom-left { left: var(--space-2); bottom: calc(var(--sheet-peek) + var(--space-2)); }
-  .sports-map .maplibregl-ctrl-bottom-right { right: var(--space-2); bottom: calc(var(--sheet-peek) + var(--space-2)); }
+  .app .sports-map .maplibregl-ctrl-top-right { top: calc(env(safe-area-inset-top, 0px) + 112px); right: var(--space-2); }
+  .app .sports-map .maplibregl-ctrl-bottom-left { left: var(--space-2); bottom: calc(var(--sheet-peek) + var(--space-2)); }
+  .app .sports-map .maplibregl-ctrl-bottom-right { right: var(--space-2); bottom: calc(var(--sheet-peek) + var(--space-2)); }
   .map-status { top: calc(env(safe-area-inset-top, 0px) + 112px); left: var(--space-2); right: calc(var(--control-md) + 2 * var(--space-2)); margin: 0; flex-wrap: wrap; }
   .trending-rail { top: auto; bottom: calc(var(--sheet-peek) + var(--space-2)); left: var(--space-2); right: var(--space-2); }
   .trending-rail-heading { display: none; }
@@ -491,7 +495,7 @@ a { color: inherit; }
 @media (pointer: coarse) {
   .icon-btn, .segmented-item, .btn-sm, .chip { position: relative; }
   .icon-btn::after, .segmented-item::after, .btn-sm::after, .chip::after { content: ''; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
-  .sports-map .maplibregl-ctrl-group button { width: var(--control-lg); height: var(--control-lg); }
+  .app .sports-map .maplibregl-ctrl-group button { width: var(--control-lg); height: var(--control-lg); }
   .map-reset { width: var(--control-lg); height: var(--control-lg); }
 }
 
@@ -507,3 +511,20 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
 }
+
+/* ---- premium polish (see DECISIONS.md → Phase 6 prelude) ---- */
+.sheet.is-detail .sheet-title h2 { font-size: var(--text-lg); letter-spacing: var(--tracking-title); }
+.brand h1 { font-weight: var(--weight-semibold); }
+@media (min-width: 721px) { .topbar { background: linear-gradient(to bottom, var(--surface), var(--surface-subtle)); } }
+.sheet-header { background: var(--surface); }
+.place-row { padding: 10px var(--space-2); }
+.facility-facts { background: var(--surface-subtle); }
+
+/* Loading skeleton: static bars in the real row geometry, so nothing moves when data arrives. */
+.place-row-skeleton { pointer-events: none; }
+.skeleton-bar { display: block; height: 10px; margin: 3px 0; border-radius: var(--radius-xs); background: var(--gray-100); }
+.skeleton-bar-sm { height: 8px; }
+.chip-row-placeholder { min-height: var(--control-md); }
+/* Attribution stays collapsed to its "i" button until the user opens it (see SportsMap.tsx). */
+.app .sports-map:not([data-attrib-open]) .maplibregl-ctrl-attrib-inner { display: none; }
+.app .sports-map:not([data-attrib-open]) .maplibregl-ctrl-attrib.maplibregl-compact-show { padding: 0; background: var(--surface-overlay); }

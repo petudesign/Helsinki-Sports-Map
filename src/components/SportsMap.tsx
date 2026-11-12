@@ -1,5 +1,5 @@
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react'
-import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
+import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, Popup, ScaleControl, setWorkerUrl, type ExpressionSpecification, type GeoJSONSource } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { FeatureCollection, LineString, MultiPolygon, Point, Polygon } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -70,6 +70,44 @@ async function loadTransitZones(): Promise<TransitZoneCollection> {
       return /^[A-E]$/.test(zone) ? [{ ...feature, properties: { ...(feature.properties ?? {}), zone } }] : []
     }),
   }
+}
+
+/*
+ * Quiet the OpenFreeMap Positron basemap so it reads as part of the product:
+ * sentence-case regular labels in the text-3 grey (no tracked uppercase or
+ * italics), no road shields, white roads on a hairline casing, and names in
+ * the UI language where OpenStreetMap has them (name:en / name:fi).
+ */
+function tuneBasemap(map: LibreMap, locale: Locale) {
+  const set = (id: string, apply: () => void) => { if (map.getLayer(id)) { try { apply() } catch { /* layer shape differs in a custom style */ } } }
+  const localizedName: ExpressionSpecification = ['coalesce', ['get', `name:${locale}`], ['get', 'name:latin'], ['get', 'name']]
+  for (const layer of map.getStyle().layers) {
+    if (layer.type !== 'symbol') continue
+    const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : ''
+    if (sourceLayer === 'place') set(layer.id, () => {
+      map.setLayoutProperty(layer.id, 'text-transform', 'none')
+      map.setLayoutProperty(layer.id, 'text-letter-spacing', 0)
+      map.setLayoutProperty(layer.id, 'text-font', [layer.id.includes('capital') || layer.id.includes('country') ? 'Noto Sans Bold' : 'Noto Sans Regular'])
+      map.setLayoutProperty(layer.id, 'text-field', localizedName)
+      map.setPaintProperty(layer.id, 'text-color', layer.id.includes('city') ? t.ink : t.label)
+      map.setPaintProperty(layer.id, 'text-halo-color', t.halo)
+      map.setPaintProperty(layer.id, 'text-halo-width', 1.5)
+    })
+    if (sourceLayer === 'water_name' || sourceLayer === 'waterway') set(layer.id, () => {
+      map.setLayoutProperty(layer.id, 'text-font', ['Noto Sans Regular'])
+      map.setLayoutProperty(layer.id, 'text-letter-spacing', 0)
+      map.setLayoutProperty(layer.id, 'text-field', localizedName)
+      map.setPaintProperty(layer.id, 'text-color', t.waterLabel)
+    })
+    if (sourceLayer === 'transportation_name') set(layer.id, () => {
+      if (layer.id.includes('shield')) { map.setLayoutProperty(layer.id, 'visibility', 'none'); return }
+      map.setPaintProperty(layer.id, 'text-color', t.labelSoft)
+    })
+  }
+  for (const id of ['highway_major_inner', 'highway_motorway_inner', 'highway_minor']) set(id, () => map.setPaintProperty(id, 'line-color', t.road))
+  for (const id of ['highway_major_casing', 'highway_motorway_casing']) set(id, () => map.setPaintProperty(id, 'line-color', t.roadCasing))
+  set('building', () => map.setPaintProperty('building', 'fill-color', t.building))
+  set('landuse_residential', () => map.setPaintProperty('landuse_residential', 'fill-color', t.residential))
 }
 
 // Map labels stay short; the full name is always in the panel.
@@ -208,6 +246,13 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     map.touchZoomRotate.disableRotation()
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
+    // MapLibre opens the compact attribution on load. That text block became the page's largest paint (LCP 7 s on
+    // mobile), so the credit stays behind its "i" button until the user opens it (data-attrib-open, see ui.css).
+    const attributionRoot = container.current
+    const attributionBox = () => attributionRoot.querySelector('.maplibregl-ctrl-attrib')
+    // Follow MapLibre's own open state after its click handler has run.
+    const toggleAttribution = (event: Event) => { if ((event.target as HTMLElement).closest('.maplibregl-ctrl-attrib-button')) window.setTimeout(() => attributionRoot.toggleAttribute('data-attrib-open', Boolean(attributionBox()?.classList.contains('maplibregl-compact-show')))) }
+    attributionRoot.addEventListener('click', toggleAttribution)
     map.addControl(new ScaleControl({ unit: 'metric', maxWidth: 90 }), 'bottom-left')
     const timeout = window.setTimeout(() => setFailed(true), 20000)
     const observer = new ResizeObserver(() => map.resize())
@@ -231,15 +276,15 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     map.on('idle', () => { if (map.isStyleLoaded() && !fallbackTilesBroken) setFailed(false) })
     map.on('load', () => {
       window.clearTimeout(timeout)
+      attributionBox()?.classList.remove('maplibregl-compact-show') // start closed, so the first tap opens it
       map.easeTo({ center: activeCity.center, zoom: 11.7, offset: defaultCameraOffset(), duration: 0 })
-      const attributionButton = container.current?.querySelector<HTMLElement>('.maplibregl-ctrl-attrib-button')
-      if (attributionButton?.parentElement?.classList.contains('maplibregl-compact-show')) attributionButton.click()
       // Keep the quiet basemap; make water/parks match the product palette.
       for (const layer of map.getStyle().layers) {
         if (layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', t.ground)
         if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'water') map.setPaintProperty(layer.id, 'fill-color', t.water)
         if (layer.type === 'fill' && 'source-layer' in layer && layer['source-layer'] === 'park') map.setPaintProperty(layer.id, 'fill-color', t.park)
       }
+      if (!usingOsmFallback) tuneBasemap(map, latest.current.locale)
       map.addSource('helsinki', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: boundary[0].geojson as Polygon } })
       map.addSource('outside-helsinki', { type: 'geojson', data: {
         type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [
@@ -259,6 +304,9 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       if (!usingOsmFallback) map.addLayer({ id: 'transit-zone-labels', type: 'symbol', source: 'transit-zones', layout: { 'text-field': ['get', 'zone'], 'text-font': ['Noto Sans Bold'], 'text-size': 18, 'text-allow-overlap': true }, paint: { 'text-color': '#235b87', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
       map.addSource('facilities', { type: 'geojson', data: pointData(latest.current.features, latest.current.locale), cluster: true, clusterMaxZoom: 14, clusterRadius: 42, attribution: 'LIPAS, University of Jyväskylä · CC BY 4.0' })
       // Clusters and places are one family: the accent, a white ring and a soft halo. Size carries the count.
+      map.addLayer({ id: 'cluster-shadow', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
+        'circle-color': t.shadow, 'circle-radius': ['step', ['get', 'point_count'], 16, 20, 19, 80, 22], 'circle-blur': 0.6, 'circle-translate': [0, 1.5],
+      } })
       map.addLayer({ id: 'cluster-halo', type: 'circle', source: 'facilities', filter: ['has', 'point_count'], paint: {
         'circle-color': t.accentHalo, 'circle-radius': ['step', ['get', 'point_count'], 20, 20, 24, 80, 28], 'circle-blur': 0.4,
       } })
@@ -361,6 +409,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       setFailed(false)
     })
     return () => {
+      attributionRoot.removeEventListener('click', toggleAttribution)
       window.clearTimeout(timeout)
       observer.disconnect()
       if (updateFallbackClusterCounts) map.off('render', updateFallbackClusterCounts)
@@ -382,7 +431,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const map = mapRef.current
     if (!ready || !map) return
     const visibility = route ? 'none' : 'visible'
-    for (const layer of ['cluster-halo', 'clusters', 'cluster-count', 'facility-hit-area', 'facility-points', 'facility-labels']) {
+    for (const layer of ['cluster-shadow', 'cluster-halo', 'clusters', 'cluster-count', 'facility-hit-area', 'facility-points', 'facility-labels']) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibility)
     }
   }, [route, ready])
@@ -451,6 +500,8 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   }, [route, ready, locale])
 
   useEffect(() => { if (ready) mapRef.current?.easeTo({ pitch: mode === 'iso' ? 45 : 0, duration: duration(), easing }) }, [mode, ready])
+  useEffect(() => { if (ready && !usingOsmFallback && mapRef.current) tuneBasemap(mapRef.current, locale) }, [locale, ready, usingOsmFallback])
+
   // MapLibre's own buttons are labelled in English; keep them in the UI language.
   useEffect(() => {
     const root = container.current

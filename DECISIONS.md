@@ -211,7 +211,7 @@ It is a small card inside the panel flow: at the bottom of the panel on desktop 
 
 ### Also fixed while rebuilding
 
-- **Search matches every word separately:** "Itäkeskus uimahalli" finds "Itäkeskuksen uimahalli".
+- **Search matches every word separately:** "Pirkkolan uimahalli" style queries match names where the words aren't adjacent. (Correction, phase 6: inflected forms such as "Itäkeskus" → "Itäkeskuksen" did not match until the stem tolerance described in phase 6 was added.)
 - **The sheet header no longer shrinks under a long title.** Its `min-height` had replaced the flex `auto` minimum, so a six-line name overlapped the body.
 - **Map labels cap at 36 characters.** The panel always has the full name.
 - **The "Near me" accessible name matches its visible text** (WCAG 2.5.3).
@@ -347,3 +347,65 @@ Automated tools found almost none of the real problems. The serious ones (lost f
 
 - **Real VoiceOver on macOS/iOS** was not run. The accessibility tree shows the right names, roles, states and headings, but announcement timing and verbosity need a person with a screen reader.
 - **Route lines** use per-mode colours (green walk, orange bike), which are close under deuteranopia. Only one mode is drawn at a time, and the selected mode is named in the controls and the legend, so the colour is never the only cue. A real route couldn't be drawn locally without the routing API keys.
+
+## Polish pass (requested after phase 5): "a touch more premium"
+
+No new colours, shapes or components. Everything comes from the existing tokens.
+
+- **Basemap brought into the system** (`tuneBasemap` in `SportsMap.tsx`, roles in `mapTheme.ts`). Positron's place labels were tracked, uppercase and italic: the same "AI tell" that phase 3 removed from the UI. They are now sentence-case Noto Sans Regular in `--text-3` grey; city names use `--text-1`. Water labels are no longer italic. Road shields ("45", "170") are hidden; they meant nothing for finding a sports place. Roads are white on a `--gray-200` casing, and buildings and residential areas are a step quieter. Labels use `name:en` / `name:fi` when OpenStreetMap has them and follow the UI language. This was deferred from phase 3 (the newcomer persona's finding).
+- **Clusters got a soft contact shadow** (a blurred ink circle 1.5 px below), so they sit on the map instead of being printed on it, like the panels' elevation-2 shadow.
+- **List rows have a leading sport tile** (36 px, 6 px radius inside the 8 px row, one Remix icon). It shows the most specific sport the place offers (swimming before gym, tennis before outdoor), giving the list a scannable rhythm. On the selected row the tile turns white with an accent icon.
+- **The detail title is one step larger** (18 px, title tracking), and the line under it shows the facility type and the distance when known.
+- **The desktop panel header** has a very faint white-to-subtle gradient, which separates it from the list without another hairline.
+
+Comparison: `docs/ui-overhaul/phase-6/1-polish-desktop.png`, `2-polish-phone.png`.
+
+## Phase 6 — Lighthouse loop
+
+### Method
+
+Production builds (`vite build` + `vite preview`) of the original (63d56f4) and the current branch, measured with Lighthouse 12.3 (Chromium 131): mobile defaults (simulated slow 4G, 4× CPU) and desktop (40 ms RTT, 10 Mbps, no CPU slowdown). **Each figure is the median of three runs.** Single runs of the original swung from 36 to 58 on mobile, which is why medians are used. `vite preview` doesn't send the Vercel headers in `vercel.json` (CSP and the rest), so best practices on the live site may differ.
+
+### Result
+
+| | Original, mobile | Final, mobile | Original, desktop | Final, desktop |
+|---|---|---|---|---|
+| **Performance** | 58 | **79** | 93 | **98** |
+| **Accessibility** | 99 | **100** | 96 | **100** |
+| **Best practices** | 96 | **100** | 100 | **100** |
+| **SEO** | 82 | **100** | 82 | **100** |
+| First contentful paint | 3.2 s | 1.8 s | 0.6 s | 0.4 s |
+| Largest contentful paint | 9.5 s | 3.9 s | 1.6 s | 1.1 s |
+| Total blocking time | 440 ms | 330 ms | 70 ms | 70 ms |
+| Cumulative layout shift | 0.014 | 0 | 0.002 | 0 |
+| Speed index | 3.2 s | 2.3 s | 0.7 s | 0.8 s |
+
+### Rounds
+
+1. **Baseline (start of this phase): mobile 50, desktop 94.** Mobile LCP 7.2 s: nothing but a centred "Loading…" text appeared until both the 2.2 MB dataset chunk and the 1.4 MB main bundle (with MapLibre) had loaded. The logo was a 1254 px, 711 kB PNG shown at 32 px. There was no `robots.txt` and no meta description. EN/FI and Tilt had accessible names that didn't contain their visible text.
+2. **Shell first: mobile 79, desktop 98, SEO 100.**
+   - The panel, search, chips and consent render immediately; the list shows skeleton rows in the real row geometry while data loads.
+   - MapLibre moved to a lazy chunk (main JS 1.37 MB → 289 kB, main CSS 121 kB → 38 kB), and its import starts at module load so it downloads in parallel.
+   - Logo variants at 32 / 64 / 192 px (5.5 kB at 2×), `robots.txt`, meta description, preconnect to the tile server.
+   - Static HTML in `#root` paints the brand, search field and panel before any script runs.
+   - The accessible names now contain the visible text.
+3. **CLS 0.015 → 0 on desktop.** The panel footer sat right after the skeleton rows and was pushed down when data arrived, so it now renders only once data exists. The search field and chip row also reserve their space in the static HTML.
+4. **The startup long task.** The search index for all 1,368 places was built at startup, before anyone searched. It is now built on the first search. The available-sport list is memoised instead of recomputed on every keystroke, trending values are computed only when Trending is on, and debug diagnostics only behind `?debug=venues`. The scores stayed flat (77/99), so the loop stopped here.
+5. **Production-only regression found while taking the final screenshots.** After the lazy split, `maplibre-gl.css` loads after `ui.css`. Equal-specificity MapLibre rules then won, `.maplibregl-map { position: relative }` collapsed the map container to 0 px height, and the map was blank in production only. The dev server loads CSS in a different order, which is why the dev-server checks passed. All map overrides are now prefixed with `.app`. **The round-2 to round-4 numbers above were measured on that broken build and were re-measured.**
+6. **With the map working, mobile LCP was 7.4 s.** The LCP element was MapLibre's attribution text: MapLibre opens the compact attribution on load, and our code closed it only after load. It now stays behind its "i" button until tapped, and the first tap opens it (verified at 1600, 390 and 320 px). The credit is also in the panel footer. **Final: mobile 79 (77/79/79), desktop 98 (97/98/99).**
+
+### Why mobile performance isn't 100
+
+- **LCP 3.9 s is the moment React mounts.** The static first paint has the same search field, but React builds a fresh DOM in place of it, and Chrome records the new paint. The fix is prerendering or SSR with hydration, so React adopts the static markup instead of replacing it. That changes the build architecture (the app reads `window` and `matchMedia` during its first render) and is a separate project.
+- **TBT 330 ms comes from one ~460 ms task:** evaluating the 2.2 MB dataset chunk and building the area model on the main thread. The fix is a Web Worker, or a smaller precomputed runtime JSON produced by the existing `tools/` pipeline.
+- **About 176 kB of MapLibre JavaScript is unused at first load.** That is inherent to the library.
+
+Desktop is at 98–99, and accessibility, best practices and SEO are at 100 on both.
+
+### Verified on the production build after the loop
+
+- **Sheet:** a flick up goes from peek to half.
+- **Focus:** opening a place moves focus to the heading; Back clears the selection and returns to the list. Enter → `h2` and Escape → the list row, by keyboard.
+- **Filters:** chip deselect returns to All, and Escape closes the popover.
+- **Map:** the controls are visible and the canvas fills the viewport.
+- **axe:** 0 violations in all six states.

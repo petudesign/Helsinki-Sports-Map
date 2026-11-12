@@ -232,22 +232,59 @@ async function searchNominatim(query: string, signal?: AbortSignal): Promise<Add
   }))
 }
 
-// Districts, venues and stations ("Kamppi", "Kauppakeskus Redi", "Pasila").
-// Optional: without the server key (or on any failure) the field falls back to streets only.
-export async function searchPlaces(query: string, locale: 'fi' | 'en', signal?: AbortSignal): Promise<AddressSuggestion[]> {
-  const text = query.trim()
-  if (text.length < 2) return []
-  try {
-    const params = new URLSearchParams({ text, lang: locale })
-    const { places } = await requestJson<{ places?: { name: string; kind: PlaceKind; detail?: string; coordinates: GeoPoint }[] }>(`${PLACES_PROXY}?${params}`, signal, 5_000)
-    return (places ?? []).map((place) => ({ label: place.name, kind: place.kind, detail: place.detail || undefined, coordinates: place.coordinates }))
-  } catch (error) {
-    if (signal?.aborted) throw error
-    return []
-  }
+type District = { name: string; sv?: string; point: GeoPoint }
+let districts: Promise<District[]> | undefined
+const loadDistricts = () => (districts ??= import('./data/districts.json').then((module) => module.default as District[]).catch(() => { districts = undefined; return [] }))
+
+// 0 = the name is the query, 1 = starts with it, 2 = a later word starts with it, -1 = no match.
+// Pelias also matches on street and area, which brings in shops that merely sit in Kamppi.
+function nameMatch(name: string, query: string) {
+  const n = normalizeSearchText(name)
+  const q = normalizeSearchText(query)
+  if (n === q || n.replace(/\s*\(.*\)$/, '') === q) return 0
+  if (n.startsWith(q)) return 1
+  return n.split(/[\s\-/(),]+/).some((word) => word.startsWith(q)) ? 2 : -1
 }
 
 const PLACE_ORDER: Record<PlaceKind, number> = { area: 0, station: 1, place: 2 }
+const metresBetween = (a: GeoPoint, b: GeoPoint) => Math.hypot((a[0] - b[0]) * 55_660, (a[1] - b[1]) * 111_320)
+
+// Districts (bundled from Helsinki's district division, so they work without any key),
+// then stations and named places from Digitransit when the server key is configured.
+export async function searchPlaces(query: string, locale: 'fi' | 'en', signal?: AbortSignal): Promise<AddressSuggestion[]> {
+  const text = query.trim()
+  if (text.length < 2) return []
+  const remoteRequest = (async () => {
+    try {
+      const params = new URLSearchParams({ text, lang: locale })
+      const { places } = await requestJson<{ places?: { name: string; kind: PlaceKind; detail?: string; coordinates: GeoPoint }[] }>(`${PLACES_PROXY}?${params}`, signal, 5_000)
+      return places ?? []
+    } catch (error) {
+      if (signal?.aborted) throw error
+      return []
+    }
+  })()
+  const areas = (await loadDistricts()).flatMap((district) => {
+    const match = Math.min(...[district.name, district.sv].filter(Boolean).map((name) => { const m = nameMatch(name!, text); return m < 0 ? 9 : m }))
+    return match < 9 ? [{ label: district.name, kind: 'area' as const, detail: 'Helsinki', coordinates: district.point, match }] : []
+  })
+  const remote = (await remoteRequest).flatMap((place) => {
+    const match = nameMatch(place.name, text)
+    return match < 0 ? [] : [{ label: place.name, kind: place.kind, detail: place.detail || undefined, coordinates: place.coordinates, match }]
+  })
+  const ranked = [...areas, ...remote]
+    .map((place, index) => ({ ...place, index }))
+    // Exact names first, then every matching district ("Töölö" → Etu- and Taka-Töölö before Töölö Gym), then the rest.
+    .map((place) => ({ ...place, tier: place.match === 0 ? 0 : place.kind === 'area' ? 1 : 1 + place.match }))
+    .sort((a, b) => a.tier - b.tier || PLACE_ORDER[a.kind] - PLACE_ORDER[b.kind] || a.index - b.index)
+  // The same name within 500 m is one place ("Pasila" the district, the station and the venue).
+  const kept: typeof ranked = []
+  for (const place of ranked) {
+    if (kept.some((other) => normalizeSearchText(other.label) === normalizeSearchText(place.label) && metresBetween(other.coordinates, place.coordinates) < 500)) continue
+    kept.push(place)
+  }
+  return kept.map(({ label, kind, detail, coordinates }) => ({ label, kind, detail, coordinates }))
+}
 
 export async function searchAddresses(query: string, signal?: AbortSignal, locale: 'fi' | 'en' = 'fi'): Promise<AddressSuggestion[]> {
   const trimmedQuery = query.trim()
@@ -268,12 +305,12 @@ export async function searchAddresses(query: string, signal?: AbortSignal, local
       if (signal?.aborted) throw error
       streetsFailed = true
     }
-    const places = (await placesRequest)
-      .map((place, index) => ({ place, index }))
-      .sort((a, b) => PLACE_ORDER[a.place.kind!] - PLACE_ORDER[b.place.kind!] || a.index - b.index)
-      .map(({ place }) => place)
+    const places = await placesRequest
     const streetLabels = new Set(streets.map((street) => normalizeSearchText(street.label)))
-    const merged = [...places.filter((place) => !streetLabels.has(normalizeSearchText(place.label))).slice(0, 5), ...streets]
+    const placeRows = places.filter((place) => !streetLabels.has(normalizeSearchText(place.label))).slice(0, 5)
+    // Typing a whole street name ("Mannerheimintie") means the street, not a landmark named after it.
+    const streetFirst = streetLabels.has(normalizeSearchText(parsed.streetname))
+    const merged = streetFirst ? [...streets, ...placeRows] : [...placeRows, ...streets]
     if (merged.length || !streetsFailed) return merged.slice(0, MAX_STREET_SUGGESTIONS)
   }
 

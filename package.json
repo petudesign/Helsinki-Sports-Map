@@ -12,6 +12,7 @@
     "check:routing": "node tools/check-routing.mjs",
     "check:transit": "node tools/check-transit-route.mjs",
     "data:venue-map": "node tools/build-venue-map.mjs",
+    "data:districts": "node tools/build-districts.mjs",
     "check:expanded-map": "node tools/check-expanded-map.mjs",
     "check:venues": "node tools/check-venue-data.mjs",
     "check:service-map": "node tools/check-service-map.mjs",

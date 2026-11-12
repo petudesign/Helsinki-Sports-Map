@@ -805,7 +805,7 @@ function App() {
           {mapArea && <footer className="panel-footer">
             <Segmented className="lang-switch lang-switch-footer" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: <>EN<span className="sr-only"> English</span></>, lang: 'en' }, { value: 'fi', label: <>FI<span className="sr-only"> Suomi</span></>, lang: 'fi' }]} />
             <span>{extraText(locale, 'officialDisclaimer')}</span>
-            <span><a href={mapArea?.source ?? 'https://www.openstreetmap.org/copyright'} target="_blank" rel="noreferrer">© OpenStreetMap</a> · <a href="https://www.lipas.fi/" target="_blank" rel="noreferrer">LIPAS</a> · <a href="?wiki=1">Wiki</a> · <button className="link-btn privacy-link" type="button" onClick={() => setConsentVisible(true)}>{locale === 'fi' ? 'Yksityisyys' : 'Privacy'}</button></span>
+            <span><a href={mapArea?.source ?? 'https://www.openstreetmap.org/copyright'} target="_blank" rel="noreferrer">© OpenStreetMap</a> · <a href="https://www.lipas.fi/" target="_blank" rel="noreferrer">LIPAS</a> · <a href="https://hri.fi/data/fi/dataset/helsingin-piirijako" target="_blank" rel="noreferrer">{locale === 'fi' ? 'Helsingin kaupunki' : 'City of Helsinki'}</a> · <a href="https://digitransit.fi/" target="_blank" rel="noreferrer">Digitransit</a> · <a href="?wiki=1">Wiki</a> · <button className="link-btn privacy-link" type="button" onClick={() => setConsentVisible(true)}>{locale === 'fi' ? 'Yksityisyys' : 'Privacy'}</button></span>
           </footer>}
         </div>
       </aside>

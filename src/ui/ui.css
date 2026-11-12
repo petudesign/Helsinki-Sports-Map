@@ -260,7 +260,8 @@ a { color: inherit; }
 
 .lang-switch-footer { display: none; justify-self: start; margin-bottom: var(--space-2); }
 .panel-footer { display: grid; gap: var(--space-1); margin-top: var(--space-2); padding: var(--space-4); border-top: 1px solid var(--border); color: var(--text-3); font-size: var(--text-xs); line-height: var(--leading-normal); }
-.panel-footer a, .panel-footer .link-btn { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 2px; }
+/* 24 px tall so wrapped credit links still meet WCAG 2.5.8 target size. */
+.panel-footer a, .panel-footer .link-btn { display: inline-block; min-height: 24px; line-height: 24px; color: var(--text-2); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 2px; }
 
 /* -------------------------------------------------------------- detail */
 .facility-card { padding: 0 var(--space-4) var(--space-4); }

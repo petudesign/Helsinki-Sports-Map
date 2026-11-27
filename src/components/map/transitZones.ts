@@ -16,7 +16,16 @@ export async function loadTransitZones(): Promise<TransitZoneCollection> {
     type: 'FeatureCollection',
     features: data.features.flatMap((feature) => {
       const zone = String(feature.properties?.ZONE ?? feature.properties?.zone ?? '').trim().toUpperCase()
-      return /^[A-E]$/.test(zone) ? [{ ...feature, properties: { ...(feature.properties ?? {}), zone } }] : []
+      if (!/^[A-E]$/.test(zone)) return []
+      // HSL's ArcGIS zones_all dataset contains a 5-point rectangular cutout
+      // artifact over Pasila station inside Zone A. Zone A is the innermost
+      // fare zone and has no interior enclaves, so keep only its outer ring.
+      const geometry = zone === 'A'
+        ? feature.geometry.type === 'Polygon'
+          ? { ...feature.geometry, coordinates: feature.geometry.coordinates.slice(0, 1) }
+          : { ...feature.geometry, coordinates: feature.geometry.coordinates.map((polygon) => polygon.slice(0, 1)) }
+        : feature.geometry
+      return [{ ...feature, geometry, properties: { ...(feature.properties ?? {}), zone } }]
     }),
   }
 }

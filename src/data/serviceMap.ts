@@ -145,6 +145,14 @@ type ServiceMapSnapshot = {
 const snapshotUnits = (snapshot.units ?? []) as ServiceMapSnapshot[]
 const snapshotsByServiceMapId = new Map(snapshotUnits.map((unit) => [unit.serviceMapId, unit]))
 const snapshotsByLipasId = new Map(snapshotUnits.filter((unit) => unit.lipasId !== undefined).map((unit) => [unit.lipasId as number, unit]))
+const snapshotsByParentName = new Map<string, ServiceMapSnapshot>()
+for (const unit of snapshotUnits) {
+  const key = (unit.nameFi ?? '').split(' / ')[0].trim().toLocaleLowerCase('fi-FI')
+  if (!key) continue
+  const existing = snapshotsByParentName.get(key)
+  const score = (item: ServiceMapSnapshot) => (item.pictureUrl ? 4 : 0) + (item.openingHoursFi ? 2 : 0) + (item.priceFi ? 1 : 0) + (item.nameFi && !item.nameFi.includes(' / ') ? 2 : 0)
+  if (!existing || score(unit) > score(existing)) snapshotsByParentName.set(key, unit)
+}
 
 function detailsFromSnapshot(unit: ServiceMapSnapshot): ServiceMapDetails {
   return {
@@ -188,4 +196,18 @@ export function serviceMapForUnit(id: number | undefined) {
 export function serviceMapForUrl(url: string | undefined) {
   const match = url?.match(/\/unit\/(\d+)/)
   return serviceMapForUnit(match ? Number(match[1]) : undefined)
+}
+
+export function serviceMapForVenue(ids: number[], name?: string, website?: string) {
+  const candidates = [
+    serviceMapForUrl(website),
+    ...ids.map((id) => serviceMapForUnit(id)),
+    name ? (() => {
+      const unit = snapshotsByParentName.get(name.split(' / ')[0].trim().toLocaleLowerCase('fi-FI'))
+      return unit ? serviceMapForUnit(unit.serviceMapId) : undefined
+    })() : undefined,
+  ].filter((item): item is ServiceMapDetails => Boolean(item))
+  if (!candidates.length) return undefined
+  const score = (item: ServiceMapDetails) => (item.pictureUrl ? 4 : 0) + (item.openingHoursFi ? 2 : 0) + (item.priceFi ? 1 : 0)
+  return candidates.sort((a, b) => score(b) - score(a))[0]
 }

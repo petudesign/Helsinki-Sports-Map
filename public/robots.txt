@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://helsinki-sports-map.vercel.app/sitemap.xml

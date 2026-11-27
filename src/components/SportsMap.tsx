@@ -138,6 +138,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     observer.observe(container.current)
     let fallbackClusterCountOverlay: HTMLElement | undefined
     let updateFallbackClusterCounts: (() => void) | undefined
+    let clearTooltipTimers: (() => void) | undefined
     // Native gestures animate the camera without any React state updates.
     // Once the raster fallback's own tiles fail too, the basemap stays marked as
     // broken: 'idle' fires even when every tile errored, so it must not clear it.
@@ -254,9 +255,9 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       map.addLayer({ id: 'origin-dot', type: 'circle', source: 'origin', paint: { 'circle-radius': 6, 'circle-color': t.ink, 'circle-stroke-color': t.halo, 'circle-stroke-width': 3 } })
       map.addSource('selected', { type: 'geojson', data: empty })
       // Selection is shown by size and a ring, not by a second colour.
-      map.addLayer({ id: 'selected-halo', type: 'circle', source: 'selected', paint: { 'circle-radius': 22, 'circle-color': t.accentHalo } })
-      map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 10, 'circle-color': t.accent, 'circle-stroke-color': t.onAccent, 'circle-stroke-width': 3 } })
-      if (!usingOsmFallback) map.addLayer({ id: 'selected-label', type: 'symbol', source: 'selected', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 13, 'text-anchor': 'top', 'text-offset': [0, 1.4], 'text-max-width': 14, 'text-allow-overlap': true }, paint: { 'text-color': t.ink, 'text-halo-color': t.halo, 'text-halo-width': 2 } })
+      map.addLayer({ id: 'selected-halo', type: 'circle', source: 'selected', paint: { 'circle-radius': 26, 'circle-color': t.accentHalo, 'circle-stroke-color': t.accent, 'circle-stroke-opacity': 0.32, 'circle-stroke-width': 1.5 } })
+      map.addLayer({ id: 'selected-point', type: 'circle', source: 'selected', paint: { 'circle-radius': 11.5, 'circle-color': t.accent, 'circle-stroke-color': t.onAccent, 'circle-stroke-width': 3.5 } })
+      if (!usingOsmFallback) map.addLayer({ id: 'selected-label', type: 'symbol', source: 'selected', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 13.5, 'text-anchor': 'top', 'text-offset': [0, 1.55], 'text-max-width': 14, 'text-allow-overlap': true }, paint: { 'text-color': t.ink, 'text-halo-color': t.halo, 'text-halo-width': 2.5 } })
       map.on('click', async (event) => {
         const hit = map.queryRenderedFeatures(event.point, { layers: ['selected-point', 'clusters', 'facility-hit-area'] })[0]
         if (hit?.properties?.cluster_id !== undefined && hit.geometry.type === 'Point') {
@@ -274,20 +275,56 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
         map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
         map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
       }
-      // Hover tooltip (mouse only): the place's name, in the same surface as the panel.
+      // Hover tooltip (mouse only): deduplicated per feature so mousemove never
+      // re-mounts the popup, with a brief initial delay and instant neighbour hops.
       if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         const tooltip = new Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'map-tooltip', maxWidth: '240px' })
+        let hoveredId: string | undefined
+        let openTimer: number | undefined
+        let warmUntil = 0
+        clearTooltipTimers = () => {
+          if (openTimer) { window.clearTimeout(openTimer); openTimer = undefined }
+          tooltip.remove()
+        }
+        const showTooltip = (coordinates: [number, number], name: string, instant: boolean) => {
+          tooltip.setLngLat(coordinates).setText(name)
+          if (!tooltip.isOpen()) tooltip.addTo(map)
+          const el = tooltip.getElement()
+          if (el) el.toggleAttribute('data-instant', instant)
+        }
         map.on('mousemove', 'facility-hit-area', (event) => {
           const hit = event.features?.[0]
           if (!hit || hit.geometry.type !== 'Point') return
-          tooltip.setLngLat(hit.geometry.coordinates as [number, number]).setText(String(hit.properties?.name || '')).addTo(map)
+          const id = String(hit.properties?.id ?? '')
+          if (!id || id === hoveredId) return
+          hoveredId = id
+          const coordinates = hit.geometry.coordinates as [number, number]
+          const name = String(hit.properties?.name || '')
+          if (openTimer) { window.clearTimeout(openTimer); openTimer = undefined }
+          const isWarm = tooltip.isOpen() || performance.now() < warmUntil
+          if (isWarm) {
+            showTooltip(coordinates, name, true)
+          } else {
+            openTimer = window.setTimeout(() => {
+              openTimer = undefined
+              if (hoveredId === id) showTooltip(coordinates, name, false)
+            }, 80)
+          }
         })
-        map.on('mouseleave', 'facility-hit-area', () => tooltip.remove())
+        map.on('mouseleave', 'facility-hit-area', () => {
+          hoveredId = undefined
+          if (openTimer) { window.clearTimeout(openTimer); openTimer = undefined }
+          if (tooltip.isOpen()) {
+            warmUntil = performance.now() + 300
+            tooltip.remove()
+          }
+        })
       }
       setReady(true)
       setFailed(false)
     })
     return () => {
+      clearTooltipTimers?.()
       attributionRoot.removeEventListener('click', toggleAttribution)
       window.clearTimeout(timeout)
       observer.disconnect()
@@ -353,7 +390,7 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     const bounds = new LngLatBounds(targets[0], targets[0])
     targets.forEach((point) => bounds.extend(point))
     const mobile = isMobile()
-    map.fitBounds(bounds, { padding: mobile ? { top: 140, right: 56, bottom: 96, left: 24 } : { top: 64, right: 72, bottom: 48, left: PANEL_INSET + 48 }, maxZoom: 15, duration: duration(), easing })
+    map.fitBounds(bounds, { padding: mobile ? { top: 140, right: 56, bottom: 96, left: 24 } : { top: 72, right: 72, bottom: 56, left: PANEL_INSET + 56 }, maxZoom: 15.5, duration: duration(), easing })
   }, [fitKey, ready, area.sports.length])
 
   useEffect(() => {

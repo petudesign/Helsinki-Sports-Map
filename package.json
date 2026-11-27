@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host localhost --port 4180",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node tools/build-seo-pages.mjs",
     "preview": "vite preview",
     "check:map": "node tools/check-map-migration.mjs",
     "check:routing": "node tools/check-routing.mjs",

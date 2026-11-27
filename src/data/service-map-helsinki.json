@@ -46,7 +46,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/39911",
-      "updatedAt": "2026-08-14T10:46:08"
+      "updatedAt": "2026-08-14T10:46:08",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/39911/picture/",
+      "pictureCaptionFi": "Ihmisiä luistelemassa Pirkkolan liikuntapuiston luistelukentällä.",
+      "pictureCaptionEn": "People skating on the skating rink in Pirkkola sports park."
     },
     {
       "serviceMapId": 39914,
@@ -106,7 +109,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/39926",
-      "updatedAt": "2026-06-18T16:32:42"
+      "updatedAt": "2026-06-18T16:32:42",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/39926/picture/"
     },
     {
       "serviceMapId": 39928,
@@ -133,7 +137,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/39928",
-      "updatedAt": "2025-09-09T09:29:32"
+      "updatedAt": "2025-09-09T09:29:32",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/39928/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 39942,
@@ -199,7 +205,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/39946",
-      "updatedAt": "2026-06-22T13:29:09"
+      "updatedAt": "2026-06-22T13:29:09",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/39946/picture/"
     },
     {
       "serviceMapId": 39974,
@@ -271,7 +278,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/39995",
-      "updatedAt": "2025-09-09T09:54:41"
+      "updatedAt": "2025-09-09T09:54:41",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/39995/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40005,
@@ -303,7 +312,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40005",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40005/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40044,
@@ -358,7 +369,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40057",
-      "updatedAt": "2026-06-30T10:26:59"
+      "updatedAt": "2026-06-30T10:26:59",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40057/picture/",
+      "pictureCaptionFi": "Arabianrannan koripallo- ja rantalentopallokenttä.",
+      "pictureCaptionEn": "Arabianranta basketball and beach volleyball court."
     },
     {
       "serviceMapId": 40063,
@@ -429,7 +443,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40065",
-      "updatedAt": "2026-08-07T11:44:26"
+      "updatedAt": "2026-08-07T11:44:26",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40065/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston nurmikenttä 1:sestä.",
+      "pictureCaptionEn": "An aerial view of grass pitch 1 in Käpylä sports park."
     },
     {
       "serviceMapId": 40068,
@@ -490,7 +507,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40068",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40068/picture/",
+      "pictureCaptionFi": "Maunulan liikuntahallin liikuntasali 2, jossa on koripallokoreja.",
+      "pictureCaptionEn": "Gymnasium 2 in the Maunula sports hall with basketball baskets."
     },
     {
       "serviceMapId": 40075,
@@ -552,7 +572,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40075",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40075/picture/",
+      "pictureCaptionFi": "Osa Maunulan liikuntahallin kuntosalia, jossa näkyy pari hahmoa liikkumassa.",
+      "pictureCaptionEn": "Part of the Maunula sports hall gym with a couple of people exercising."
     },
     {
       "serviceMapId": 40095,
@@ -622,7 +645,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40123",
-      "updatedAt": "2026-08-07T11:55:08"
+      "updatedAt": "2026-08-07T11:55:08",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40123/picture/",
+      "pictureCaptionFi": "Käpylän jalkapallokenttä.",
+      "pictureCaptionEn": "Käpylä football field."
     },
     {
       "serviceMapId": 40168,
@@ -708,7 +734,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40195",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40195/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston liikuntahallin pöytätennistilan yhdeksän pöytää, joista yhdessä on kaksi sumeaa hahmoa pelaamassa.",
+      "pictureCaptionEn": "Nine tables of the table tennis area of the sports hall in Ruskeasuo sports park, one of which has two blurred figures playing."
     },
     {
       "serviceMapId": 40218,
@@ -788,7 +817,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40255",
-      "updatedAt": "2026-07-27T11:01:09"
+      "updatedAt": "2026-07-27T11:01:09",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40255/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston hiekkakenttä.",
+      "pictureCaptionEn": "Ruskeasuo sports park sand field."
     },
     {
       "serviceMapId": 40259,
@@ -855,7 +887,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40259",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40259/picture/"
     },
     {
       "serviceMapId": 40264,
@@ -966,7 +999,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40351",
-      "updatedAt": "2026-06-18T14:43:28"
+      "updatedAt": "2026-06-18T14:43:28",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40351/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston yleisurheilun harjoitusalueesta.",
+      "pictureCaptionEn": "An aerial view of the athletics practice area in Käpylä sports park."
     },
     {
       "serviceMapId": 40360,
@@ -1065,7 +1101,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40391",
-      "updatedAt": "2026-08-21T14:55:04"
+      "updatedAt": "2026-08-21T14:55:04",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40391/picture/",
+      "pictureCaptionFi": "Kampin liikuntakeskuksen liikuntasali 1, jossa on seitsemän tuolia piirissä.",
+      "pictureCaptionEn": "Kamppi sports centre gymnasium 1 with seven chairs in a circle."
     },
     {
       "serviceMapId": 40409,
@@ -1141,7 +1180,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40416",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40416/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40423,
@@ -1216,7 +1257,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40425",
-      "updatedAt": "2026-08-21T14:56:01"
+      "updatedAt": "2026-08-21T14:56:01",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40425/picture/",
+      "pictureCaptionFi": "Kampin liikuntakeskuksen uima-allas.",
+      "pictureCaptionEn": "Kamppi sports centre’s swimming pool."
     },
     {
       "serviceMapId": 40440,
@@ -1247,7 +1291,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40440",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40440/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40443,
@@ -1297,7 +1343,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40443",
-      "updatedAt": "2026-08-07T11:46:32"
+      "updatedAt": "2026-08-07T11:46:32",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40443/picture/",
+      "pictureCaptionFi": "Käpylän jalkapallokenttiä.",
+      "pictureCaptionEn": "Football fields at Käpylä."
     },
     {
       "serviceMapId": 40446,
@@ -1347,7 +1396,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40446",
-      "updatedAt": "2026-07-27T09:58:57"
+      "updatedAt": "2026-07-27T09:58:57",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40446/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuiston nurmikentästä.",
+      "pictureCaptionEn": "An aerial view of the grass pitch in Pirkkola sports park."
     },
     {
       "serviceMapId": 40448,
@@ -1374,7 +1426,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40448",
-      "updatedAt": "2025-09-09T09:47:54"
+      "updatedAt": "2025-09-09T09:47:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40448/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40457,
@@ -1442,7 +1496,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40457",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40457/picture/",
+      "pictureCaptionFi": "Etualalla ihmisiä pelaamassa lentopalloa, taustalla näkyy sulkapallon ja koripallon harrastajia.",
+      "pictureCaptionEn": "People playing volleyball in the foreground with badminton and basketball players in the background."
     },
     {
       "serviceMapId": 40476,
@@ -1487,7 +1544,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40476",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40476/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuiston lähiliikuntapaikka Plotista.",
+      "pictureCaptionEn": "An aerial view of the neighbourhood sports site Plotti in Pirkkola sports park."
     },
     {
       "serviceMapId": 40501,
@@ -1527,7 +1587,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40501",
-      "updatedAt": "2026-06-18T13:46:04"
+      "updatedAt": "2026-06-18T13:46:04",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40501/picture/",
+      "pictureCaptionFi": "Käpylän rullaluisteluun tarkoitettu kaukalo ilmasta kuvattuna.",
+      "pictureCaptionEn": "Aerial photo of the Käpylä roller skating rink."
     },
     {
       "serviceMapId": 40512,
@@ -1579,7 +1642,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40518",
-      "updatedAt": "2025-09-09T09:19:18"
+      "updatedAt": "2025-09-09T09:19:18",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40518/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40522,
@@ -1624,7 +1689,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40529",
-      "updatedAt": "2025-09-03T13:46:54"
+      "updatedAt": "2025-09-03T13:46:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40529/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40566,
@@ -1659,7 +1726,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40566",
-      "updatedAt": "2026-06-18T13:26:49"
+      "updatedAt": "2026-06-18T13:26:49",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40566/picture/",
+      "pictureCaptionFi": "Käpylän liikuntapuiston beachvolleykenttä.",
+      "pictureCaptionEn": "The beach volleyball court in Käpylä sports park."
     },
     {
       "serviceMapId": 40573,
@@ -1694,7 +1764,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40573",
-      "updatedAt": "2026-06-18T13:57:23"
+      "updatedAt": "2026-06-18T13:57:23",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40573/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston parkour-alueesta.",
+      "pictureCaptionEn": "An aerial view of the parkour area in Käpylä sports park."
     },
     {
       "serviceMapId": 40575,
@@ -1812,7 +1885,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40602",
-      "updatedAt": "2026-06-30T10:41:50"
+      "updatedAt": "2026-06-30T10:41:50",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40602/picture/",
+      "pictureCaptionFi": "Arabianrannan minikoripallokenttä",
+      "pictureCaptionEn": "A person at the Arabianranta basketball court."
     },
     {
       "serviceMapId": 40608,
@@ -1899,7 +1975,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40618",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40618/picture/",
+      "pictureCaptionFi": "Sumeita hahmoja harrastamassa liikuntaa Töölön kisahallin A-puolen liikuntahallissa.",
+      "pictureCaptionEn": "Blurred figures exercising in the sports hall on side A of Töölö sports hall."
     },
     {
       "serviceMapId": 40716,
@@ -1965,7 +2044,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40716",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40716/picture/",
+      "pictureCaptionFi": "Sumeita hahmoja harrastamassa liikuntaa Kisahallin B-puolen liikuntahallissa.",
+      "pictureCaptionEn": "Blurred figures exercising in the sports hall on side B of Töölö sports hall."
     },
     {
       "serviceMapId": 40724,
@@ -2000,7 +2082,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40724",
-      "updatedAt": "2026-08-06T11:01:20"
+      "updatedAt": "2026-08-06T11:01:20",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40724/picture/",
+      "pictureCaptionFi": "Arabianrannan koripallo- ja rantalentopallokenttä.",
+      "pictureCaptionEn": "Arabianranta basketball and beach volleyball court."
     },
     {
       "serviceMapId": 40732,
@@ -2050,7 +2135,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40732",
-      "updatedAt": "2026-07-27T09:00:45"
+      "updatedAt": "2026-07-27T09:00:45",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40732/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuiston hiekkakentästä.",
+      "pictureCaptionEn": "An aerial view of the sand field in Pirkkola sports park."
     },
     {
       "serviceMapId": 40736,
@@ -2206,7 +2294,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40774",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40774/picture/",
+      "pictureCaptionFi": "Uimahallin iso allas kuvattuna suuren lasiseinän suuntaan, altaassa muutama uimari.",
+      "pictureCaptionEn": "The large swimming pool of the swimming hall photographed towards the large glass wall, with a few swimmers in the pool."
     },
     {
       "serviceMapId": 40795,
@@ -2281,7 +2372,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40806",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40806/picture/",
+      "pictureCaptionFi": "Maunulan liikuntahallin liikuntasali 1, jossa on rytmisen- ja joukkuevoimisteluun soveltuva matto.",
+      "pictureCaptionEn": "Gymnasium 1 in the Maunula sports hall with a mat suitable for rhythmic and team gymnastics."
     },
     {
       "serviceMapId": 40807,
@@ -2347,7 +2441,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40807",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40807/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston liikuntahallin nyrkkeilysali, jossa on nyrkkeilykehä ja taustalla katosta roikkuu neljä nyrkkeilysäkkiä.",
+      "pictureCaptionEn": "The boxing room of the sports hall in Ruskeasuo sports park with a boxing ring and four punchbags hanging from the ceiling in the background."
     },
     {
       "serviceMapId": 40809,
@@ -2423,7 +2520,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40817",
-      "updatedAt": "2026-08-07T14:35:39"
+      "updatedAt": "2026-08-07T14:35:39",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40817/picture/"
     },
     {
       "serviceMapId": 40848,
@@ -2503,7 +2601,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40849",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40849/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40855,
@@ -2588,7 +2688,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40863",
-      "updatedAt": "2026-08-07T14:36:49"
+      "updatedAt": "2026-08-07T14:36:49",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40863/picture/"
     },
     {
       "serviceMapId": 40870,
@@ -2628,7 +2729,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40870",
-      "updatedAt": "2026-06-18T16:44:25"
+      "updatedAt": "2026-06-18T16:44:25",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40870/picture/"
     },
     {
       "serviceMapId": 40874,
@@ -2787,7 +2889,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40902",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40902/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40904,
@@ -2827,7 +2931,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40904",
-      "updatedAt": "2026-07-27T09:57:23"
+      "updatedAt": "2026-07-27T09:57:23",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40904/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston lentopallokenttä.",
+      "pictureCaptionEn": "Volleyball court in Pirkkola sports park."
     },
     {
       "serviceMapId": 40917,
@@ -2919,7 +3026,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/40949",
-      "updatedAt": "2025-09-09T09:31:16"
+      "updatedAt": "2025-09-09T09:31:16",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/40949/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 40953,
@@ -3010,7 +3119,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41041",
-      "updatedAt": "2025-09-03T13:37:10"
+      "updatedAt": "2025-09-03T13:37:10",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41041/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41044,
@@ -3137,7 +3248,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41070",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41070/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41098,
@@ -3172,7 +3285,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41098",
-      "updatedAt": "2026-07-27T08:57:08"
+      "updatedAt": "2026-07-27T08:57:08",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41098/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston urheilukentän läheisyydessä olevia ulkokuntoilulaitteita.",
+      "pictureCaptionEn": "Outdoor fitness equipment in the vicinity of the sports field in Pirkkola sports park."
     },
     {
       "serviceMapId": 41117,
@@ -3217,7 +3333,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41117",
-      "updatedAt": "2026-08-18T12:40:51"
+      "updatedAt": "2026-08-18T12:40:51",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41117/picture/"
     },
     {
       "serviceMapId": 41118,
@@ -3273,7 +3390,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41118",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41118/picture/",
+      "pictureCaptionFi": "Maunulan liikuntahallin sisäampumarata.",
+      "pictureCaptionEn": "Indoor shooting range in the Maunula sports hall."
     },
     {
       "serviceMapId": 41208,
@@ -3323,7 +3443,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41208",
-      "updatedAt": "2026-08-18T11:21:26"
+      "updatedAt": "2026-08-18T11:21:26",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41208/picture/",
+      "pictureCaptionFi": "Ilmakuva Meilahden liikuntapuiston pesäpallokentästä.",
+      "pictureCaptionEn": "An aerial view of the baseball field in Meilahti sports park."
     },
     {
       "serviceMapId": 41211,
@@ -3385,7 +3508,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41211",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41211/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston kenttärakennuksen kuntosali ja sen kuntoiluvälineitä.",
+      "pictureCaptionEn": "Pirkkola sports park field building’s gym and its fitness equipment."
     },
     {
       "serviceMapId": 41214,
@@ -3466,7 +3592,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41228",
-      "updatedAt": "2026-08-31T12:27:03"
+      "updatedAt": "2026-08-31T12:27:03",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41228/picture/",
+      "pictureCaptionFi": "Katajanokan liikuntahallin tyhjä Liikuntasali 2.",
+      "pictureCaptionEn": "Empty gymnasium 2 at Katajanokka sports hall."
     },
     {
       "serviceMapId": 41230,
@@ -3571,7 +3700,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41334",
-      "updatedAt": "2026-08-07T11:49:45"
+      "updatedAt": "2026-08-07T11:49:45",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41334/picture/",
+      "pictureCaptionFi": "Käpylän jalkapallokenttiä ja pyöräilystadion.",
+      "pictureCaptionEn": "Käpylä football fields and the cycling stadium."
     },
     {
       "serviceMapId": 41343,
@@ -3597,7 +3729,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41343",
-      "updatedAt": "2025-09-09T09:30:23"
+      "updatedAt": "2025-09-09T09:30:23",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41343/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41349,
@@ -3637,7 +3771,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41349",
-      "updatedAt": "2026-07-27T11:12:07"
+      "updatedAt": "2026-07-27T11:12:07",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41349/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston nurmikenttä.",
+      "pictureCaptionEn": "Ruskeasuo sport park grass field."
     },
     {
       "serviceMapId": 41372,
@@ -3663,7 +3800,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41372",
-      "updatedAt": "2026-03-23T15:13:15"
+      "updatedAt": "2026-03-23T15:13:15",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41372/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41381,
@@ -3720,7 +3859,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41399",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41399/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41411,
@@ -3740,7 +3881,8 @@
       },
       "links": [],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41411",
-      "updatedAt": "2026-02-20T10:08:40"
+      "updatedAt": "2026-02-20T10:08:40",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41411/picture/"
     },
     {
       "serviceMapId": 41419,
@@ -3790,7 +3932,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41419",
-      "updatedAt": "2026-08-20T09:37:26"
+      "updatedAt": "2026-08-20T09:37:26",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41419/picture/"
     },
     {
       "serviceMapId": 41435,
@@ -3930,7 +4073,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41447",
-      "updatedAt": "2026-07-27T10:09:57"
+      "updatedAt": "2026-07-27T10:09:57",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41447/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuiston tekonurmikentästä.",
+      "pictureCaptionEn": "An aerial view of the artificial turf pitch in Pirkkola sports park."
     },
     {
       "serviceMapId": 41480,
@@ -3956,7 +4102,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41480",
-      "updatedAt": "2025-09-03T13:32:46"
+      "updatedAt": "2025-09-03T13:32:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41480/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41482,
@@ -4008,7 +4156,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41506",
-      "updatedAt": "2025-09-03T13:46:54"
+      "updatedAt": "2025-09-03T13:46:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41506/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41513,
@@ -4156,7 +4306,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41547",
-      "updatedAt": "2026-08-07T12:05:53"
+      "updatedAt": "2026-08-07T12:05:53",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41547/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston nurmikenttä 2:sesta.",
+      "pictureCaptionEn": "An aerial view of grass pitch 2 in Käpylä sports park."
     },
     {
       "serviceMapId": 41611,
@@ -4303,7 +4456,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41739",
-      "updatedAt": "2026-08-31T12:26:26"
+      "updatedAt": "2026-08-31T12:26:26",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41739/picture/",
+      "pictureCaptionFi": "Katajanokan liikuntahallin tyhjä Liikuntasali 1.",
+      "pictureCaptionEn": "Empty gymnasium 1 at Katajanokka sports hall."
     },
     {
       "serviceMapId": 41756,
@@ -4329,7 +4485,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41756",
-      "updatedAt": "2025-08-29T09:47:17"
+      "updatedAt": "2025-08-29T09:47:17",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41756/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41757,
@@ -4380,7 +4538,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41759",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41759/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41760,
@@ -4420,7 +4580,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41760",
-      "updatedAt": "2026-06-30T10:44:52"
+      "updatedAt": "2026-06-30T10:44:52",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41760/picture/",
+      "pictureCaptionFi": "Arabianrannan liikuntapuiston yleisurheilun harjoitusalue."
     },
     {
       "serviceMapId": 41767,
@@ -4490,7 +4652,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41767",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41767/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston liikuntahallin voimailusali, jossa on neljä henkilöä kuntoilemassa.",
+      "pictureCaptionEn": "The weightlifting room of the sports hall in Ruskeasuo sports park with four people exercising."
     },
     {
       "serviceMapId": 41770,
@@ -4536,7 +4701,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41770",
-      "updatedAt": "2026-07-08T10:45:39"
+      "updatedAt": "2026-07-08T10:45:39",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41770/picture/",
+      "pictureCaptionFi": "Ihmisiä kaukalossa pelaamassa jääkiekkoa Käpylässä.",
+      "pictureCaptionEn": "People in a rink playing ice hockey at Käpylä."
     },
     {
       "serviceMapId": 41772,
@@ -4595,7 +4763,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41792",
-      "updatedAt": "2026-08-31T13:21:50"
+      "updatedAt": "2026-08-31T13:21:50",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41792/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston ratsastuskenttä.",
+      "pictureCaptionEn": "Ruskeasuo sport park riding field."
     },
     {
       "serviceMapId": 41817,
@@ -4822,7 +4993,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41909",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41909/picture/",
+      "pictureCaptionFi": "Sumeita hahmoja Pirkkolan liikuntapuiston kenttärakennuksen voimailusalilla.",
+      "pictureCaptionEn": "Blurred figures at the weightlifting room in Pirkkola sports park field building."
     },
     {
       "serviceMapId": 41918,
@@ -4867,7 +5041,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41918",
-      "updatedAt": "2026-08-07T11:40:46"
+      "updatedAt": "2026-08-07T11:40:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41918/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston amerikkalaisen jalkapallon kentästä.",
+      "pictureCaptionEn": "An aerial view of the American football field at Käpylä sports park."
     },
     {
       "serviceMapId": 41927,
@@ -4898,7 +5075,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/41927",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/41927/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 41954,
@@ -5007,7 +5186,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42006",
-      "updatedAt": "2026-07-27T10:14:08"
+      "updatedAt": "2026-07-27T10:14:08",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42006/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston ulkokuntosali.",
+      "pictureCaptionEn": "Outdoor gym equipment at Pirkkola sports park."
     },
     {
       "serviceMapId": 42042,
@@ -5062,7 +5244,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42061",
-      "updatedAt": "2026-07-27T08:23:34"
+      "updatedAt": "2026-07-27T08:23:34",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42061/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston lähiliikuntapaikasta.",
+      "pictureCaptionEn": "An aerial view of the neighbourhood sports site in Käpylä sports park."
     },
     {
       "serviceMapId": 42066,
@@ -5150,7 +5335,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42081",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42081/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston liikuntahallin liikuntasali, jossa on käsipallomaalit paikoillaan ja salin läpi kulkee pitkittäin viisi sulkapalloverkkoa.",
+      "pictureCaptionEn": "The gymnasium of the sports hall in Ruskeasuo sports park with handball goals in place and five badminton nets set up."
     },
     {
       "serviceMapId": 42084,
@@ -5203,7 +5391,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42084",
-      "updatedAt": "2026-08-31T15:19:16"
+      "updatedAt": "2026-08-31T15:19:16",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42084/picture/",
+      "pictureCaptionFi": "Pirkkolan palloiluhalli, jossa paikoillaan futsal-/käsipallomaalit ja koripallokorit nostettu ylös.",
+      "pictureCaptionEn": "Pirkkola ball hall with futsal/handball goals and basketball baskets lifted in place."
     },
     {
       "serviceMapId": 42092,
@@ -5275,7 +5466,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42120",
-      "updatedAt": "2026-08-20T13:13:48"
+      "updatedAt": "2026-08-20T13:13:48",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42120/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston nurmikenttä 3:sesta.",
+      "pictureCaptionEn": "An aerial view of grass pitch 3 in Käpylä sports park."
     },
     {
       "serviceMapId": 42125,
@@ -5301,7 +5495,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42125",
-      "updatedAt": "2025-09-09T09:33:37"
+      "updatedAt": "2025-09-09T09:33:37",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42125/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 42143,
@@ -5347,7 +5543,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42143",
-      "updatedAt": "2026-07-27T10:07:00"
+      "updatedAt": "2026-07-27T10:07:00",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42143/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston uimahallin aulan kolme pöytätennispöytää, jossa taaimmaisessa sumea hahmo pelaamassa pöytätennistä.",
+      "pictureCaptionEn": "Three table tennis tables in the lobby of the Pirkkola sports park, with a blurred figure playing table tennis in the back."
     },
     {
       "serviceMapId": 42161,
@@ -5442,7 +5641,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42185",
-      "updatedAt": "2026-07-08T10:48:39"
+      "updatedAt": "2026-07-08T10:48:39",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42185/picture/",
+      "pictureCaptionFi": "Ihmisiä Käpylän tekojääkentällä pelaamassa jääkiekkoa.",
+      "pictureCaptionEn": "People playing ice hockey on the artificial ice rink at Käpylä."
     },
     {
       "serviceMapId": 42224,
@@ -5476,7 +5678,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42224",
-      "updatedAt": "2026-07-23T10:45:06"
+      "updatedAt": "2026-07-23T10:45:06",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42224/picture/",
+      "pictureCaptionFi": "Arabianrannan liikuntapuiston ulkokuntoilupaikka."
     },
     {
       "serviceMapId": 42242,
@@ -5507,7 +5711,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42242",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42242/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 42256,
@@ -5564,7 +5770,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42264",
-      "updatedAt": "2026-06-04T10:29:08"
+      "updatedAt": "2026-06-04T10:29:08",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42264/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 42265,
@@ -5615,7 +5823,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42278",
-      "updatedAt": "2025-09-03T13:32:46"
+      "updatedAt": "2025-09-03T13:32:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42278/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 42281,
@@ -5675,7 +5885,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42281",
-      "updatedAt": "2026-08-21T14:55:37"
+      "updatedAt": "2026-08-21T14:55:37",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42281/picture/",
+      "pictureCaptionFi": "Kampin liikuntakeskuksen tyhjä liikuntasali 2.",
+      "pictureCaptionEn": "Empty gymnasium 2 at Kamppi sports centre."
     },
     {
       "serviceMapId": 42283,
@@ -5725,7 +5938,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42283",
-      "updatedAt": "2026-08-13T10:53:48"
+      "updatedAt": "2026-08-13T10:53:48",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42283/picture/",
+      "pictureCaptionFi": "Pirkkolan liikuntapuiston yleisurheilukenttä."
     },
     {
       "serviceMapId": 42292,
@@ -5780,7 +5995,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/42300",
-      "updatedAt": "2026-07-23T11:25:02"
+      "updatedAt": "2026-07-23T11:25:02",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/42300/picture/",
+      "pictureCaptionFi": "Käpylän liikuntapuiston ulkokuntoiluvälineitä.",
+      "pictureCaptionEn": "Outdoor exercise equipment in Käpylä sports park."
     },
     {
       "serviceMapId": 44388,
@@ -5830,7 +6048,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/44388",
-      "updatedAt": "2026-07-27T10:11:30"
+      "updatedAt": "2026-07-27T10:11:30",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/44388/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuiston tekonurmikentästä.",
+      "pictureCaptionEn": "An aerial view of the artificial turf pitch in Pirkkola sports park."
     },
     {
       "serviceMapId": 45121,
@@ -5885,7 +6106,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45121",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45121/picture/",
+      "pictureCaptionFi": "Maunulan liikuntahallin sisäjousiampumarata.",
+      "pictureCaptionEn": "Indoor archery range in the Maunula sports hall."
     },
     {
       "serviceMapId": 45155,
@@ -5924,7 +6148,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45155",
-      "updatedAt": "2026-08-31T13:51:55"
+      "updatedAt": "2026-08-31T13:51:55",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45155/picture/",
+      "pictureCaptionFi": "Ruskeasuon liikuntapuiston ratsastusmaneesi, jossa on kolme ratsastajaa hevostensa selässä.",
+      "pictureCaptionEn": "Ruskeasuo sports park riding manège with three riders on horseback."
     },
     {
       "serviceMapId": 45206,
@@ -5958,7 +6185,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45206",
-      "updatedAt": "2026-07-23T10:46:30"
+      "updatedAt": "2026-07-23T10:46:30",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45206/picture/",
+      "pictureCaptionFi": "Ulkokuntoiluvälineitä.",
+      "pictureCaptionEn": "Outdoor exercise equipment."
     },
     {
       "serviceMapId": 45207,
@@ -5992,7 +6222,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45207",
-      "updatedAt": "2026-07-23T10:46:45"
+      "updatedAt": "2026-07-23T10:46:45",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45207/picture/",
+      "pictureCaptionFi": "Ulkokuntoiluvälineitä.",
+      "pictureCaptionEn": "Outdoor exercise equipment."
     },
     {
       "serviceMapId": 45208,
@@ -6027,7 +6260,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45208",
-      "updatedAt": "2026-08-19T09:04:57"
+      "updatedAt": "2026-08-19T09:04:57",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45208/picture/"
     },
     {
       "serviceMapId": 45210,
@@ -6060,7 +6294,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45210",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45210/picture/"
     },
     {
       "serviceMapId": 45212,
@@ -6094,7 +6329,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45212",
-      "updatedAt": "2026-07-23T10:47:02"
+      "updatedAt": "2026-07-23T10:47:02",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45212/picture/",
+      "pictureCaptionFi": "Ulkokuntoiluvälineitä Arabianrannan liikuntapuiston ulkokuntoilupaikalla."
     },
     {
       "serviceMapId": 45552,
@@ -6525,7 +6762,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45900",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45900/picture/",
+      "pictureCaptionFi": "Ihmisiä harjoittelemassa Pirkkolan liikuntapuiston uimahallin kuntosalilla.",
+      "pictureCaptionEn": "People practising at the Pirkkola sports park swimming hall gym."
     },
     {
       "serviceMapId": 45901,
@@ -6556,7 +6796,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45901",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45901/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 45906,
@@ -6657,7 +6899,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45928",
-      "updatedAt": "2026-08-21T14:48:53"
+      "updatedAt": "2026-08-21T14:48:53",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45928/picture/",
+      "pictureCaptionFi": "Kampin liikuntakeskuksen uima-allas.",
+      "pictureCaptionEn": "Kamppi sports centre’s swimming pool."
     },
     {
       "serviceMapId": 45929,
@@ -6714,7 +6959,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45929",
-      "updatedAt": "2026-08-31T15:22:24"
+      "updatedAt": "2026-08-31T15:22:24",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45929/picture/",
+      "pictureCaptionFi": "Ilmakuva Katajanokan liikuntahallista.",
+      "pictureCaptionEn": "Aerial photo of Katajanokka sports hall."
     },
     {
       "serviceMapId": 45932,
@@ -6780,7 +7028,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45932",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45932/picture/",
+      "pictureCaptionFi": "Ilmakuva Maunulan liikuntahallista.",
+      "pictureCaptionEn": "An aerial view of Maunula sports hall."
     },
     {
       "serviceMapId": 45947,
@@ -6806,7 +7057,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/45947",
-      "updatedAt": "2025-09-09T09:46:16"
+      "updatedAt": "2025-09-09T09:46:16",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/45947/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 46070,
@@ -6878,7 +7131,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/48984",
-      "updatedAt": "2025-09-03T13:32:46"
+      "updatedAt": "2025-09-03T13:32:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/48984/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 49957,
@@ -6974,7 +7229,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/50208",
-      "updatedAt": "2026-08-07T11:39:15"
+      "updatedAt": "2026-08-07T11:39:15",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/50208/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuiston hiekkakentästä.",
+      "pictureCaptionEn": "An aerial view of the sand field in Käpylä sports park."
     },
     {
       "serviceMapId": 53489,
@@ -7074,7 +7332,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/57199",
-      "updatedAt": "2025-09-03T13:32:46"
+      "updatedAt": "2025-09-03T13:32:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/57199/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 57241,
@@ -7109,7 +7369,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/57241",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/57241/picture/",
+      "pictureCaptionFi": "Frisbeegolfkori Arabianrannassa.",
+      "pictureCaptionEn": "Disc golf basket in Arabianranta."
     },
     {
       "serviceMapId": 59803,
@@ -7161,7 +7424,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/59824",
-      "updatedAt": "2025-09-03T13:37:55"
+      "updatedAt": "2025-09-03T13:37:55",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/59824/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 62913,
@@ -7225,7 +7490,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/62942",
-      "updatedAt": "2026-08-06T11:13:35"
+      "updatedAt": "2026-08-06T11:13:35",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/62942/picture/"
     },
     {
       "serviceMapId": 67714,
@@ -7282,7 +7548,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/67714",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/67714/picture/",
+      "pictureCaptionFi": "Pirkkolan jäähalli ilmakuvattuna ulkopuolelta.",
+      "pictureCaptionEn": "Aerial view of the Pirkkola ice stadium from the outside."
     },
     {
       "serviceMapId": 68752,
@@ -7327,7 +7596,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/68752",
-      "updatedAt": "2026-08-19T16:19:03"
+      "updatedAt": "2026-08-19T16:19:03",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/68752/picture/",
+      "pictureCaptionFi": "Arabianrannan liikuntapuiston ulkokuntosali."
     },
     {
       "serviceMapId": 68846,
@@ -7477,7 +7748,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/73117",
-      "updatedAt": "2025-08-29T09:51:20"
+      "updatedAt": "2025-08-29T09:51:20",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/73117/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 73119,
@@ -7508,7 +7781,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/73119",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/73119/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 74724,
@@ -7534,7 +7809,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/74724",
-      "updatedAt": "2025-09-03T13:32:46"
+      "updatedAt": "2025-09-03T13:32:46",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/74724/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 75207,
@@ -7637,7 +7914,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75399",
-      "updatedAt": "2026-07-23T13:06:03"
+      "updatedAt": "2026-07-23T13:06:03",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75399/picture/"
     },
     {
       "serviceMapId": 75403,
@@ -7697,7 +7975,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75403",
-      "updatedAt": "2026-09-07T16:15:31"
+      "updatedAt": "2026-09-07T16:15:31",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75403/picture/"
     },
     {
       "serviceMapId": 75432,
@@ -7898,7 +8177,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75759",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75759/picture/"
     },
     {
       "serviceMapId": 75761,
@@ -7950,7 +8230,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75761",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75761/picture/"
     },
     {
       "serviceMapId": 75764,
@@ -8007,7 +8288,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75764",
-      "updatedAt": "2026-06-15T08:53:54"
+      "updatedAt": "2026-06-15T08:53:54",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75764/picture/"
     },
     {
       "serviceMapId": 75908,
@@ -8038,7 +8320,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75908",
-      "updatedAt": "2026-03-13T10:09:38"
+      "updatedAt": "2026-03-13T10:09:38",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75908/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 75979,
@@ -8064,7 +8348,9 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/75979",
-      "updatedAt": "2026-04-17T09:11:47"
+      "updatedAt": "2026-04-17T09:11:47",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/75979/picture/",
+      "pictureCaptionFi": "Kuva: Elmo Paloniemi"
     },
     {
       "serviceMapId": 78562,
@@ -8813,7 +9099,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/78584",
-      "updatedAt": "2026-07-07T09:34:42"
+      "updatedAt": "2026-07-07T09:34:42",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/78584/picture/"
     },
     {
       "serviceMapId": 78588,
@@ -8840,7 +9127,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/78588",
-      "updatedAt": "2026-06-23T12:31:10"
+      "updatedAt": "2026-06-23T12:31:10",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/78588/picture/"
     },
     {
       "serviceMapId": 78589,
@@ -9024,7 +9312,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79909",
-      "updatedAt": "2026-08-18T11:14:30"
+      "updatedAt": "2026-08-18T11:14:30",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79909/picture/",
+      "pictureCaptionFi": "Ilmakuva Meilahden liikuntapuistosta.",
+      "pictureCaptionEn": "An aerial view of Meilahti sports park."
     },
     {
       "serviceMapId": 79911,
@@ -9071,7 +9362,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79911",
-      "updatedAt": "2026-08-20T13:12:06"
+      "updatedAt": "2026-08-20T13:12:06",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79911/picture/",
+      "pictureCaptionFi": "Ilmakuva Käpylän liikuntapuistosta.",
+      "pictureCaptionEn": "An aerial view of Käpylä sports park."
     },
     {
       "serviceMapId": 79918,
@@ -9123,7 +9417,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79918",
-      "updatedAt": "2026-08-21T15:00:35"
+      "updatedAt": "2026-08-21T15:00:35",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79918/picture/",
+      "pictureCaptionFi": "Ilmakuva Oulunkylän liikuntapuistosta.",
+      "pictureCaptionEn": "An aerial view of Oulunkylä sports park."
     },
     {
       "serviceMapId": 79923,
@@ -9170,7 +9467,8 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79923",
-      "updatedAt": "2026-08-07T14:18:18"
+      "updatedAt": "2026-08-07T14:18:18",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79923/picture/"
     },
     {
       "serviceMapId": 79924,
@@ -9217,7 +9515,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79924",
-      "updatedAt": "2026-08-11T14:06:13"
+      "updatedAt": "2026-08-11T14:06:13",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79924/picture/",
+      "pictureCaptionFi": "Arabianrannan liikuntapuisto",
+      "pictureCaptionEn": "Arabianranta sports park"
     },
     {
       "serviceMapId": 79927,
@@ -9264,7 +9565,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79927",
-      "updatedAt": "2026-08-18T16:38:36"
+      "updatedAt": "2026-08-18T16:38:36",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79927/picture/",
+      "pictureCaptionFi": "Ilmakuva Ruskeasuon liikuntapuistosta, jossa on liikuntahalli, maneesi, ratsastuskenttä ja kaksi hevostallia.",
+      "pictureCaptionEn": "Aerial view of Ruskeasuo sports park with sports hall, manège, riding field and two horse stables."
     },
     {
       "serviceMapId": 79930,
@@ -9321,7 +9625,10 @@
         }
       ],
       "sourceUrl": "https://palvelukartta.hel.fi/fi/unit/79930",
-      "updatedAt": "2026-07-27T08:36:20"
+      "updatedAt": "2026-07-27T08:36:20",
+      "pictureUrl": "https://api.hel.fi/servicemap/v2/unit/79930/picture/",
+      "pictureCaptionFi": "Ilmakuva Pirkkolan liikuntapuistosta.",
+      "pictureCaptionEn": "Aerial view of Pirkkola sports park."
     },
     {
       "serviceMapId": 80584,

@@ -107,6 +107,27 @@ export function sportsFromSite(site: LipasSite) {
   // sport-specific count field. It deliberately distinguishes indoor gyms
   // from outdoor exercise places.
   if (/jalkapallostadion|jalkapallohalli|jalkapallokenttä|jalkapallomaal|futsal/.test(label)) sports.add('soccer')
+  // LIPAS stores most Helsinki football pitches under the generic “Pallokenttä”
+  // type without football-fields-count, putting goals/markings/turf in the site
+  // comment. Strip neighbour-describing sentences so nearby fields never leak in.
+  if (/pallokenttä|ball field/i.test(`${site.type?.fi ?? ''} ${site.type?.en ?? ''}`)) {
+    const ownComment = (site.comment ?? '')
+      .toLocaleLowerCase('fi-FI')
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => !/^(vieress|viereis|yhteydess|lähist)/i.test(sentence.trim()))
+      .join(' ')
+    const isAmericanOnly = /amerikkalaisen jalkapallon|jenkkifutis/.test(ownComment)
+      && !/(?<!amerikkalaisen )jalkapallo(?!n)|jalkapallomaal|jalkapallokent/.test(ownComment)
+    const isOtherFieldSport = /pesäpallo|amerikkalaisen jalkapallon|maahockey|kriketti|rugby|tennis|padel|petanque|petankki/.test(ownComment)
+    if (!isAmericanOnly && (
+      /jalkapallo|futis|futsal|panna-?areena|nappulakent|rautamaal|pienmaal|(?<![\p{L}])maalit(?![\p{L}])|(?<![\p{L}])maalia(?![\p{L}])|(?<![\p{L}])maaleja(?![\p{L}])/u.test(ownComment)
+      || /nappulakent|panna-?areena/.test(label)
+      || (/tekonurmikenttä|tekonurmi/.test(label) && !isOtherFieldSport)
+      || (/liikuntapuisto/.test(identity) && /nurmikenttä/.test(label) && !isOtherFieldSport)
+    )) {
+      sports.add('soccer')
+    }
+  }
   if (/yleisurheilu|juoksu|yleisurheilukenttä|yleisurheilun harjoitus/.test(label)) sports.add('athletics')
   if (/uinti|uimahalli|maauimala|uima-allastila/.test(label) && !/talviuinti|avantouinti/.test(label)) sports.add('swimming')
   // Keep ordinary swimming, outdoor swimming and winter swimming distinct.
@@ -141,10 +162,18 @@ export function sportsFromSite(site: LipasSite) {
   return [...new Set([...(curatedSportsBySite[site.id] ?? []), ...sports])]
 }
 
+const paidVenuePattern = /\b(elixia|fitness24seven|easyfit|fressi|unisport|crossfit|ole\.?fit|forever|idealfit|boulderkeskus|kiipeilyareena|puro gym|gym 24|arctic gym|east city gym|tempaus-areena|mayor'?s)\b|kuntokeskus|uimahalli|maauimala|keilahalli|padelhalli|padel club|padel x/i
+
 export function explicitPrice(site: LipasSite): Exclude<PriceClass, 'mixed' | 'unknown'> | undefined {
-  // A free-use flag is insufficient when the description states restrictions.
-  if (/vain|ei vapaassa|ei maksuton|varau|jäsen|kesäisin|talvisin|pääsymaks|käyttömaks/i.test(site.comment ?? '')) return undefined
+  const comment = site.comment ?? ''
+  // Seasonal or access restrictions override a free-use flag.
+  if (/vain|ei vapaassa|ei maksuton|varau|jäsen|kesäisin|talvisin|pääsymaks|käyttömaks/i.test(comment)) {
+    if (/pääsymaks|käyttömaks|maksullinen|kertamaksu/i.test(comment) && !/kesäisin|talvisin|ilmainen|maksuton/i.test(comment)) return 'paid'
+    return undefined
+  }
   if (site.properties?.['free-use?'] === true) return 'free'
+  if (site.properties?.['free-use?'] === false) return 'paid'
+  if (paidVenuePattern.test(`${site.name} ${site.type?.fi ?? ''} ${site.type?.en ?? ''}`)) return 'paid'
   return undefined
 }
 
@@ -193,10 +222,12 @@ export function accessProfileForUrl(url: string | undefined) {
 }
 
 function groupingRadius(groupName: string) {
-  // Keep school campuses together while still separating other facilities
-  // with the same parent name when their coordinates are clearly apart.
-  if (/(peruskoulu|yhteiskoulu|lukio|koulu|school|college)/.test(nameKey(groupName))) return 150
-  return 80
+  // Sports parks span hundreds of metres; keep all pitches/halls of the same
+  // sports park under one venue instead of splitting them into duplicate rows.
+  const key = nameKey(groupName)
+  if (/(liikuntapuisto|urheilupuisto|sportspark)/.test(key)) return 450
+  if (/(peruskoulu|yhteiskoulu|lukio|koulu|school|college|puisto|kentta)/.test(key)) return 180
+  return 100
 }
 
 function splitNearbyGroups(members: { site: LipasSite; coordinate: GeoPoint }[], groupName: string) {
@@ -219,10 +250,31 @@ function splitNearbyGroups(members: { site: LipasSite; coordinate: GeoPoint }[],
   return groups
 }
 
+function normalizeAddressKey(address: string) {
+  return address
+    .trim()
+    .toLocaleLowerCase('fi-FI')
+    .replace(/\s+/g, ' ')
+    .replace(/(\d)\s+([a-zåäö])\b/gi, '$1$2')
+}
+
 function addressForCluster(cluster: { site: LipasSite; coordinate: GeoPoint }[]) {
-  const addresses = [...new Set(cluster.map(({ site }) => site.address).filter((address): address is string => Boolean(address)))]
-  const preciseAddresses = addresses.filter((address) => /\d/.test(address))
-  return (preciseAddresses.length > 0 ? preciseAddresses : addresses).join(' / ')
+  const counts = new Map<string, { value: string; count: number; score: number }>()
+  for (const { site } of cluster) {
+    const raw = site.address?.trim()
+    if (!raw) continue
+    const key = normalizeAddressKey(raw)
+    // Prefer properly cased strings (more uppercase letters after spaces/numbers) over sloppy casing.
+    const casingScore = (raw.match(/(?:^|\s)[A-ZÅÄÖ]/g)?.length ?? 0) + (/\d/.test(raw) ? 10 : 0)
+    const existing = counts.get(key)
+    if (!existing) counts.set(key, { value: raw, count: 1, score: casingScore })
+    else {
+      existing.count += 1
+      if (casingScore > existing.score) { existing.value = raw; existing.score = casingScore }
+    }
+  }
+  const ranked = [...counts.values()].sort((a, b) => Number(/\d/.test(b.value)) - Number(/\d/.test(a.value)) || b.count - a.count || b.score - a.score)
+  return ranked[0]?.value ?? ''
 }
 
 function ringAround(point: MapPoint, radius = 5) {

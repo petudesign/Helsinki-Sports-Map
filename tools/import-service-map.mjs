@@ -134,6 +134,25 @@ for (let index = 0; index < sportsUnits.length; index += concurrency) {
   console.log(`Imported accessibility ${Math.min(index + concurrency, sportsUnits.length)}/${sportsUnits.length}`)
 }
 
+const pictures = new Map()
+for (let index = 0; index < sportsUnits.length; index += 50) {
+  const chunk = sportsUnits.slice(index, index + 50).map((unit) => unit.id).join(',')
+  try {
+    const response = await getJson(`https://api.hel.fi/servicemap/v2/unit/?id=${chunk}&page_size=100&only=id,picture_url,picture_caption`)
+    for (const item of response.results ?? []) {
+      if (item.picture_url) {
+        pictures.set(item.id, {
+          pictureUrl: item.picture_url,
+          pictureCaptionFi: item.picture_caption?.fi || undefined,
+          pictureCaptionEn: item.picture_caption?.en || undefined,
+        })
+      }
+    }
+  } catch (error) {
+    console.warn(`Picture batch skipped: ${error.message}`)
+  }
+}
+
 const importedAt = new Date().toISOString()
 const output = {
   source: serviceMapUnitsUrl,
@@ -147,6 +166,7 @@ const output = {
     const priceFi = localizedConnectionText(unit, 'PRICE', 'fi') || undefined
     const priceEn = localizedConnectionText(unit, 'PRICE', 'en') || undefined
     const properties = accessibility.get(unit.id) ?? []
+    const picture = pictures.get(unit.id)
     return {
       serviceMapId: unit.id,
       lipasId,
@@ -158,9 +178,9 @@ const output = {
       descriptionEn: unit.desc_en,
       openingHoursFi: localizedConnectionText(unit, 'OPENING_HOURS', 'fi') || undefined,
       openingHoursEn: localizedConnectionText(unit, 'OPENING_HOURS', 'en') || undefined,
-      pictureUrl: unit.picture_url ?? unit.pictureUrl,
-      pictureCaptionFi: unit.picture_caption_fi ?? unit.picture_caption?.fi,
-      pictureCaptionEn: unit.picture_caption_en ?? unit.picture_caption?.en,
+      pictureUrl: picture?.pictureUrl ?? unit.picture_url ?? unit.pictureUrl,
+      pictureCaptionFi: picture?.pictureCaptionFi ?? unit.picture_caption_fi ?? unit.picture_caption?.fi,
+      pictureCaptionEn: picture?.pictureCaptionEn ?? unit.picture_caption_en ?? unit.picture_caption?.en,
       priceFi,
       priceEn,
       priceClass: priceClassFor(priceFi ?? priceEn),

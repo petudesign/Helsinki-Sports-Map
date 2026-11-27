@@ -1,7 +1,9 @@
 import lipasSnapshot from './lipas-helsinki-runtime.json'
 import helsinkiBoundary from './helsinki-boundary.json'
-import type { Bounds, GeoPoint, LipasVenue, MapPoint, PriceClass, SportFeature } from './types'
+import type { GeoPoint, LipasVenue, MapPoint, PriceClass, SportFeature } from './types'
 import { normalizeExternalUrl } from './urls'
+import { boundsOf, distanceMetres } from './geometry'
+import { nameKey } from './text'
 
 type LipasSite = {
   id: number
@@ -46,23 +48,14 @@ function isWithinHelsinki(site: LipasSite) {
   return coordinates.length > 0 && coordinates.every((coordinate) => pointInRing(coordinate, helsinkiBoundaryRing))
 }
 
-function normalized(value: string) {
-  return value.toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')
-}
-
 function distanceSquared(a: GeoPoint, b: GeoPoint) {
   const latitudeScale = Math.cos(a[1] * Math.PI / 180)
   return ((a[0] - b[0]) * latitudeScale) ** 2 + (a[1] - b[1]) ** 2
 }
 
-function distanceMetres(a: GeoPoint, b: GeoPoint) {
-  const latitudeScale = Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180)
-  return Math.sqrt(((a[0] - b[0]) * latitudeScale * 111_320) ** 2 + ((a[1] - b[1]) * 111_320) ** 2)
-}
-
 const sites = (lipasSnapshot.sites as LipasSite[]).flatMap((site) => {
   const coordinate = firstCoordinate(site)
-  return coordinate ? [{ site, coordinate, normalizedName: normalized(site.name) }] : []
+  return coordinate ? [{ site, coordinate, normalizedName: nameKey(site.name) }] : []
 }).filter(({ site }) => isWithinHelsinki(site))
 
 // LIPAS uses the generic “Ball field” category for these five fields, but
@@ -202,7 +195,7 @@ export function accessProfileForUrl(url: string | undefined) {
 function groupingRadius(groupName: string) {
   // Keep school campuses together while still separating other facilities
   // with the same parent name when their coordinates are clearly apart.
-  if (/(peruskoulu|yhteiskoulu|lukio|koulu|school|college)/.test(normalized(groupName))) return 150
+  if (/(peruskoulu|yhteiskoulu|lukio|koulu|school|college)/.test(nameKey(groupName))) return 150
   return 80
 }
 
@@ -212,7 +205,7 @@ function splitNearbyGroups(members: { site: LipasSite; coordinate: GeoPoint }[],
   members.forEach((member) => {
     const matching = groups.filter((group) => group.some((existing) => {
       const distance = distanceMetres(member.coordinate, existing.coordinate)
-      const sameAddress = existing.site.address && member.site.address && normalized(existing.site.address) === normalized(member.site.address)
+      const sameAddress = existing.site.address && member.site.address && nameKey(existing.site.address) === nameKey(member.site.address)
       return distance <= radius || (Boolean(sameAddress) && distance <= 200)
     }))
     if (!matching.length) { groups.push([member]); return }
@@ -239,19 +232,12 @@ function ringAround(point: MapPoint, radius = 5) {
   })
 }
 
-function boundsOf(ring: MapPoint[]): Bounds {
-  return ring.reduce((bounds, point) => ({
-    minX: Math.min(bounds.minX, point.x), minY: Math.min(bounds.minY, point.y),
-    maxX: Math.max(bounds.maxX, point.x), maxY: Math.max(bounds.maxY, point.y),
-  }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
-}
-
 export function createLipasFeatures(project: (point: GeoPoint) => MapPoint) {
   const features: SportFeature[] = []
   const venues: { id: string; venue: LipasVenue }[] = []
   const groups = new Map<string, { site: LipasSite; coordinate: GeoPoint }[]>()
   sites.filter(({ site }) => isUserFacingSite(site)).forEach(({ site, coordinate }) => {
-    const key = normalized(venueGroupName(site))
+    const key = nameKey(venueGroupName(site))
     groups.set(key, [...(groups.get(key) ?? []), { site, coordinate }])
   })
   groups.forEach((members) => {
@@ -266,7 +252,7 @@ export function createLipasFeatures(project: (point: GeoPoint) => MapPoint) {
       const priceClass = priceClassForSites(cluster.map(({ site }) => site))
       const representative = cluster.find(({ site }) => /yleisurheilukenttä|jalkapallostadion|maauimala|uimahalli/i.test(site.type?.fi ?? '')) ?? cluster[0]
       const displayName = groupName
-      const displayNameEn = normalized(displayName) === normalized(cluster[0].site.type?.fi ?? '')
+      const displayNameEn = nameKey(displayName) === nameKey(cluster[0].site.type?.fi ?? '')
         ? cluster[0].site.type?.en ?? displayName
         : displayName
       const facilities = cluster.map(({ site }) => ({ id: site.id, name: site.name, typeName: site.type?.fi, typeNameEn: site.type?.en, address: site.address }))
@@ -281,7 +267,7 @@ export function createLipasFeatures(project: (point: GeoPoint) => MapPoint) {
 
 export function findLipasVenue(name: string | undefined, coordinate: GeoPoint): LipasVenue | undefined {
   if (!name) return undefined
-  const normalizedName = normalized(name)
+  const normalizedName = nameKey(name)
   const candidates = sites.filter(({ normalizedName: candidate }) => candidate.includes(normalizedName) || normalizedName.includes(candidate))
   const match = (candidates.length > 0 ? candidates : sites)
     .map((candidate) => ({ ...candidate, distance: distanceSquared(coordinate, candidate.coordinate) }))

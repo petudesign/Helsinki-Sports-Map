@@ -1,7 +1,7 @@
-import { applyRateLimit, timeoutSignal } from '../server/security.mjs'
+import { applyRateLimit, readBoundedText, readJsonBody, RequestBodyTooLargeError, requireMethod, timeoutSignal } from '../server/security.mjs'
+import { distanceMetres, isFinnishCoordinatePair, MAX_ROUTE_DISTANCE_METRES } from '../server/geo.mjs'
 
 const DIGITRANSIT_URL = 'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'
-const MAX_ROUTE_DISTANCE_METRES = 100_000
 
 const TRANSIT_QUERY = `
   query TransitPlan($origin: PlanLabeledLocationInput!, $destination: PlanLabeledLocationInput!, $locale: Locale) {
@@ -38,16 +38,6 @@ const TRANSIT_QUERY = `
     }
   }
 `
-
-function distanceMetres([leftLng, leftLat], [rightLng, rightLat]) {
-  const earthRadius = 6_371_000
-  const toRadians = (value) => value * Math.PI / 180
-  const deltaLat = toRadians(rightLat - leftLat)
-  const deltaLng = toRadians(rightLng - leftLng)
-  const latitude = toRadians((leftLat + rightLat) / 2)
-  const x = deltaLng * Math.cos(latitude)
-  return Math.sqrt((deltaLat * earthRadius) ** 2 + (x * earthRadius) ** 2)
-}
 
 function normalizeZone(zoneId) {
   const zone = String(zoneId ?? '').split(':').pop()?.trim().toUpperCase()
@@ -88,18 +78,6 @@ function appendCoordinates(target, coordinates) {
     const previous = target[target.length - 1]
     if (!previous || previous[0] !== coordinate[0] || previous[1] !== coordinate[1]) target.push(coordinate)
   })
-}
-
-async function readJsonBody(request) {
-  if (request.body && typeof request.body === 'object') return request.body
-  if (typeof request.body === 'string') return JSON.parse(request.body)
-  let body = ''
-  for await (const chunk of request) body += chunk
-  return body ? JSON.parse(body) : undefined
-}
-
-function validCoordinatePair(value) {
-  return Array.isArray(value) && value.length === 2 && value.every((part) => typeof part === 'number' && Number.isFinite(part)) && value[0] >= 19 && value[0] <= 32 && value[1] >= 58 && value[1] <= 71
 }
 
 function routeFromItinerary(itinerary, origin, destination) {
@@ -146,11 +124,7 @@ function routeFromItinerary(itinerary, origin, destination) {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== 'POST') {
-    response.setHeader('Allow', 'POST')
-    response.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+  if (!requireMethod(request, response, 'POST')) return
   if (!applyRateLimit(request, response, { scope: 'transit-route', limit: 8 })) return
 
   const apiKey = process.env.DIGITRANSIT_API_KEY
@@ -160,13 +134,13 @@ export default async function handler(request, response) {
   }
 
   let body
-  try { body = await readJsonBody(request) } catch {
-    response.status(400).json({ error: 'Invalid transit request' })
+  try { body = await readJsonBody(request) } catch (error) {
+    response.status(error instanceof RequestBodyTooLargeError ? 413 : 400).json({ error: 'Invalid transit request' })
     return
   }
   const origin = body?.origin
   const destination = body?.destination
-  if (!validCoordinatePair(origin) || !validCoordinatePair(destination) || distanceMetres(origin, destination) > MAX_ROUTE_DISTANCE_METRES) {
+  if (!isFinnishCoordinatePair(origin) || !isFinnishCoordinatePair(destination) || distanceMetres(origin, destination) > MAX_ROUTE_DISTANCE_METRES) {
     response.status(400).json({ error: 'Invalid transit request' })
     return
   }
@@ -190,8 +164,9 @@ export default async function handler(request, response) {
         },
       }),
     })
-    const result = await upstream.json()
-    if (!upstream.ok || result.errors?.length) {
+    const text = await readBoundedText(upstream, 2_000_000)
+    const result = text === undefined ? undefined : JSON.parse(text)
+    if (!upstream.ok || !result || result.errors?.length) {
       response.status(502).json({ error: 'transit_service_unavailable' })
       return
     }

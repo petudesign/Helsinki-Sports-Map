@@ -5,7 +5,9 @@ import { runtimeSite } from './lib/lipas-runtime.mjs'
 const read = (path) => JSON.parse(readFileSync(new URL(`../${path}.json`, import.meta.url), 'utf8'))
 const raw = read('data/raw/helsinki-expanded')
 const venues = read('src/data/venue-map')
-assert.deepEqual(venues.bbox, raw.bbox)
+// build-venue-map.mjs frames the facility layer on the whole city, not the source extract.
+const [south, north, west, east] = read('src/data/helsinki-boundary')[0].boundingbox.map(Number)
+assert.deepEqual(venues.bbox, [west, south, east, north])
 assert.deepEqual(venues.features, raw.features.filter((f) => f.properties.category === 'sport' && f.properties.context !== 'neighboring'))
 assert.ok(venues.features.length > 400)
 for (const site of read('data/raw/lipas-helsinki').sites) {

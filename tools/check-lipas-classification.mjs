@@ -4,10 +4,12 @@ import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
 
 // Exercise the actual TypeScript classifiers without adding a test dependency.
-const source = readFileSync(new URL('../src/data/lipas.ts', import.meta.url), 'utf8')
-const output = stripTypeScriptTypes(source.replace(/^import .*$/gm, '').replace(/export function/g, 'function')) + '\nexports.sportsFromSite = sportsFromSite; exports.explicitPrice = explicitPrice; exports.priceClassForSites = priceClassForSites;'
+// lipas.ts imports are stripped, so its local helper modules are prepended.
+const source = ['text.ts', 'geometry.ts', 'lipas.ts'].map((file) => readFileSync(new URL(`../src/data/${file}`, import.meta.url), 'utf8')).join('\n')
+const output = stripTypeScriptTypes(source.replace(/^import .*$/gm, '').replace(/^export /gm, '')) + '\nexports.sportsFromSite = sportsFromSite; exports.explicitPrice = explicitPrice; exports.priceClassForSites = priceClassForSites;'
 const snapshot = JSON.parse(readFileSync(new URL('../data/raw/lipas-helsinki.json', import.meta.url), 'utf8'))
-const context = { exports: {}, lipasSnapshot: snapshot }
+const helsinkiBoundary = JSON.parse(readFileSync(new URL('../src/data/helsinki-boundary.json', import.meta.url), 'utf8'))
+const context = { exports: {}, lipasSnapshot: snapshot, helsinkiBoundary }
 vm.runInNewContext(output, context)
 const { sportsFromSite, explicitPrice, priceClassForSites } = context.exports
 const site = (id) => snapshot.sites.find((item) => item.id === id)

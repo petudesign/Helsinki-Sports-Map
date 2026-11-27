@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { runtimeSnapshot } from './lib/lipas-runtime.mjs'
 
 const api = 'https://api.lipas.fi/v2'
@@ -15,7 +15,7 @@ const helsinkiBbox = { west: Number(westArg), south: Number(southArg), east: Num
 if (!Object.values(helsinkiBbox).every(Number.isFinite) || !(helsinkiBbox.west < helsinkiBbox.east && helsinkiBbox.south < helsinkiBbox.north)) throw new Error('Usage: node tools/import-lipas.mjs <west> <south> <east> <north> [output] [runtime-output]')
 
 async function getJson(path) {
-  const response = await fetch(`${api}${path}`)
+  const response = await fetch(`${api}${path}`, { signal: AbortSignal.timeout(30_000) })
   if (!response.ok) throw new Error(`LIPAS ${response.status}: ${path}`)
   return response.json()
 }
@@ -63,6 +63,9 @@ const sites = pages.flatMap(({ items }) => items).filter((site) => {
   comment: site.comment,
   updatedAt: site['event-date'],
 }))
+
+// An empty import would overwrite the last good snapshot with nothing.
+if (!sites.length) throw new Error('LIPAS import returned no Helsinki sports sites; keeping the existing snapshot')
 
 await mkdir(outputPath.includes('/') ? outputPath.slice(0, outputPath.lastIndexOf('/')) : '.', { recursive: true })
 await mkdir(runtimeOutputPath.includes('/') ? runtimeOutputPath.slice(0, runtimeOutputPath.lastIndexOf('/')) : '.', { recursive: true })

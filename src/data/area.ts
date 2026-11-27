@@ -1,8 +1,10 @@
 import { accessProfileForUrl, createLipasFeatures, findLipasVenue } from './lipas'
-import type { Bounds, GeoJsonFeature, GeoPoint, MapDataset, MapPoint, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
+import type { GeoPoint, MapDataset, MapPoint, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
 import { venueProfile } from './venueLinks'
 import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
 import { transitDirectionsUrl } from '../routing'
+import { boundsOf } from './geometry'
+import { nameKey } from './text'
 
 function toLocalMetres([longitude, latitude]: GeoPoint, [centerLon, centerLat]: GeoPoint): MapPoint {
   return { x: (longitude - centerLon) * 111_320 * Math.cos(centerLat * Math.PI / 180), y: (latitude - centerLat) * 111_320 }
@@ -12,13 +14,6 @@ function estimatedHeight(id: string, explicitHeight?: number) {
   if (explicitHeight) return Math.max(5, Math.min(explicitHeight, 48))
   const hash = [...id].reduce((total, character) => total + character.charCodeAt(0), 0)
   return 9 + (hash % 5) * 2.4
-}
-
-function boundsOf(points: MapPoint[]): Bounds {
-  return points.reduce((bounds, point) => ({
-    minX: Math.min(bounds.minX, point.x), minY: Math.min(bounds.minY, point.y),
-    maxX: Math.max(bounds.maxX, point.x), maxY: Math.max(bounds.maxY, point.y),
-  }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
 }
 
 function boundsOfRings(rings: MapPoint[][]) {
@@ -31,15 +26,11 @@ function centerOfGeoRing(ring: GeoPoint[]): GeoPoint {
   return [total[0] / Math.max(points.length, 1), total[1] / Math.max(points.length, 1)]
 }
 
-function normalizedVenueName(name: string | undefined) {
-  return (name ?? '').toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '')
-}
-
 function mergeVenueSources(lipasVenues: SportsVenue[], osmVenues: SportsVenue[]) {
   const venues = new Map<string, SportsVenue>()
-  lipasVenues.forEach((venue) => venues.set(normalizedVenueName(venue.name), venue))
+  lipasVenues.forEach((venue) => venues.set(nameKey(venue.name), venue))
   osmVenues.forEach((venue) => {
-    const key = normalizedVenueName(venue.name)
+    const key = nameKey(venue.name)
     const existing = venues.get(key)
     if (!existing || !key) { venues.set(`${key}:${venue.id}`, venue); return }
     venues.set(key, {

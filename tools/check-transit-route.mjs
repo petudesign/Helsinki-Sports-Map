@@ -19,7 +19,7 @@ global.fetch = async (url, init) => {
   }
   return {
     ok: true,
-    json: async () => ({ data: { planConnection: { edges: [{ node: itinerary }] } } }),
+    text: async () => JSON.stringify({ data: { planConnection: { edges: [{ node: itinerary }] } } }),
   }
 }
 

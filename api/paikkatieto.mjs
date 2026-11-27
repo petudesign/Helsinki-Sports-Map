@@ -1,12 +1,9 @@
+import { applyRateLimit, readBoundedInteger, readBoundedQueryParam, readBoundedText, requestUrlOf, requireMethod, timeoutSignal } from '../server/security.mjs'
+
 const PAIKKATIETO_ADDRESS_URL = 'https://paikkatietohaku.api.hel.fi/v1/address/'
-import { applyRateLimit, readBoundedInteger, readBoundedQueryParam, timeoutSignal } from '../server/security.mjs'
 
 export default async function handler(request, response) {
-  if (request.method !== 'GET') {
-    response.setHeader('Allow', 'GET')
-    response.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+  if (!requireMethod(request, response, 'GET')) return
   if (!applyRateLimit(request, response, { scope: 'paikkatieto', limit: 30 })) return
 
   const apiKey = process.env.PAIKKATIETO_API_KEY
@@ -15,7 +12,7 @@ export default async function handler(request, response) {
     return
   }
 
-  const requestUrl = new URL(request.url ?? '/', 'http://localhost')
+  const requestUrl = requestUrlOf(request)
   const streetname = readBoundedQueryParam(requestUrl, 'streetname', { maxLength: 80, required: true })
   const streetnumber = readBoundedQueryParam(requestUrl, 'streetnumber', { maxLength: 8 })
   const page = readBoundedInteger(requestUrl, 'page', { min: 1, max: 10, defaultValue: 1 })
@@ -36,13 +33,8 @@ export default async function handler(request, response) {
       headers: { Accept: 'application/json', 'Api-Key': apiKey },
       signal: timeoutSignal(5_000),
     })
-    const contentLength = Number(upstream.headers.get('content-length'))
-    if (Number.isFinite(contentLength) && contentLength > 1_000_000) {
-      response.status(502).json({ error: 'Address response was too large' })
-      return
-    }
-    const body = await upstream.text()
-    if (body.length > 1_000_000) {
+    const body = await readBoundedText(upstream, 1_000_000)
+    if (body === undefined) {
       response.status(502).json({ error: 'Address response was too large' })
       return
     }

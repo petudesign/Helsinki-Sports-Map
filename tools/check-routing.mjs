@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import vm from 'node:vm'
 
-const source = readFileSync(new URL('../src/routing.ts', import.meta.url), 'utf8')
+// Imports are stripped, so the modules routing.ts depends on are concatenated in order.
+const source = ['http.ts', 'geocoding.ts', 'routing.ts'].map((file) => readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8')).join('\n')
 const js = stripTypeScriptTypes(source.replace(/^import .*$/gm, '').replace(/^export /gm, ''))
 const context = { exports: {}, URLSearchParams, AbortController, setTimeout, clearTimeout, fetch: undefined }
 vm.runInNewContext(js + '\nexports.searchAddresses=searchAddresses; exports.routeByMode=routeByMode; exports.requestJson=requestJson;', context)
@@ -15,10 +16,12 @@ context.fetch = async (url) => {
   return response({ features: ['Mäkelänkatu', 'Mäkelänrinne', 'Mäkelänkatu', 'Mannerheimintie'].map(katunimi => ({ properties: { katunimi } })) })
 }
 assert.deepEqual(Array.from(await searchAddresses('Mäk'), s => s.label), ['Mäkelänkatu', 'Mäkelänrinne'])
-let calls = 0
-context.fetch = async () => { calls++; return response({ features: [] }) }
+// Place search runs alongside the street index (batch 8). An empty but successful
+// street answer must not fall through to the credentialed Paikkatieto lookup.
+const calls = []
+context.fetch = async (url) => { calls.push(url.split('?')[0]); return response({ features: [] }) }
 assert.equal((await searchAddresses('Tuntematon')).length, 0)
-assert.equal(calls, 1, 'A valid empty street search must not trigger another service')
+assert.deepEqual(calls.sort(), ['/api/helsinki-streets', '/api/places'], 'A valid empty street search must not trigger another service')
 
 context.fetch = async () => response({}, 503)
 await assert.rejects(searchAddresses('Mäk'), /Request failed/)

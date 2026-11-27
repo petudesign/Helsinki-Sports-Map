@@ -10,7 +10,7 @@ const defaultBounds = {
   east: Number(boundary.boundingbox[3]),
   north: Number(boundary.boundingbox[1]),
 }
-const [westArg = String(defaultBounds.west), southArg = String(defaultBounds.south), eastArg = String(defaultBounds.east), northArg = String(defaultBounds.north), outputPath = 'src/data/lipas-helsinki.json', runtimeOutputPath = 'src/data/lipas-helsinki-runtime.json'] = process.argv.slice(2)
+const [westArg = String(defaultBounds.west), southArg = String(defaultBounds.south), eastArg = String(defaultBounds.east), northArg = String(defaultBounds.north), outputPath = 'data/raw/lipas-helsinki.json', runtimeOutputPath = 'src/data/lipas-helsinki-runtime.json'] = process.argv.slice(2)
 const helsinkiBbox = { west: Number(westArg), south: Number(southArg), east: Number(eastArg), north: Number(northArg) }
 if (!Object.values(helsinkiBbox).every(Number.isFinite) || !(helsinkiBbox.west < helsinkiBbox.east && helsinkiBbox.south < helsinkiBbox.north)) throw new Error('Usage: node tools/import-lipas.mjs <west> <south> <east> <north> [output] [runtime-output]')
 
@@ -64,7 +64,6 @@ const sites = pages.flatMap(({ items }) => items).filter((site) => {
   updatedAt: site['event-date'],
 }))
 
-await mkdir('src/data', { recursive: true })
 await mkdir(outputPath.includes('/') ? outputPath.slice(0, outputPath.lastIndexOf('/')) : '.', { recursive: true })
 await mkdir(runtimeOutputPath.includes('/') ? runtimeOutputPath.slice(0, runtimeOutputPath.lastIndexOf('/')) : '.', { recursive: true })
 const snapshot = {

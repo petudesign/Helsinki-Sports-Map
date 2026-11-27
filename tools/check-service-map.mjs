@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 
-const lipas = JSON.parse(await readFile(new URL('../src/data/lipas-helsinki.json', import.meta.url), 'utf8'))
+const lipas = JSON.parse(await readFile(new URL('../data/raw/lipas-helsinki.json', import.meta.url), 'utf8'))
 const snapshot = JSON.parse(await readFile(new URL('../src/data/service-map-helsinki.json', import.meta.url), 'utf8'))
 const lipasIds = new Set(lipas.sites.map((site) => site.id))
 const allowedTriStates = new Set(['yes', 'no', 'unknown'])

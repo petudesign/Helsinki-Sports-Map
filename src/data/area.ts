@@ -1,9 +1,12 @@
 import { accessProfileForUrl, createLipasFeatures, findLipasVenue } from './lipas'
-import type { Bounds, GeoJsonFeature, GeoPoint, MapChunkManifest, MapDataset, MapPoint, MapViewport, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
-import { createProjector, toLocalMetres } from '../renderer/projection'
+import type { Bounds, GeoJsonFeature, GeoPoint, MapDataset, MapPoint, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
 import { venueProfile } from './venueLinks'
 import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
 import { transitDirectionsUrl } from '../routing'
+
+function toLocalMetres([longitude, latitude]: GeoPoint, [centerLon, centerLat]: GeoPoint): MapPoint {
+  return { x: (longitude - centerLon) * 111_320 * Math.cos(centerLat * Math.PI / 180), y: (latitude - centerLat) * 111_320 }
+}
 
 function estimatedHeight(id: string, explicitHeight?: number) {
   if (explicitHeight) return Math.max(5, Math.min(explicitHeight, 48))
@@ -146,73 +149,5 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   trees: geojson.features.flatMap((feature) => feature.properties.category === 'tree' && feature.geometry.type === 'Point' ? [project(feature.geometry.coordinates)] : []),
   attribution: geojson.attribution,
   source: geojson.source,
-  }
-}
-
-function areaBoundsFromBbox(bbox: [number, number, number, number], center: GeoPoint): Bounds {
-  const southWest = toLocalMetres([bbox[0], bbox[1]], center)
-  const northEast = toLocalMetres([bbox[2], bbox[3]], center)
-  return { minX: southWest.x, minY: southWest.y, maxX: northEast.x, maxY: northEast.y }
-}
-
-function chunkIsVisible(chunk: MapChunkManifest['chunks'][number], manifest: MapChunkManifest, viewport: MapViewport) {
-  const area = { bounds: areaBoundsFromBbox(manifest.bbox, manifest.center) } as MapDataset
-  const projector = createProjector(area, viewport.width, viewport.height, viewport)
-  const [west, south, east, north] = chunk.bbox
-  const points = [[west, south], [west, north], [east, south], [east, north]].map((coordinate) => projector.point(toLocalMetres(coordinate as GeoPoint, manifest.center)))
-  const minX = Math.min(...points.map(({ x }) => x)); const maxX = Math.max(...points.map(({ x }) => x))
-  const minY = Math.min(...points.map(({ y }) => y)); const maxY = Math.max(...points.map(({ y }) => y))
-  const margin = 220
-  return maxX >= -margin && minX <= viewport.width + margin && maxY >= -margin && minY <= viewport.height + margin
-}
-
-async function createAreaFromChunks(chunks: StudyAreaGeoJson[]) {
-  const firstChunk = chunks[0]
-  const uniqueFeatures = new Map<string, GeoJsonFeature>()
-  chunks.flatMap(({ features }) => features).forEach((feature, index) => uniqueFeatures.set(feature.id ?? `${feature.properties.category}-${index}-${JSON.stringify(feature.geometry)}`, feature))
-  return createArea({ ...firstChunk, features: [...uniqueFeatures.values()] })
-}
-
-export type ChunkedMapSource = {
-  loadManifest: () => Promise<MapChunkManifest>
-  loadOverview: () => Promise<StudyAreaGeoJson>
-  loadChunk: (file: string) => Promise<StudyAreaGeoJson>
-}
-
-export function createChunkedAreaLoader(source: ChunkedMapSource) {
-  const chunkCache = new Map<string, Promise<StudyAreaGeoJson>>()
-  const datasetCache = new Map<string, Promise<MapDataset>>()
-  const datasetFor = (key: string, chunks: () => Promise<StudyAreaGeoJson[]>) => {
-    const cached = datasetCache.get(key)
-    if (cached) return cached
-    const pending = chunks().then(createAreaFromChunks).catch((error) => {
-      datasetCache.delete(key)
-      throw error
-    })
-    datasetCache.set(key, pending)
-    // Bound retained geometry while reusing recent viewport combinations.
-    if (datasetCache.size > 4) datasetCache.delete(datasetCache.keys().next().value!)
-    return pending
-  }
-  let overviewCache: Promise<StudyAreaGeoJson> | undefined
-  let manifestCache: Promise<MapChunkManifest> | undefined
-  const loadManifest = () => { manifestCache ??= source.loadManifest(); return manifestCache }
-  const loadOverview = () => { overviewCache ??= source.loadOverview(); return overviewCache }
-  const loadChunk = (file: string) => {
-    const cached = chunkCache.get(file)
-    if (cached) return cached
-    const promise = source.loadChunk(file).catch((error) => { chunkCache.delete(file); throw error })
-    chunkCache.set(file, promise)
-    return promise
-  }
-  return {
-    loadDataset: () => datasetFor('overview', async () => [await loadOverview()]),
-    loadDatasetForViewport: async (viewport: MapViewport) => {
-      if (viewport.zoom < 1.45) return datasetFor('overview', async () => [await loadOverview()])
-      const manifest = await loadManifest()
-      const visible = manifest.chunks.filter((chunk) => chunkIsVisible(chunk, manifest, viewport))
-      if (!visible.length) return datasetFor('overview', async () => [await loadOverview()])
-      return datasetFor(visible.map(({ file }) => file).join('|'), () => Promise.all(visible.map(({ file }) => loadChunk(file))))
-    },
   }
 }

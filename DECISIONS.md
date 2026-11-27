@@ -460,3 +460,12 @@ Changes:
 - **Footer credits** now include City of Helsinki (districts) and Digitransit (places). The footer links are 24 px tall so they still meet the WCAG 2.5.8 target size when they wrap.
 
 Checked against live production data for Kamppi, Kallio, Töölö, Itäkeskus, Redi, Pasila, Olympiastadion and Mannerheimintie.
+
+## Cleanup: dead code and data
+
+Removed code and data the app no longer loads. Nothing user-facing changes.
+
+- **Canvas renderer.** `src/renderer/`, `src/design-system/canvasTheme.ts` and `src/config/mapLandmarks.ts` were removed, along with the checks that only tested them (`check-background-renderer`, `check-geometry-cache`, `check-landmarks`). The one helper still in use, `toLocalMetres`, now lives in `src/data/area.ts`.
+- **Chunked basemap.** `src/data/map-chunks/` (84 files), `central-helsinki.json`, `createChunkedAreaLoader`, `split-map-data.mjs`, `check-viewport-cache.mjs` and the `data:split-map` script were removed. The chunk comparison was dropped from `check:expanded-map`.
+- **Olympic-area extract.** `olympic-area.json`, `preprocess-osm.mjs`, `olympic-area.overpassql` and `check-study-area.mjs` (`check:data`) were removed. `check:venues` now checks `venue-map.json`, the data the app actually ships.
+- **Raw sources moved.** `helsinki-expanded.json` and `lipas-helsinki.json` are inputs to the data scripts, not runtime data. They moved from `src/data/` to `data/raw/`, and every script was updated to the new path.

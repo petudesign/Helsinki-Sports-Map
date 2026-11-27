@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { runtimeSite } from './lib/lipas-runtime.mjs'
 
-const read = (name) => JSON.parse(readFileSync(new URL(`../src/data/${name}.json`, import.meta.url), 'utf8'))
-const raw = read('helsinki-expanded')
-const venues = read('venue-map')
+const read = (path) => JSON.parse(readFileSync(new URL(`../${path}.json`, import.meta.url), 'utf8'))
+const raw = read('data/raw/helsinki-expanded')
+const venues = read('src/data/venue-map')
 assert.deepEqual(venues.bbox, raw.bbox)
 assert.deepEqual(venues.features, raw.features.filter((f) => f.properties.category === 'sport' && f.properties.context !== 'neighboring'))
 assert.ok(venues.features.length > 400)
-for (const site of read('lipas-helsinki').sites) {
+for (const site of read('data/raw/lipas-helsinki').sites) {
   const geometry = site.geometry?.features?.[0]?.geometry
   const anchor = geometry?.type === 'Point' ? geometry.coordinates : geometry?.type === 'LineString' ? geometry.coordinates[0] : geometry?.type === 'Polygon' ? geometry.coordinates[0]?.[0] : undefined
   assert.deepEqual(runtimeSite(site).geometry?.features[0].geometry.coordinates, anchor, `Anchor changed for ${site.id}`)

@@ -2,7 +2,7 @@
 
 The main map uses MapLibre GL JS with the OpenFreeMap Positron vector style. Set `VITE_MAP_STYLE_URL` at build time to use another compatible style/provider. Keep attribution enabled. Default styles, tiles and glyphs require a network connection; this is not an offline map.
 
-The old custom renderer and source extracts are retained for reference, but are not imported by the application. `src/config/city.ts` loads the facility dataset once. Panning and zooming are handled inside MapLibre, not in React state. Facilities are a clustered GeoJSON layer, not hundreds of DOM markers. Selected facilities and routes use separate sources so they do not rebuild clusters. The tile cache is bounded and canvas pixel ratio is capped at 2.
+The earlier custom canvas renderer and its chunked basemap were removed; see the git history before the dead-code cleanup if you need them. Source extracts used by the data scripts live in `data/raw/`. `src/config/city.ts` loads the facility dataset once. Panning and zooming are handled inside MapLibre, not in React state. Facilities are a clustered GeoJSON layer, not hundreds of DOM markers. Selected facilities and routes use separate sources so they do not rebuild clusters. The tile cache is bounded and canvas pixel ratio is capped at 2.
 
 `SportsMap.tsx` imports the MapLibre v6 worker through Vite's `?worker&url` loader. Do not remove this: the default relative worker path does not survive dependency prebundling.
 

@@ -103,6 +103,8 @@ The map uses two levels of orientation labels. Larger districts remain visible a
 
 ### Map geometry is prepared for spatial chunking
 
+> **Superseded.** The MapLibre map replaced the canvas renderer, and the chunks, `createChunkedAreaLoader` and the chunk tools were removed in the dead-code cleanup. Kept here as history.
+
 The Helsinki base map is split into an 8×8 set of spatial GeoJSON chunks, with a separate lightweight overview geometry. Features crossing a chunk boundary are included in each relevant chunk, and the runtime deduplicates features when assembling the current dataset. The app starts with the overview, then requests only the visible detail chunk plus a small neighboring preload area after zooming, panning, or switching projection. LIPAS facilities remain available across the full current area so counts and filters do not flicker while background geometry is loading.
 
 ### Helsinki boundary and neighboring context
@@ -238,6 +240,8 @@ The non-interactive “Practical overview” label and decorative status dot are
 The label repeated information already communicated by the view toggle, while the dot did not represent a real application state. Removing both gives the header a clearer hierarchy and avoids implying functionality that does not exist.
 
 ## 2026-09-12 — Separate expensive map backgrounds from immediate interaction
+
+> **Superseded.** This applied to the custom canvas renderer, which has since been removed. The regression checks named below no longer exist.
 
 ### Decision
 

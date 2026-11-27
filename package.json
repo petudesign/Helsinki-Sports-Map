@@ -7,7 +7,6 @@
     "dev": "vite --host localhost --port 4180",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "check:data": "node tools/check-study-area.mjs",
     "check:map": "node tools/check-map-migration.mjs",
     "check:routing": "node tools/check-routing.mjs",
     "check:transit": "node tools/check-transit-route.mjs",
@@ -23,9 +22,7 @@
     "data:classify-boundary": "node tools/classify-map-boundary.mjs",
     "data:lipas:runtime": "node tools/build-lipas-runtime.mjs",
     "data:service-map": "node tools/import-service-map.mjs",
-    "data:review-staging": "node tools/build-review-staging.mjs",
-    "check:landmarks": "node tools/check-landmarks.mjs",
-    "data:split-map": "node tools/split-map-data.mjs --source src/data/central-helsinki.json --output src/data/map-chunks/central-helsinki"
+    "data:review-staging": "node tools/build-review-staging.mjs"
   },
   "dependencies": {
     "@remixicon/react": "^4.9.0",

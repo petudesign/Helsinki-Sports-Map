@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 const serviceMapUnitsUrl = 'https://www.hel.fi/palvelukarttaws/rest/v4/unit/?arealcity=91&search=liikunta'
 const serviceMapBaseUrl = 'https://www.hel.fi/palvelukarttaws/rest/v4'
 const serviceMapWebUrl = 'https://palvelukartta.hel.fi/fi/unit'
-const sourcePath = new URL('../src/data/lipas-helsinki.json', import.meta.url)
+const sourcePath = new URL('../data/raw/lipas-helsinki.json', import.meta.url)
 const outputPath = new URL('../src/data/service-map-helsinki.json', import.meta.url)
 const requestTimeoutMs = 30_000
 const concurrency = 8

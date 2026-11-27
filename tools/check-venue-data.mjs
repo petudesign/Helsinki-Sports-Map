@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import data from '../src/data/olympic-area.json' with { type: 'json' }
+import data from '../src/data/venue-map.json' with { type: 'json' }
 
 const kisahalli = data.features.find(({ properties }) => properties.name === 'Töölön Kisahalli')
 assert.ok(kisahalli, 'Töölön Kisahalli missing from extract')

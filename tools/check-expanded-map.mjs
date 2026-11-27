@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { readdir, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 
-const data = JSON.parse(await readFile('src/data/helsinki-expanded.json', 'utf8'))
+const data = JSON.parse(await readFile('data/raw/helsinki-expanded.json', 'utf8'))
 const [west, south, east, north] = data.bbox
 const categories = data.features.reduce((counts, feature) => ({ ...counts, [feature.properties.category]: (counts[feature.properties.category] ?? 0) + 1 }), {})
 const neighboringFeatures = data.features.filter((feature) => feature.properties.context === 'neighboring')
@@ -19,17 +19,5 @@ assert.ok(categories.building > 1_000 && categories.road > 1_000, 'Expanded map 
 assert.ok(categories.water > 15 && categories.green > 300, 'Expanded map should retain water and green context')
 assert.ok(neighboringFeatures.length > 5_000, 'Expanded map should retain neighboring context separately from Helsinki')
 assert.ok(data.features.some((feature) => /keilaniemi/i.test(feature.properties.name ?? '') && feature.properties.context === 'neighboring'), 'Keilaniemi should be classified outside Helsinki')
-
-const chunkDirectory = 'src/data/map-chunks/helsinki-expanded'
-const chunkFiles = (await readdir(chunkDirectory)).filter((file) => /^\d-\d\.json$/.test(file))
-const chunkFeatures = (await Promise.all(chunkFiles.map(async (file) => JSON.parse(await readFile(`${chunkDirectory}/${file}`, 'utf8')).features))).flat()
-const chunkIds = new Map()
-chunkFeatures.forEach((feature) => {
-  if (!feature.id) return
-  assert.ok(Object.keys(feature.properties).every((key) => ['category', 'name', 'height', 'routeKind', 'sport', 'osmTags', 'context'].includes(key)), `Unexpected runtime map property in ${feature.id}`)
-  chunkIds.set(feature.id, feature)
-})
-assert.equal(chunkIds.size, data.features.length, 'Generated map chunks must retain every source feature')
-data.features.forEach((feature) => assert.equal(chunkIds.get(feature.id)?.properties.category, feature.properties.category, `Generated map feature is missing: ${feature.id}`))
 
 console.log('Expanded map OK', { features: data.features.length, neighboringFeatures: neighboringFeatures.length, categories, bbox: data.bbox })

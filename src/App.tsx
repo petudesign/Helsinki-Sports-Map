@@ -1,109 +1,32 @@
-import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { RiApps2Line, RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBasketballLine, RiBikeLine, RiBoxingLine, RiBus2Line, RiCarLine, RiCloseLine, RiCommunityLine, RiRoadMapLine, RiStore2Line, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFootballLine, RiFootprintLine, RiFullscreenExitLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiNavigationLine, RiPingPongLine, RiRunLine, RiSearchLine, RiShipLine, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine, type RemixiconComponentType } from '@remixicon/react'
-import type { GeoPoint, LipasVenue, MapDataset, SportFeature, SportsVenue } from './data/types'
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBikeLine, RiBus2Line, RiCarLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFullscreenExitLine, RiNavigationLine, RiSearchLine, RiWalkLine } from '@remixicon/react'
+import type { GeoPoint, MapDataset, SportFeature } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
+import { distanceMetres } from './data/geometry'
+import { nameKey } from './data/text'
 import type { MapControls } from './components/SportsMap'
 // MapLibre is ~1 MB: load it in its own chunk, starting immediately, so the panel can paint first.
 const sportsMapModule = import('./components/SportsMap')
 const SportsMap = lazy(() => sportsMapModule.then((module) => ({ default: module.SportsMap })))
 import { Segmented } from './ui/Segmented'
+import { ErrorBoundary, reloadPage } from './ui/ErrorBoundary'
 import { useSheetDrag, type SheetSnap } from './ui/useSheetDrag'
 import { useHorizontalScroll } from './ui/useHorizontalScroll'
 import { extraText, formatPlaceCount, sportText, text, type Locale } from './i18n'
-import { geocodeAddress, reverseGeocode, routeByMode, routeByTransit, RouteRequestError, searchAddresses, transitDirectionsUrl, type AddressSuggestion, type RouteResult, type TravelMode } from './routing'
+import { type SportFilter, type PriceFilter, type AccessibilityFilter, type FamilyFilter, allFilterOptions, matchesFilter, matchesPrice, matchesAccessibility, matchesFamily } from './filters'
+import { formatDistance, venueTypeLabel, featureDisplayName, priceLabelKey, formatRouteDuration, transitLegTitle, transitLegDetail, transitCompactLabel, hslTicketZones, reportDataUrl, summarizeActivities, venueActivityLabel, placeKindLabel } from './format'
+import { PlaceTile, SportFilterIcon, TransitLegIcon, SuggestionIcon } from './components/icons'
+import { FacilityDetails } from './components/FacilityDetails'
+import { routeByMode, routeByTransit, RouteRequestError, transitDirectionsUrl, type RouteResult, type TravelMode } from './routing'
+import { geocodeAddress, reverseGeocode, searchAddresses, type AddressSuggestion } from './geocoding'
 import { installStressEnvironment, stressInitialSearch } from './dev/stress'
 import { getAnalyticsConsent, setAnalyticsConsent, type AnalyticsConsent } from './privacy'
-const ReviewWorkbench = lazy(() => import('./review/ReviewWorkbench').then((module) => ({ default: module.ReviewWorkbench })))
-const WikiWorkbench = lazy(() => import('./wiki/WikiWorkbench').then((module) => ({ default: module.WikiWorkbench })))
+// Dev-only: the ternary lets the production build drop these chunks entirely.
+const ReviewWorkbench = import.meta.env.DEV ? lazy(() => import('./review/ReviewWorkbench').then((module) => ({ default: module.ReviewWorkbench }))) : () => null
+const WikiWorkbench = import.meta.env.DEV ? lazy(() => import('./wiki/WikiWorkbench').then((module) => ({ default: module.WikiWorkbench }))) : () => null
 
 type Mode = '2d' | 'iso'
-type SportFilter = 'all' | 'football' | 'basketball' | 'outdoor' | 'gym' | 'athletics' | 'swimming' | 'outdoor_swimming' | 'ice_hockey' | 'tennis' | 'padel' | 'martial_arts' | 'skateboarding'
-type PriceFilter = 'all' | 'free' | 'paid'
-type AccessibilityFilter = 'all' | 'stepFreeEntrance' | 'accessibleToilet' | 'accessibleParking'
-type FamilyFilter = 'all' | 'family'
-
-function FacilityBreakdown({ facilities, locale }: { facilities: NonNullable<LipasVenue['facilities']>; locale: Locale }) {
-  if (facilities.length < 2) return null
-  return <details className="disclosure facility-breakdown"><summary>{text(locale, 'facilityComponents', { count: String(facilities.length) })}</summary><ul>{facilities.map((facility) => {
-    const sourceName = facility.name.split(' / ').slice(-1)[0] || facility.name
-    const type = locale === 'en' ? facility.typeNameEn ?? facility.typeName : facility.typeName
-    const name = locale === 'en' && sourceName.toLocaleLowerCase('fi-FI') === facility.typeName?.toLocaleLowerCase('fi-FI') ? type ?? sourceName : sourceName
-    return <li key={facility.id}><strong>{name}</strong>{type && type.toLocaleLowerCase(locale) !== name.toLocaleLowerCase(locale) && <span>{type}</span>}{facility.address && <small>{facility.address}</small>}</li>
-  })}</ul></details>
-}
-
-function FacilityDetails({ feature, venue, trend, trendingEnabled, locale, route, travelMode, onDirections }: {
-  feature: SportFeature
-  venue?: SportsVenue
-  trend?: TrendingSignal
-  trendingEnabled: boolean
-  locale: Locale
-  route?: RouteResult
-  travelMode: TravelMode
-  onDirections: () => void
-}) {
-  const serviceMap = venue?.serviceMap
-  const [photoFailed, setPhotoFailed] = useState(false)
-  const photoCaption = locale === 'en' ? serviceMap?.pictureCaptionEn ?? serviceMap?.pictureCaptionFi : serviceMap?.pictureCaptionFi ?? serviceMap?.pictureCaptionEn
-  const hasFacilityBreakdown = (venue?.lipas?.facilities?.length ?? 0) > 1
-  const officialShortDescription = locale === 'en' ? serviceMap?.shortDescriptionEn : serviceMap?.shortDescriptionFi || serviceMap?.shortDescriptionEn
-  const officialDescription = locale === 'en' ? serviceMap?.descriptionEn : serviceMap?.descriptionFi || serviceMap?.descriptionEn
-  const officialOpeningHours = locale === 'en' ? serviceMap?.openingHoursEn : serviceMap?.openingHoursFi || serviceMap?.openingHoursEn
-  const officialPrice = locale === 'en' ? serviceMap?.priceEn : serviceMap?.priceFi || serviceMap?.priceEn
-  const officialServices = locale === 'en'
-    ? serviceMap?.servicesEn ?? []
-    : serviceMap?.servicesFi.length ? serviceMap.servicesFi : serviceMap?.servicesEn ?? []
-  const displayName = featureDisplayName(feature, locale, venue?.name)
-  const ownPage = [venue?.officialUrl, serviceMap?.sourceUrl].find((url) => url && !isGenericSite(url))
-  const officialHref = ownPage ?? serviceMapSearchUrl(locale, displayName)
-  const officialLabel = ownPage ? text(locale, 'openOfficial') : (locale === 'fi' ? 'Etsi Helsingin palvelukartalta' : 'Find on Helsinki Service Map')
-  const accessLink = venue?.lipas?.accessSourceUrl && !isGenericSite(venue.lipas.accessSourceUrl) && venue.lipas.accessSourceUrl !== officialHref ? venue.lipas.accessSourceUrl : undefined
-  const hasOfficialDetails = Boolean(officialShortDescription?.trim() || officialDescription?.trim() || officialServices.length || officialPrice?.trim() || serviceMap?.links.length)
-  return <div className="facility-card">
-    {venue?.lipas?.parentName && <span className="facility-parent-name">{venue.lipas.parentName}</span>}
-    {serviceMap?.pictureUrl && !photoFailed && <figure className="facility-photo"><img onLoad={(event) => { event.currentTarget.dataset.loaded = 'true' }} src={serviceMap.pictureUrl} alt={photoCaption ?? featureDisplayName(feature, locale, venue?.name)} loading="lazy" decoding="async" onError={() => setPhotoFailed(true)} />{(photoCaption || serviceMap.sourceUrl) && <figcaption>{photoCaption && <span>{photoCaption}</span>}{serviceMap.sourceUrl && <a href={serviceMap.sourceUrl} target="_blank" rel="noreferrer">{locale === 'fi' ? 'Helsingin palvelukartta' : 'Helsinki Service Map'} ↗</a>}</figcaption>}</figure>}
-    {trend && trendingEnabled && <section className={`trend-summary trend-${trend.stage}`}><div><span>{text(locale, trend.source === 'preview' ? 'previewScore' : 'interestSignal')}</span><strong>{trend.interestScore}</strong></div><div className="trend-summary-bar"><span style={{ '--trend-progress': trend.interestScore / 100 } as CSSProperties} /></div><small>+{trend.recentChange}% · {text(locale, trend.stage === 'new' ? 'newOnList' : trend.stage === 'rising' ? 'risingInterest' : 'popularNow')}</small></section>}
-    <div className="facility-location-row">
-      {venue?.lipas?.address && <p className="facility-address"><RiMapPin2Line className="location-icon" aria-hidden="true" size={16} />{venue.lipas.address}</p>}
-      <button className="btn btn-primary directions-open" type="button" onClick={onDirections}>{locale === 'fi' ? 'Reittiohjeet' : 'Directions'}</button>
-    </div>
-    {(() => {
-      // Show only facts the source actually has, and say once what is missing.
-      const priceClass = venue?.lipas?.priceClass ?? feature.priceClass
-      const accessStatus = venue?.lipas?.accessStatus
-      const priceKnown = Boolean(priceClass && priceClass !== 'unknown')
-      const hoursKnown = Boolean(officialOpeningHours?.trim())
-      const facts = [
-        priceKnown ? { label: text(locale, 'priceFilter'), value: text(locale, priceLabelKey(priceClass)) } : undefined,
-        accessStatus && accessStatus !== 'unknown' ? { label: text(locale, 'access'), value: text(locale, accessStatus === 'open' ? 'accessOpen' : accessStatus === 'restricted' ? 'accessRestricted' : 'accessBooking') } : undefined,
-        hoursKnown ? { label: text(locale, 'openingHours'), value: officialOpeningHours!.trim() } : undefined,
-      ].filter((fact): fact is { label: string; value: string } => Boolean(fact))
-      const missingKey = !priceKnown && !hoursKnown ? 'missingPriceAndHours' : !hoursKnown ? 'missingHours' : !priceKnown ? 'missingPrice' : undefined
-      return <>
-        {facts.length > 0 && <dl className="facility-facts">{facts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
-        {missingKey && <p className="facility-unknown">{text(locale, missingKey)}</p>}
-        <a className="text-link facility-official-link" href={officialHref} target="_blank" rel="noreferrer">{officialLabel} ↗</a>
-      </>
-    })()}
-    {!venue?.lipas?.accessNoteFi && accessLink && <p className="facility-access-link"><a href={accessLink} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a></p>}
-    {venue?.lipas?.accessNoteFi && <div className="facility-access"><h3 className="section-title">{text(locale, 'access')}</h3><p>{locale === 'en' ? venue.lipas.accessNoteEn : venue.lipas.accessNoteFi}</p>{accessLink && <a href={accessLink} target="_blank" rel="noreferrer">{text(locale, 'verifyAccess')} ↗</a>}</div>}
-    {route && <span className="facility-type">{text(locale, travelMode === 'walk' ? 'walkingRoute' : travelMode)}: {Math.max(1, Math.round(route.durationSeconds / 60))} {text(locale, 'minutes')} · {Math.round(route.distanceMetres)} m</span>}
-    {venue?.lipas?.typeName && !hasFacilityBreakdown && <span className="facility-type">{locale === 'en' ? venue.lipas.typeNameEn ?? venue.lipas.typeName : venue.lipas.typeName}</span>}
-    {venue?.sports.length ? <><h3 className="section-title">{text(locale, 'activities')}</h3><ul className="facility-activities">{venue.sports.map((sport) => <li key={sport}>{venueActivityLabel(locale, sport)}</li>)}</ul></> : <p className="facility-unknown">{text(locale, 'missingSports')}</p>}
-    {venue && <div className="facility-more-info">
-      <FacilityBreakdown facilities={venue.lipas?.facilities ?? []} locale={locale} />
-      {serviceMap && hasOfficialDetails && <details className="disclosure official-details">
-        <summary>{text(locale, 'officialInfo')}</summary>
-        {officialShortDescription && <p>{officialShortDescription}</p>}
-        {officialDescription && <p>{officialDescription}</p>}
-        {officialServices.length > 0 && <><h3 className="section-title">{text(locale, 'officialServices')}</h3><ul className="official-services">{officialServices.map((service) => <li key={service}>{service}</li>)}</ul></>}
-        {officialPrice && <><h3 className="section-title">{text(locale, 'priceDetails')}</h3>{serviceMap.priceGroups.length > 0 ? <div className="price-groups">{serviceMap.priceGroups.map((group) => <section key={group.heading}><strong>{group.heading}</strong><ul>{group.items.map((item) => <li key={item}>{item}</li>)}</ul></section>)}</div> : <p className="official-hours">{officialPrice}</p>}</>}
-        {serviceMap.links.length > 0 && <><h3 className="section-title">{text(locale, 'officialLinks')}</h3><ul className="official-links">{serviceMap.links.map((link) => <li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{locale === 'en' ? link.labelEn : link.labelFi} ↗</a></li>)}</ul></>}
-      </details>}
-    </div>}
-  </div>
-}
 
 const LOCALE_KEY = 'hsm-locale'
 function initialLocale(): Locale {
@@ -111,211 +34,12 @@ function initialLocale(): Locale {
   return navigator.languages?.some((language) => language.toLowerCase().startsWith('fi')) ? 'fi' : 'en'
 }
 
-function distanceMetres([lng1, lat1]: GeoPoint, [lng2, lat2]: GeoPoint) {
-  const rad = Math.PI / 180
-  const a = Math.sin((lat2 - lat1) * rad / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin((lng2 - lng1) * rad / 2) ** 2
-  return 6_371_000 * 2 * Math.asin(Math.sqrt(a))
-}
-
-function formatDistance(locale: Locale, metres: number) {
-  const tag = locale === 'fi' ? 'fi-FI' : 'en-GB'
-  if (metres < 950) return `${new Intl.NumberFormat(tag).format(Math.max(10, Math.round(metres / 10) * 10))} m`
-  return `${new Intl.NumberFormat(tag, { maximumFractionDigits: metres < 10_000 ? 1 : 0 }).format(metres / 1000)} km`
-}
-
-// Many LIPAS records point at a provider's front page rather than the venue.
-// Those are not "official details" for this place, so they are not offered as such.
-function isGenericSite(url?: string) {
-  if (!url) return true
-  try { const parsed = new URL(url); return /^\/?((fi|en|sv)\/?)?$/.test(parsed.pathname) && !parsed.search } catch { return true }
-}
-
-function serviceMapSearchUrl(locale: Locale, name: string) {
-  return `https://palvelukartta.hel.fi/${locale}/search?q=${encodeURIComponent(name)}`
-}
-
-function venueTypeLabel(venue: SportsVenue | undefined, locale: Locale) {
-  const label = locale === 'en' ? venue?.lipas?.typeNameEn ?? venue?.lipas?.typeName : venue?.lipas?.typeName
-  // Grouped records are typed as "3 sports facilities": a count, not a type, so it is left out of the row.
-  return label && !/^\d+ (liikuntapaikkaa|sports facilities)$/i.test(label) ? label : undefined
-}
-
-function featureDisplayName(feature: SportFeature, locale: Locale, fallback?: string) {
-  return (locale === 'en' ? feature.nameEn : feature.name) ?? feature.name ?? fallback ?? text(locale, 'selectArea')
-}
-
-const allFilterOptions: { id: SportFilter; label: string }[] = [
-  { id: 'all', label: 'All' }, { id: 'football', label: 'Football' }, { id: 'basketball', label: 'Basketball' }, { id: 'outdoor', label: 'Outdoor' }, { id: 'gym', label: 'Gym' },
-  { id: 'athletics', label: 'Athletics' }, { id: 'swimming', label: 'Swimming' }, { id: 'outdoor_swimming', label: 'Outdoor swimming' }, { id: 'ice_hockey', label: 'Ice hockey' }, { id: 'tennis', label: 'Tennis' }, { id: 'padel', label: 'Padel' }, { id: 'martial_arts', label: 'Martial arts' }, { id: 'skateboarding', label: 'Skateboarding' },
-]
-
-
-const sportIcons: Record<SportFilter, RemixiconComponentType> = {
-  all: RiApps2Line,
-  football: RiFootballLine,
-  basketball: RiBasketballLine,
-  outdoor: RiLeafLine,
-  gym: RiWeightLine,
-  athletics: RiRunLine,
-  swimming: RiWaterFlashLine,
-  outdoor_swimming: RiWaterPercentLine,
-  ice_hockey: RiMedal2Line,
-  tennis: RiPingPongLine,
-  padel: RiPingPongLine,
-  martial_arts: RiBoxingLine,
-  skateboarding: RiFootprintLine,
-}
-
-// The row's leading tile shows the most specific sport the place offers; specific sports win over "gym" and "outdoor".
-const tilePriority: SportFilter[] = ['swimming', 'outdoor_swimming', 'ice_hockey', 'tennis', 'padel', 'basketball', 'football', 'athletics', 'skateboarding', 'martial_arts', 'gym']
-function PlaceTile({ feature }: { feature: SportFeature }) {
-  const id = tilePriority.find((option) => matchesFilter(feature, option))
-  const Icon = id ? sportIcons[id] : RiMapPin2Line
-  return <span className="place-tile" aria-hidden="true"><Icon size={18} /></span>
-}
-
-function SportFilterIcon({ id }: { id: SportFilter }) {
-  const Icon = sportIcons[id]
-  return <Icon className="sport-filter-icon" aria-hidden="true" size={15} />
-}
-
-const outdoorSports = new Set(['athletics', 'basketball', 'beachvolleyball', 'football', 'soccer', 'ice_hockey', 'outdoor_fitness', 'outdoor_swimming', 'padel', 'skateboarding', 'skating', 'skiing', 'tennis', 'volleyball'])
-
-function isOutdoorFeature(feature: SportFeature) {
-  const sports = feature.sports?.length ? feature.sports : [feature.sport]
-  if (sports.some((sport) => outdoorSports.has(sport))) return true
-  return /beach|court|field|fitness.station|hiihto|kenttä|kuntorata|luist|outdoor|park|pitch|puisto|ranta|rata|stadium|stadion|skate|track|trail|ulko|uimar/i.test(`${feature.name ?? ''} ${feature.facilityType ?? ''}`)
-}
-
-function matchesFilter(feature: SportFeature, filter: SportFilter) {
-  if (filter === 'all') return true
-  const sports = feature.sports?.length ? feature.sports : [feature.sport]
-  if (filter === 'football') return sports.some((sport) => ['soccer', 'football'].includes(sport))
-  if (filter === 'basketball') return sports.includes('basketball')
-  if (filter === 'outdoor') return isOutdoorFeature(feature)
-  if (filter === 'gym') return sports.some((sport) => ['fitness', 'outdoor_fitness'].includes(sport))
-  if (filter === 'athletics') return sports.some((sport) => ['athletics', 'running'].includes(sport))
-  if (filter === 'skateboarding') return sports.some((sport) => ['skateboarding', 'skateboard', 'scooter', 'rollerblading'].includes(sport))
-  return sports.includes(filter)
-}
-
-function matchesPrice(feature: SportFeature, filter: PriceFilter) {
-  return filter === 'all' || feature.priceClass === filter || feature.priceClass === 'mixed'
-}
-
-function matchesAccessibility(venue: SportsVenue | undefined, filter: AccessibilityFilter) {
-  if (filter === 'all') return true
-  return venue?.serviceMap?.accessibility?.[filter] === 'yes'
-}
-
-function matchesFamily(venue: SportsVenue | undefined, filter: FamilyFilter) {
-  return filter === 'all' || Boolean(venue?.serviceMap?.familySignals.length)
-}
-
-function priceLabelKey(priceClass: SportFeature['priceClass']) {
-  return priceClass === 'free' ? 'priceFree' : priceClass === 'paid' ? 'pricePaid' : priceClass === 'mixed' ? 'priceMixed' : 'priceUnknown'
-}
-
-function formatRouteDuration(locale: Locale, seconds: number) {
-  const minutes = Math.max(1, Math.round(seconds / 60))
-  if (minutes < 60) return `${minutes} ${text(locale, 'minutes')}`
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return `${hours} h${remainingMinutes ? ` ${remainingMinutes} ${text(locale, 'minutes')}` : ''}`
-}
-
-function transitModeLabel(locale: Locale, mode: string) {
-  switch (mode.toUpperCase()) {
-    case 'WALK': return text(locale, 'walkMode')
-    case 'BUS': return text(locale, 'busMode')
-    case 'TRAM': return text(locale, 'tramMode')
-    case 'RAIL': return text(locale, 'trainMode')
-    case 'SUBWAY': return text(locale, 'metroMode')
-    case 'FERRY': return text(locale, 'ferryMode')
-    default: return text(locale, 'transitMode')
-  }
-}
-
-function TransitLegIcon({ mode }: { mode: string }) {
-  const normalizedMode = mode.toUpperCase()
-  const Icon = normalizedMode === 'WALK' ? RiWalkLine : normalizedMode === 'BUS' ? RiBus2Line : normalizedMode === 'TRAM' ? RiTrainLine : normalizedMode === 'RAIL' ? RiTrainLine : normalizedMode === 'SUBWAY' ? RiSubwayLine : normalizedMode === 'FERRY' ? RiShipLine : RiBus2Line
-  return <Icon aria-hidden="true" size={17} />
-}
-
-function transitLegTitle(locale: Locale, leg: NonNullable<RouteResult['transit']>['legs'][number], index: number, total: number) {
-  const mode = leg.mode.toUpperCase()
-  if (mode === 'WALK') return text(locale, index === total - 1 ? 'transitWalkFrom' : 'transitWalkTo', { stop: index === total - 1 ? leg.from ?? 'your stop' : leg.to ?? 'your stop' })
-  if (!leg.routeName) return transitModeLabel(locale, leg.mode)
-  return text(locale, 'transitVehicle', { mode: transitModeLabel(locale, leg.mode), route: leg.routeName })
-}
-
-function transitLegDetail(locale: Locale, leg: NonNullable<RouteResult['transit']>['legs'][number]) {
-  const details = []
-  if (leg.headsign) details.push(text(locale, 'transitTowards', { headsign: leg.headsign }))
-  if (leg.from || leg.to) details.push(text(locale, 'transitStopPair', { from: leg.from ?? 'Start', to: leg.to ?? 'Destination' }))
-  return details.join(' · ')
-}
-
-function transitCompactLabel(locale: Locale, leg: NonNullable<RouteResult['transit']>['legs'][number]) {
-  const mode = transitModeLabel(locale, leg.mode)
-  return leg.routeName ? `${mode} ${leg.routeName}` : mode
-}
-
-function hslTicketZones(zones: string[]) {
-  const normalized = new Set(zones.map((zone) => zone.trim().toUpperCase()))
-  if (normalized.has('A')) return normalized.has('C') ? 'ABC' : 'AB'
-  if (normalized.has('B')) return normalized.has('C') ? 'BC' : 'AB'
-  if (normalized.has('C')) return normalized.has('D') ? 'CD' : 'BC'
-  if (normalized.has('D')) return 'D'
-  return zones.join('') || 'HSL'
-}
-
-function reportDataUrl(locale: Locale, feature: SportFeature, venue: SportsVenue | undefined) {
-  const name = feature.name ?? venue?.name ?? (locale === 'fi' ? 'Nimetön liikuntapaikka' : 'Unnamed sports facility')
-  const title = `${locale === 'fi' ? 'Virheellinen liikuntapaikkatieto' : 'Incorrect facility data'}: ${name}`
-  const body = [
-    locale === 'fi' ? 'Tässä liikuntapaikassa näyttää olevan virheellistä tai vanhentunutta tietoa.' : 'This facility appears to have incorrect or outdated information.',
-    '',
-    `${locale === 'fi' ? 'Liikuntapaikka' : 'Facility'}: ${name}`,
-    `${locale === 'fi' ? 'Osoite' : 'Address'}: ${venue?.lipas?.address ?? '—'}`,
-    `${locale === 'fi' ? 'Tunniste' : 'ID'}: ${feature.id}`,
-    venue?.sourceUrl ? `Source: ${venue.sourceUrl}` : '',
-    '',
-    locale === 'fi' ? 'Mitä pitäisi korjata?' : 'What should be corrected?',
-  ].filter(Boolean).join('\n')
-  const url = new URL('https://github.com/petudesign/Helsinki-Sports-Map/issues/new')
-  url.searchParams.set('title', title)
-  url.searchParams.set('body', body)
-  return url.toString()
-}
-
-function summarizeActivities(labels: string[], locale: Locale, max = 3) {
-  // A venue can list dozens of sports; a list row shows a few and the count of the rest.
-  if (labels.length <= max + 1) return labels.join(', ')
-  return `${labels.slice(0, max).join(', ')} ${locale === 'fi' ? `+${labels.length - max} muuta` : `+${labels.length - max} more`}`
-}
-
-function venueActivityLabel(locale: Locale, sport: string) {
-  const label = sportText(locale, sport)
-  const firstCharacter = Array.from(label)[0]
-  return firstCharacter ? `${firstCharacter.toLocaleUpperCase(locale === 'fi' ? 'fi-FI' : 'en-US')}${label.slice(firstCharacter.length)}` : label
-}
-
 if (import.meta.env.DEV) installStressEnvironment()
 
-const placeKindLabel = (locale: Locale, kind: NonNullable<AddressSuggestion['kind']>) => ({
-  area: locale === 'fi' ? 'Alue' : 'Area',
-  station: locale === 'fi' ? 'Asema' : 'Station',
-  place: locale === 'fi' ? 'Paikka' : 'Place',
-})[kind]
-function SuggestionIcon({ kind }: { kind?: AddressSuggestion['kind'] }) {
-  const Icon = kind === 'area' ? RiCommunityLine : kind === 'station' ? RiSubwayLine : kind === 'place' ? RiStore2Line : RiRoadMapLine
-  return <Icon aria-hidden="true" size={16} className="suggestion-icon" />
-}
-
 function App() {
-  const reviewMode = new URLSearchParams(window.location.search).get('review') === '1'
-  const wikiMode = new URLSearchParams(window.location.search).get('wiki') === '1'
+  // Internal tools are local-only and stay out of the production bundle.
+  const reviewMode = import.meta.env.DEV && new URLSearchParams(window.location.search).get('review') === '1'
+  const wikiMode = import.meta.env.DEV && new URLSearchParams(window.location.search).get('wiki') === '1'
   const mapRef = useRef<MapControls>(null)
   const filterDrawerRef = useRef<HTMLDetailsElement>(null)
   const [loadError, setLoadError] = useState(false)
@@ -417,8 +141,11 @@ function App() {
     if (!normalizedSearch) return true
     const values = searchIndex.get(id)
     // Finnish inflects the stem ("Itäkeskus" → "Itäkeskuksen"), so long words also match with one or two letters trimmed.
-    const variants = (word: string) => [word, word.length >= 6 ? word.slice(0, -1) : '', word.length >= 8 ? word.slice(0, -2) : ''].filter(Boolean)
-    return values ? normalizedSearch.split(/\s+/).every((word) => variants(word).some((variant) => values.some((value) => value.includes(variant)))) : false
+    // The word as typed may match inside a compound ("halli" → "uimahalli"). A trimmed stem must start a word and
+    // leave at most an inflection ending, so "kamppi" no longer reaches "kamppailulajit" through "kampp".
+    const stems = (word: string) => [word.length >= 6 ? word.slice(0, -1) : '', word.length >= 8 ? word.slice(0, -2) : ''].filter(Boolean)
+    const stemStartsWord = (value: string, stem: string) => value.split(/[^\p{L}\p{N}]+/u).some((part) => part.startsWith(stem) && part.length <= stem.length + 4)
+    return values ? normalizedSearch.split(/\s+/).every((word) => values.some((value) => value.includes(word)) || stems(word).some((stem) => values.some((value) => stemStartsWord(value, stem)))) : false
   }, [normalizedSearch, searchIndex])
   const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
     if (!matchesFilter(feature, filter)) return false
@@ -480,7 +207,7 @@ function App() {
   const venueDiagnostics = useMemo(() => {
     if (!debugVenues) return { duplicateNames: [] as string[], duplicateNameGroups: 0, venueCount: 0, featureCount: 0, sourceCount: 0 }
     const names = new Map<string, { name: string; count: number }>()
-    mapArea?.venues.forEach((venue) => { const key = (venue.name ?? '').trim().toLocaleLowerCase('fi-FI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ''); if (key) { const current = names.get(key); names.set(key, { name: current?.name ?? venue.name ?? key, count: (current?.count ?? 0) + 1 }) } })
+    mapArea?.venues.forEach((venue) => { const key = nameKey(venue.name); if (key) { const current = names.get(key); names.set(key, { name: current?.name ?? venue.name ?? key, count: (current?.count ?? 0) + 1 }) } })
     const duplicateNames = [...names.values()].filter(({ count }) => count > 1).sort((a, b) => b.count - a.count).slice(0, 3).map(({ name, count }) => `${name} (${count})`)
     return { duplicateNames, duplicateNameGroups: [...names.values()].filter(({ count }) => count > 1).length, venueCount: mapArea?.venues.length ?? 0, featureCount: mapArea?.sports.length ?? 0, sourceCount: new Set(mapArea?.venues.map((venue) => venue.source.provider)).size }
   }, [mapArea, debugVenues])
@@ -601,7 +328,10 @@ function App() {
       setRoutes({})
       setRouteStatus('idle')
       setLocationStatus('idle')
-      reverseGeocode(coordinates).then((suggestion) => { if (requestId === locationRequestRef.current) setStartingPoint(suggestion.label) }).catch(() => undefined)
+      reverseGeocode(coordinates).then((suggestion) => { if (requestId === locationRequestRef.current) setStartingPoint(suggestion.label) }).catch((error) => {
+        // The field keeps "Current location"; the coordinates are already set, so routing still works.
+        if (import.meta.env.DEV) console.warn('Reverse geocoding failed', error)
+      })
     }, (error) => {
       if (requestId !== locationRequestRef.current) return
       if (locationTimeoutRef.current) window.clearTimeout(locationTimeoutRef.current)
@@ -812,7 +542,7 @@ function App() {
     </div>
 
     <section className="map-stage" aria-label={locale === 'fi' ? 'Kartta ja kohteet' : 'Map and facilities'}>
-      {mapArea && <Suspense fallback={null}><SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} fitKey={mapFitKey} fitTargets={mapFitTargets} /></Suspense>}
+      {mapArea && <ErrorBoundary fallback={<div className="map-status is-error" role="alert"><span><strong>{locale === 'fi' ? 'Kartta ei latautunut.' : 'The map didn’t load.'}</strong> {locale === 'fi' ? 'Paikat löytyvät silti listasta.' : 'You can still browse places in the list.'}</span><button type="button" onClick={reloadPage}>{locale === 'fi' ? 'Lataa sivu uudelleen' : 'Reload page'}</button></div>}><Suspense fallback={null}><SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} fitKey={mapFitKey} fitTargets={mapFitTargets} /></Suspense></ErrorBoundary>}
       <div className="map-controls">
         <Segmented className="segmented-vertical" orientation="vertical" label={extraText(locale, 'mapProjection')} value={mode} onChange={setMode} options={[{ value: '2d', label: '2D' }, { value: 'iso', label: locale === 'fi' ? 'Vino' : 'Tilt' }]} />
         <button type="button" className="icon-btn map-reset" onClick={() => { selectFeature(undefined); mapRef.current?.reset() }} aria-label={locale === 'fi' ? 'Palauta koko kaupungin näkymä' : 'Reset to the whole city'} title={locale === 'fi' ? 'Palauta näkymä' : 'Reset view'}><RiFullscreenExitLine aria-hidden="true" size={18} /></button>

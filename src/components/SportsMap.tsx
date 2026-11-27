@@ -1,15 +1,18 @@
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react'
-import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, Popup, ScaleControl, setWorkerUrl, type ExpressionSpecification, type GeoJSONSource } from 'maplibre-gl'
+import { AttributionControl, Map as LibreMap, LngLatBounds, NavigationControl, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import type { FeatureCollection, LineString, MultiPolygon, Point, Polygon } from 'geojson'
+import type { FeatureCollection, Polygon } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { activeCity } from '../config/city'
 import boundary from '../data/helsinki-boundary.json'
 import type { GeoPoint, MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
-import { text, type Locale } from '../i18n'
+import type { Locale } from '../i18n'
 import { stressFlag } from '../dev/stress'
 import { mapTheme as t } from '../design-system/mapTheme'
+import { tuneBasemap } from './map/basemap'
+import { empty, pointData, routeLineData, routePointData } from './map/layerData'
+import { emptyTransitZones, loadTransitZones, type TransitZoneCollection } from './map/transitZones'
 
 export type MapControls = { reset: () => void }
 type Props = {
@@ -27,7 +30,6 @@ type Props = {
   fitKey?: string
   fitTargets?: GeoPoint[]
 }
-const empty: FeatureCollection = { type: 'FeatureCollection', features: [] }
 // Bundle the v6 module worker explicitly for both Vite dev and production URLs.
 setWorkerUrl(workerUrl)
 const stressMapError = import.meta.env.DEV && stressFlag('maperror')
@@ -57,135 +59,6 @@ const DEFAULT_VIEW_EAST = 220
 const defaultCameraOffset = (): [number, number] => isMobile() ? [0, 0] : [PANEL_INSET / 2 - DEFAULT_VIEW_EAST, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
 const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
-type TransitZoneCollection = FeatureCollection<Polygon | MultiPolygon>
-const emptyTransitZones: TransitZoneCollection = { type: 'FeatureCollection', features: [] }
-const HSL_ZONES_URL = 'https://services1.arcgis.com/sswNXkUiRoWtrx0t/arcgis/rest/services/zones_all/FeatureServer/0/query?where=ZONE%20IN%20(%27A%27,%27B%27,%27C%27,%27D%27,%27E%27)&outFields=ZONE,NIMI_E&returnGeometry=true&outSR=4326&f=geojson'
-
-async function loadTransitZones(): Promise<TransitZoneCollection> {
-  const response = await fetch(HSL_ZONES_URL, { cache: 'force-cache', headers: { Accept: 'application/geo+json,application/json' } })
-  if (!response.ok) throw new Error('HSL fare zones unavailable')
-  const data = await response.json() as TransitZoneCollection
-  return {
-    ...data,
-    features: data.features.flatMap((feature) => {
-      const zone = String(feature.properties?.ZONE ?? feature.properties?.zone ?? '').trim().toUpperCase()
-      return /^[A-E]$/.test(zone) ? [{ ...feature, properties: { ...(feature.properties ?? {}), zone } }] : []
-    }),
-  }
-}
-
-/*
- * Quiet the OpenFreeMap Positron basemap so it reads as part of the product:
- * sentence-case regular labels in the text-3 grey (no tracked uppercase or
- * italics), no road shields, white roads on a hairline casing, and names in
- * the UI language where OpenStreetMap has them (name:en / name:fi).
- */
-function tuneBasemap(map: LibreMap, locale: Locale) {
-  const set = (id: string, apply: () => void) => { if (map.getLayer(id)) { try { apply() } catch { /* layer shape differs in a custom style */ } } }
-  const localizedName: ExpressionSpecification = ['coalesce', ['get', `name:${locale}`], ['get', 'name:latin'], ['get', 'name']]
-  for (const layer of map.getStyle().layers) {
-    if (layer.type !== 'symbol') continue
-    const sourceLayer = 'source-layer' in layer ? layer['source-layer'] : ''
-    if (sourceLayer === 'place') set(layer.id, () => {
-      map.setLayoutProperty(layer.id, 'text-transform', 'none')
-      map.setLayoutProperty(layer.id, 'text-letter-spacing', 0)
-      map.setLayoutProperty(layer.id, 'text-font', [layer.id.includes('capital') || layer.id.includes('country') ? 'Noto Sans Bold' : 'Noto Sans Regular'])
-      map.setLayoutProperty(layer.id, 'text-field', localizedName)
-      map.setPaintProperty(layer.id, 'text-color', layer.id.includes('city') ? t.ink : t.label)
-      map.setPaintProperty(layer.id, 'text-halo-color', t.halo)
-      map.setPaintProperty(layer.id, 'text-halo-width', 1.5)
-    })
-    if (sourceLayer === 'water_name' || sourceLayer === 'waterway') set(layer.id, () => {
-      map.setLayoutProperty(layer.id, 'text-font', ['Noto Sans Regular'])
-      map.setLayoutProperty(layer.id, 'text-letter-spacing', 0)
-      map.setLayoutProperty(layer.id, 'text-field', localizedName)
-      map.setPaintProperty(layer.id, 'text-color', t.waterLabel)
-    })
-    if (sourceLayer === 'transportation_name') set(layer.id, () => {
-      if (layer.id.includes('shield')) { map.setLayoutProperty(layer.id, 'visibility', 'none'); return }
-      map.setPaintProperty(layer.id, 'text-color', t.labelSoft)
-    })
-  }
-  for (const id of ['highway_major_inner', 'highway_motorway_inner', 'highway_minor']) set(id, () => map.setPaintProperty(id, 'line-color', t.road))
-  for (const id of ['highway_major_casing', 'highway_motorway_casing']) set(id, () => map.setPaintProperty(id, 'line-color', t.roadCasing))
-  set('building', () => map.setPaintProperty('building', 'fill-color', t.building))
-  set('landuse_residential', () => map.setPaintProperty('landuse_residential', 'fill-color', t.residential))
-}
-
-// Map labels stay short; the full name is always in the panel.
-const mapLabel = (name: string) => name.length > 36 ? `${name.slice(0, 34).trimEnd()}…` : name
-
-function pointData(features: SportFeature[], locale: Locale): FeatureCollection<Point> {
-  return { type: 'FeatureCollection', features: features.flatMap((feature) => feature.center ? [{
-    type: 'Feature' as const, id: feature.id,
-    properties: { id: feature.id, name: mapLabel(locale === 'en' ? feature.nameEn ?? feature.name ?? '' : feature.name ?? ''), sport: feature.sport },
-    geometry: { type: 'Point' as const, coordinates: feature.center },
-  }] : []) }
-}
-
-function transitModeLabel(locale: Locale, mode: string) {
-  switch (mode.toUpperCase()) {
-    case 'BUS': return text(locale, 'busMode')
-    case 'TRAM': return text(locale, 'tramMode')
-    case 'RAIL': return text(locale, 'trainMode')
-    case 'SUBWAY': return text(locale, 'metroMode')
-    case 'FERRY': return text(locale, 'ferryMode')
-    default: return text(locale, 'transitMode')
-  }
-}
-
-function routeLineData(route: RouteResult | undefined): FeatureCollection<LineString> {
-  if (!route) return empty as FeatureCollection<LineString>
-  const transitLegs = route.transit?.legs ?? []
-  const transitFeatures = transitLegs.flatMap((leg, index) => {
-    const fallback = [
-      leg.fromCoordinates ?? (index === 0 ? route.origin : undefined),
-      leg.toCoordinates ?? (index === transitLegs.length - 1 ? route.destination : undefined),
-    ].filter((coordinate): coordinate is [number, number] => Boolean(coordinate))
-    const coordinates = leg.geometry && leg.geometry.length > 1 ? leg.geometry : fallback
-    return coordinates.length > 1 ? [{ type: 'Feature' as const, properties: { mode: leg.mode.toLowerCase() }, geometry: { type: 'LineString' as const, coordinates } }] : []
-  })
-  if (transitFeatures.length) return { type: 'FeatureCollection', features: transitFeatures }
-  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { mode: route.mode }, geometry: { type: 'LineString', coordinates: route.coordinates } }] }
-}
-
-function routePointData(route: RouteResult | undefined, locale: Locale): FeatureCollection<Point> {
-  if (!route) return empty as FeatureCollection<Point>
-  const events = (route.transit?.legs ?? []).flatMap((leg) => {
-    if (leg.mode.toUpperCase() === 'WALK') return []
-    return [
-      leg.fromCoordinates ? { kind: 'board' as const, coordinates: leg.fromCoordinates, leg } : undefined,
-      leg.toCoordinates ? { kind: 'alight' as const, coordinates: leg.toCoordinates, leg } : undefined,
-    ].filter((event): event is NonNullable<typeof event> => Boolean(event))
-  })
-  const groups = new Map<string, typeof events>()
-  for (const event of events) {
-    const key = event.coordinates.map((value) => value.toFixed(6)).join(',')
-    const group = groups.get(key) ?? []
-    group.push(event)
-    groups.set(key, group)
-  }
-  const stopFeatures = [...groups.values()].map((group) => {
-    const [first] = group
-    const board = group.find((event) => event.kind === 'board')
-    const isTransfer = group.length > 1
-    const label = isTransfer && board
-      ? text(locale, 'transitChange', { mode: transitModeLabel(locale, board.leg.mode), route: board.leg.routeName ?? '—' })
-      : first.kind === 'board'
-        ? text(locale, 'transitBoard', { mode: transitModeLabel(locale, first.leg.mode), route: first.leg.routeName ?? '—' })
-        : text(locale, 'transitAlight', { stop: first.leg.to ?? (locale === 'fi' ? 'määränpää' : 'destination') })
-    return { type: 'Feature' as const, properties: { kind: isTransfer ? 'transfer' : first.kind, label }, geometry: { type: 'Point' as const, coordinates: first.coordinates } }
-  })
-  return {
-    type: 'FeatureCollection',
-    features: [
-      { type: 'Feature', properties: { kind: 'start', label: locale === 'fi' ? 'Lähtö tästä' : 'Start here' }, geometry: { type: 'Point', coordinates: route.origin } },
-      { type: 'Feature', properties: { kind: 'end', label: locale === 'fi' ? 'Perille' : 'Destination' }, geometry: { type: 'Point', coordinates: route.destination } },
-      ...stopFeatures,
-    ],
-  }
-}
-
 export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale, origin, fitKey, fitTargets }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LibreMap | null>(null)
@@ -218,7 +91,11 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
     let cancelled = false
     loadTransitZones().then((data) => {
       if (!cancelled) setTransitZoneData({ ...data, features: data.features.filter((feature) => requestedZones.has(String(feature.properties?.zone ?? '').toUpperCase())) })
-    }).catch(() => { if (!cancelled) setTransitZoneData(emptyTransitZones) })
+    }).catch((error) => {
+      // The route still works without the zone overlay; only say why in development.
+      if (import.meta.env.DEV) console.warn('HSL fare zones failed to load', error)
+      if (!cancelled) setTransitZoneData(emptyTransitZones)
+    })
     return () => { cancelled = true }
   }, [route?.transit?.zones?.join('|')])
 

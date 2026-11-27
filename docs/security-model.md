@@ -41,5 +41,9 @@ The repository may be public, but it must contain only source code, public fixtu
 - Provider requests use fixed result-size limits, timeouts, response-size limits, and provider-specific rate controls.
 - Address suggestions use the Helsinki street index first; credentialed address resolution happens only for a selected or submitted address.
 - User-derived route and reverse-geocoding responses are private and are not CDN-cached.
+- Request bodies and upstream responses are read with hard byte limits (`readJsonBody`, `readBoundedText` in `server/security.mjs`); a response over the limit is cut off, not buffered.
+- The local dev server runs the same handlers as production, so validation and limits match.
+- The in-app rate limit keys on the client IP headers Vercel sets itself. Behind another proxy those headers would need re-checking.
+- The review, wiki and design-system tools are compiled only into dev builds.
 - Production Vercel WAF adds a cross-instance limit of 100 requests per client IP per 60 seconds for paths beginning with `/api/`. Endpoint-specific application limits remain stricter where needed.
 

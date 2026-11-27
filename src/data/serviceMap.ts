@@ -146,10 +146,6 @@ const snapshotUnits = (snapshot.units ?? []) as ServiceMapSnapshot[]
 const snapshotsByServiceMapId = new Map(snapshotUnits.map((unit) => [unit.serviceMapId, unit]))
 const snapshotsByLipasId = new Map(snapshotUnits.filter((unit) => unit.lipasId !== undefined).map((unit) => [unit.lipasId as number, unit]))
 
-const englishDescriptionTranslations: Record<number, string> = {
-  41444: 'Five of the tennis courts are covered by air domes in winter. The indoor sports hall has a 137 m² spectator stand, equipment rental, a tennis shop and a café. The courts have been under renovation since 2018.',
-}
-
 function detailsFromSnapshot(unit: ServiceMapSnapshot): ServiceMapDetails {
   return {
     id: unit.serviceMapId,

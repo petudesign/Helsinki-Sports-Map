@@ -1,8 +1,7 @@
-import { applyRateLimit, readBoundedQueryParam, reserveNominatimSlot, timeoutSignal } from '../server/security.mjs'
+import { applyRateLimit, NOMINATIM_USER_AGENT, readBoundedQueryParam, readBoundedText, requestUrlOf, requireMethod, reserveNominatimSlot, timeoutSignal } from '../server/security.mjs'
+import { HELSINKI_VIEWBOX } from '../server/geo.mjs'
 
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
-const HELSINKI_VIEWBOX = '24.7828026,60.2978497,25.2545116,59.922486'
-const NOMINATIM_USER_AGENT = 'Helsinki-Sports-Map/0.0.1 (+https://helsinki-sports-map.vercel.app/)'
 
 function safeResult(result) {
   return {
@@ -19,14 +18,10 @@ function safeResult(result) {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== 'GET') {
-    response.setHeader('Allow', 'GET')
-    response.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+  if (!requireMethod(request, response, 'GET')) return
   if (!applyRateLimit(request, response, { scope: 'nominatim-geocode', limit: 10 })) return
 
-  const requestUrl = new URL(request.url ?? '/', 'http://localhost')
+  const requestUrl = requestUrlOf(request)
   const query = readBoundedQueryParam(requestUrl, 'q', { maxLength: 128, required: true })
   if (!query.valid) {
     response.status(400).json({ error: 'Invalid geocoding query' })
@@ -58,13 +53,8 @@ export default async function handler(request, response) {
       response.status(502).json({ error: 'Geocoding service request failed' })
       return
     }
-    const contentLength = Number(upstream.headers.get('content-length'))
-    if (Number.isFinite(contentLength) && contentLength > 500_000) {
-      response.status(502).json({ error: 'Geocoding response was too large' })
-      return
-    }
-    const body = await upstream.text()
-    if (body.length > 500_000) {
+    const body = await readBoundedText(upstream, 500_000)
+    if (body === undefined) {
       response.status(502).json({ error: 'Geocoding response was too large' })
       return
     }

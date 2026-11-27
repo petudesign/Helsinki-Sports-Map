@@ -1,135 +1,66 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
-import transitRouteHandler from './api/transit-route.mjs'
+import geocodeHandler from './api/geocode.mjs'
+import helsinkiStreetsHandler from './api/helsinki-streets.mjs'
+import paikkatietoHandler from './api/paikkatieto.mjs'
 import placesHandler from './api/places.mjs'
+import reverseGeocodeHandler from './api/reverse-geocode.mjs'
+import routeHandler from './api/route.mjs'
+import transitRouteHandler from './api/transit-route.mjs'
 
-function transitDevApiPlugin(apiKey: string) {
-  if (apiKey) process.env.DIGITRANSIT_API_KEY = apiKey
+type ApiResponse = {
+  status(code: number): ApiResponse
+  setHeader(name: string, value: string): void
+  json(payload: unknown): void
+  send(body: string): void
+}
+type ApiHandler = (request: IncomingMessage, response: ApiResponse) => Promise<void>
+
+// The dev server runs the same serverless handlers as production, so local
+// requests get the same validation, size limits and rate limits.
+const apiHandlers: Record<string, ApiHandler> = {
+  '/api/geocode': geocodeHandler,
+  '/api/helsinki-streets': helsinkiStreetsHandler,
+  '/api/paikkatieto': paikkatietoHandler,
+  '/api/places': placesHandler,
+  '/api/reverse-geocode': reverseGeocodeHandler,
+  '/api/route': routeHandler,
+  '/api/transit-route': transitRouteHandler,
+}
+
+function vercelStyleResponse(response: ServerResponse): ApiResponse {
+  const api: ApiResponse = {
+    status(code) { response.statusCode = code; return api },
+    setHeader(name, value) { response.setHeader(name, value) },
+    json(payload) { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(payload)) },
+    send(body) { response.end(body) },
+  }
+  return api
+}
+
+function devApiPlugin(env: Record<string, string>) {
+  // Handlers read their keys from process.env, as they do on Vercel.
+  for (const name of ['PAIKKATIETO_API_KEY', 'DIGITRANSIT_API_KEY']) {
+    if (env[name]) process.env[name] = env[name]
+  }
   return {
-    name: 'hsm-transit-dev-api',
-    configureServer(server: { middlewares: { use: (path: string, handler: (request: any, response: any, next: () => void) => void) => void } }) {
-      server.middlewares.use('/api/transit-route', (request, response, next) => {
-        if (request.method !== 'POST') { next(); return }
-        let rawBody = ''
-        request.on('data', (chunk: Buffer) => { rawBody += chunk.toString() })
-        request.on('end', async () => {
-          let body
-          try { body = JSON.parse(rawBody) } catch {
-            response.statusCode = 400
-            response.setHeader('Content-Type', 'application/json')
-            response.end(JSON.stringify({ error: 'Invalid transit request' }))
-            return
-          }
-          const apiResponse = {
-            status(code: number) { response.statusCode = code; return apiResponse },
-            setHeader(name: string, value: string) { response.setHeader(name, value) },
-            json(payload: unknown) { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(payload)) },
-          }
-          try { await transitRouteHandler({ ...request, body }, apiResponse) }
-          catch { response.statusCode = 502; response.end(JSON.stringify({ error: 'transit_service_unavailable' })) }
+    name: 'hsm-dev-api',
+    configureServer(server: { middlewares: { use: (handler: (request: IncomingMessage, response: ServerResponse, next: () => void) => void) => void } }) {
+      server.middlewares.use((request, response, next) => {
+        const handler = apiHandlers[new URL(request.url ?? '/', 'http://localhost').pathname]
+        if (!handler) { next(); return }
+        handler(request, vercelStyleResponse(response)).catch(() => {
+          if (response.headersSent) { response.end(); return }
+          response.statusCode = 502
+          response.setHeader('Content-Type', 'application/json')
+          response.end(JSON.stringify({ error: 'service_unavailable' }))
         })
       })
-      // Same serverless handler as production, so the dev server needs no separate proxy rules.
-      server.middlewares.use('/api/places', async (request, response) => {
-        const apiResponse = {
-          status(code: number) { response.statusCode = code; return apiResponse },
-          setHeader(name: string, value: string) { response.setHeader(name, value) },
-          json(payload: unknown) { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(payload)) },
-        }
-        // Connect strips the mount path; the handler only reads the query string.
-        try { await placesHandler({ ...request, method: request.method, headers: request.headers, url: request.originalUrl ?? request.url }, apiResponse) }
-        catch { response.statusCode = 502; response.end(JSON.stringify({ error: 'places_service_unavailable' })) }
-      })
     },
   }
 }
 
-function wfsProxyPath(path: string) {
-  const requestUrl = new URL(path, 'http://localhost')
-  const prefix = requestUrl.searchParams.get('prefix')?.trim() ?? ''
-  const escapedPrefix = prefix.replace(/'/g, "''")
-  const params = new URLSearchParams({
-    service: 'WFS',
-    version: '2.0.0',
-    request: 'GetFeature',
-    typeNames: 'avoindata:Helsinki_osoiteluettelo',
-    count: '200',
-    outputFormat: 'application/json',
-    CQL_FILTER: `katunimi ILIKE '${escapedPrefix}%' AND osoitenumero IS NOT NULL`,
-  })
-  return `/ws/geoserver/avoindata/wfs?${params}`
-}
-
-function nominatimSearchProxyPath(path: string) {
-  const requestUrl = new URL(path, 'http://localhost')
-  const query = requestUrl.searchParams.get('q')?.trim() ?? ''
-  const params = new URLSearchParams({ format: 'jsonv2', limit: '1', addressdetails: '1', countrycodes: 'fi', 'accept-language': 'fi,en', viewbox: '24.7828026,60.2978497,25.2545116,59.922486', bounded: '1', q: query })
-  return `/search?${params}`
-}
-
-function nominatimReverseProxyPath(path: string) {
-  const requestUrl = new URL(path, 'http://localhost')
-  const params = new URLSearchParams({ format: 'jsonv2', zoom: '18', addressdetails: '1', 'accept-language': 'fi,en', lat: requestUrl.searchParams.get('lat') ?? '', lon: requestUrl.searchParams.get('lon') ?? '' })
-  return `/reverse?${params}`
-}
-
-function routeProxyPath(path: string) {
-  const requestUrl = new URL(path, 'http://localhost')
-  const servers = { walk: 'routed-foot', bike: 'routed-bike', car: 'routed-car' }
-  const server = servers[requestUrl.searchParams.get('mode') as keyof typeof servers] ?? 'routed-foot'
-  const coordinates = [
-    `${requestUrl.searchParams.get('originLng') ?? ''},${requestUrl.searchParams.get('originLat') ?? ''}`,
-    `${requestUrl.searchParams.get('destinationLng') ?? ''},${requestUrl.searchParams.get('destinationLat') ?? ''}`,
-  ].join(';')
-  return `/${server}/route/v1/driving/${coordinates}?overview=full&geometries=geojson`
-}
-
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const apiKey = env.PAIKKATIETO_API_KEY
-  const transitApiKey = env.DIGITRANSIT_API_KEY
-
-  return {
-    plugins: [react(), transitDevApiPlugin(transitApiKey)],
-    server: {
-      proxy: {
-          '/api/paikkatieto': {
-          target: 'https://paikkatietohaku.api.hel.fi',
-          changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api\/paikkatieto/, '/v1/address/'),
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyRequest) => {
-              if (apiKey) proxyRequest.setHeader('Api-Key', apiKey)
-            })
-            },
-          },
-          '/api/helsinki-streets': {
-            target: 'https://kartta.hel.fi',
-            changeOrigin: true,
-            rewrite: wfsProxyPath,
-          },
-          '/api/geocode': {
-            target: 'https://nominatim.openstreetmap.org',
-            changeOrigin: true,
-            rewrite: nominatimSearchProxyPath,
-            configure: (proxy) => {
-              proxy.on('proxyReq', (proxyRequest) => proxyRequest.setHeader('User-Agent', 'Helsinki-Sports-Map/0.0.1 (+https://helsinki-sports-map.vercel.app/)'))
-            },
-          },
-          '/api/reverse-geocode': {
-            target: 'https://nominatim.openstreetmap.org',
-            changeOrigin: true,
-            rewrite: nominatimReverseProxyPath,
-            configure: (proxy) => {
-              proxy.on('proxyReq', (proxyRequest) => proxyRequest.setHeader('User-Agent', 'Helsinki-Sports-Map/0.0.1 (+https://helsinki-sports-map.vercel.app/)'))
-            },
-          },
-          '/api/route': {
-            target: 'https://routing.openstreetmap.de',
-            changeOrigin: true,
-            rewrite: routeProxyPath,
-          },
-        },
-    },
-  }
-})
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), devApiPlugin(loadEnv(mode, process.cwd(), ''))],
+}))

@@ -1,7 +1,7 @@
 // Place and area autocomplete for the starting-point field ("Kamppi", "Itäkeskus",
 // "Kauppakeskus Redi"). Uses Digitransit's geocoder with the same server-only key
 // as transit routing. Street addresses still come from Helsinki's own registers.
-import { applyRateLimit, readBoundedQueryParam, timeoutSignal } from '../server/security.mjs'
+import { applyRateLimit, readBoundedQueryParam, readBoundedText, requestUrlOf, requireMethod, timeoutSignal } from '../server/security.mjs'
 
 const DIGITRANSIT_GEOCODING_URL = 'https://api.digitransit.fi/geocoding/v1/autocomplete'
 // Neighbourhoods, districts, named venues and stations. Individual bus stops are
@@ -25,11 +25,7 @@ function compactFeature(feature) {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== 'GET') {
-    response.setHeader('Allow', 'GET')
-    response.status(405).json({ error: 'Method not allowed' })
-    return
-  }
+  if (!requireMethod(request, response, 'GET')) return
   if (!applyRateLimit(request, response, { scope: 'places', limit: 60 })) return
 
   const apiKey = process.env.DIGITRANSIT_API_KEY
@@ -38,7 +34,7 @@ export default async function handler(request, response) {
     return
   }
 
-  const requestUrl = new URL(request.url ?? '/', 'http://localhost')
+  const requestUrl = requestUrlOf(request)
   const text = readBoundedQueryParam(requestUrl, 'text', { maxLength: 80, required: true })
   const lang = requestUrl.searchParams.get('lang') ?? 'fi'
   if (!text.valid || text.value.length < 2 || !LANGUAGES.has(lang)) {
@@ -65,8 +61,8 @@ export default async function handler(request, response) {
       headers: { Accept: 'application/json', 'digitransit-subscription-key': apiKey },
       signal: timeoutSignal(5_000),
     })
-    const body = await upstream.text()
-    if (!upstream.ok || body.length > 1_000_000) {
+    const body = await readBoundedText(upstream, 1_000_000)
+    if (!upstream.ok || body === undefined) {
       response.status(502).json({ error: 'places_service_unavailable' })
       return
     }

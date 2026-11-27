@@ -7,8 +7,11 @@ function headerValue(request, name) {
   return Array.isArray(value) ? value[0] : value
 }
 
+// Vercel sets these headers itself and does not forward client-supplied IPs, so
+// they are trustworthy there. Anywhere else (the local dev server) a client can
+// send its own value, which is acceptable only because that server is local.
 function clientIdentifier(request) {
-  const forwarded = headerValue(request, 'x-forwarded-for')
+  const forwarded = headerValue(request, 'x-vercel-forwarded-for') ?? headerValue(request, 'x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim() || 'unknown'
   return headerValue(request, 'x-real-ip')?.trim() || 'unknown'
 }
@@ -69,6 +72,21 @@ export function readCoordinate(url, name, { min, max }) {
     : { valid: false, value: undefined }
 }
 
+// Answers 405 and returns false unless the request uses the given method.
+export function requireMethod(request, response, method) {
+  if (request.method === method) return true
+  response.setHeader('Allow', method)
+  response.status(405).json({ error: 'Method not allowed' })
+  return false
+}
+
+// Handlers only read the query string; the host is a placeholder.
+export function requestUrlOf(request) {
+  return new URL(request.url ?? '/', 'http://localhost')
+}
+
+export const NOMINATIM_USER_AGENT = 'Helsinki-Sports-Map/0.0.1 (+https://helsinki-sports-map.vercel.app/)'
+
 // Nominatim's public service asks applications to stay at or below one
 // request per second. This guard is per warm instance; the app also uses
 // WAF limits and only calls Nominatim for explicit user actions.
@@ -77,6 +95,54 @@ export function reserveNominatimSlot() {
   if (now < nextNominatimRequestAt) return Math.ceil((nextNominatimRequestAt - now) / 1000)
   nextNominatimRequestAt = now + 1_000
   return 0
+}
+
+// Read an upstream response body, stopping as soon as it exceeds maxBytes so an
+// oversized or endless response never sits fully in memory. Returns undefined
+// when the body is too large.
+export async function readBoundedText(response, maxBytes) {
+  const declared = Number(response.headers?.get?.('content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) return undefined
+  const reader = response.body?.getReader?.()
+  if (!reader) {
+    const text = await response.text()
+    return new TextEncoder().encode(text).byteLength > maxBytes ? undefined : text
+  }
+  const chunks = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined)
+      return undefined
+    }
+    chunks.push(value)
+  }
+  const decoder = new TextDecoder()
+  return chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join('') + decoder.decode()
+}
+
+export class RequestBodyTooLargeError extends Error {}
+
+// Parse a JSON request body with a hard size limit. Vercel may hand over an
+// already-parsed body; a raw Node stream is read incrementally.
+export async function readJsonBody(request, maxBytes = 16_000) {
+  if (request.body && typeof request.body === 'object') return request.body
+  if (typeof request.body === 'string') {
+    if (new TextEncoder().encode(request.body).byteLength > maxBytes) throw new RequestBodyTooLargeError()
+    return JSON.parse(request.body)
+  }
+  const chunks = []
+  let total = 0
+  for await (const chunk of request) {
+    total += chunk.length
+    if (total > maxBytes) throw new RequestBodyTooLargeError()
+    chunks.push(typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk)
+  }
+  const body = new TextDecoder().decode(Buffer.concat(chunks))
+  return body ? JSON.parse(body) : undefined
 }
 
 export function timeoutSignal(milliseconds) {

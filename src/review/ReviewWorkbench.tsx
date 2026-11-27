@@ -57,6 +57,7 @@ export function ReviewWorkbench() {
   const [editing, setEditing] = useState(false)
   const [editedPrices, setEditedPrices] = useState<string[]>([])
   const [note, setNote] = useState('')
+  const [saveFailed, setSaveFailed] = useState(false)
 
   const current = reviewCandidates[selectedIndex]
   const currentReview = current ? reviews[current.id] : undefined
@@ -95,7 +96,8 @@ export function ReviewWorkbench() {
 
   function persist(next: StoredReviews) {
     setReviews(next)
-    window.localStorage.setItem(storageKey, JSON.stringify(next))
+    // Storage can be full or blocked; the decision stays in this tab and the reviewer is told.
+    try { window.localStorage.setItem(storageKey, JSON.stringify(next)); setSaveFailed(false) } catch { setSaveFailed(true) }
   }
 
   function nextPendingIndex(from: number) {
@@ -159,7 +161,7 @@ export function ReviewWorkbench() {
   return <main className="review-shell">
     <header className="review-topbar">
       <div className="review-brand"><span className="review-mark">HSM</span><div><h1>Review queue</h1><p>Validate extracted sports venue facts before they reach the map.</p></div></div>
-      <div className="review-top-actions"><span className="review-local-status"><span className="status-dot" /> Local only · nothing is published</span><button type="button" className="review-export" disabled={!approvedCount} onClick={downloadApprovedExport}>Export {approvedCount} approved</button><a href={window.location.pathname}>Back to map</a></div>
+      <div className="review-top-actions"><span className="review-local-status" role="status"><span className="status-dot" /> {saveFailed ? 'Not saved: browser storage is unavailable. Export before closing this tab.' : 'Local only · nothing is published'}</span><button type="button" className="review-export" disabled={!approvedCount} onClick={downloadApprovedExport}>Export {approvedCount} approved</button><a href={window.location.pathname}>Back to map</a></div>
     </header>
 
     <div className="review-layout">

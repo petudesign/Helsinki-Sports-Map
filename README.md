@@ -124,20 +124,17 @@ The data layer is intentionally kept separate from the UI so that additional sou
 - OpenStreetMap-based routing
 - Vercel
 
-The main map uses MapLibre for native touch gestures, zoom-dependent vector tiles and worker-based clustering. The previous custom Canvas renderer remains in the repository for reference but is not loaded by the application. The tilted view uses the same map instance as the 2D view.
+The main map uses MapLibre for native touch gestures, zoom-dependent vector tiles and worker-based clustering. The tilted view uses the same map instance as the 2D view.
 
 ## Architecture
 
 The project separates sports facility data from map rendering.
 
-The same normalized venue and geographic data can be used by different map views, while rendering-specific behavior remains inside the renderer layer.
+The same normalized venue and geographic data can be used by different map views, while rendering-specific behavior stays in the MapLibre map component.
 
 The repository currently contains dedicated modules for:
 
-- map rendering
-- projection
-- sport rendering
-- landmarks
+- the map view (MapLibre)
 - routing
 - localization
 - privacy
@@ -151,9 +148,9 @@ This keeps the product flexible enough to add new data providers or cities witho
 
 ## Performance
 
-The map uses chunked geographic data so that only relevant parts of the map need to be loaded and rendered.
+Basemap roads, buildings and surfaces come from vector tiles, so the app only bundles the facility dataset (`src/data/venue-map.json` and the LIPAS runtime snapshot). Facilities are drawn as a clustered GeoJSON layer.
 
-Performance work is currently focused especially on zooming, where roads, buildings, surfaces, and markers may need to be reprojected and redrawn.
+Large source extracts used by the data scripts live in `data/raw/` and are never imported by the app.
 
 ## Localization
 

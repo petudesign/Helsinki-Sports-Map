@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import data from '../src/data/lipas-helsinki.json' with { type: 'json' }
+import data from '../data/raw/lipas-helsinki.json' with { type: 'json' }
 import runtime from '../src/data/lipas-helsinki-runtime.json' with { type: 'json' }
 
 const sites = data.sites

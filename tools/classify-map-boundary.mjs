@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
-const [inputPath = 'src/data/helsinki-expanded.json', boundaryPath = 'src/data/helsinki-boundary.json', outputPath = 'tmp/helsinki-expanded-classified.json'] = process.argv.slice(2)
+const [inputPath = 'data/raw/helsinki-expanded.json', boundaryPath = 'src/data/helsinki-boundary.json', outputPath = 'tmp/helsinki-expanded-classified.json'] = process.argv.slice(2)
 const [source, boundarySnapshot] = await Promise.all([
   readFile(inputPath, 'utf8').then(JSON.parse),
   readFile(boundaryPath, 'utf8').then(JSON.parse),

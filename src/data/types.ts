@@ -2,8 +2,6 @@ export type GeoPoint = [longitude: number, latitude: number]
 export type MapPoint = { x: number; y: number }
 export type MapLabel = { text: string; coordinates: GeoPoint; minZoom?: number; tone?: 'primary' | 'secondary' | 'context'; offset?: { x: number; y: number } }
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number }
-export type MapViewport = { width: number; height: number; mode: '2d' | 'iso'; zoom: number; pan: MapPoint }
-export type MapChunkManifest = { name: string; center: GeoPoint; bbox: [number, number, number, number]; chunks: { id: string; file: string; row: number; column: number; bbox: [number, number, number, number] }[] }
 
 export type SurfaceFeature = { id: string; kind: 'green' | 'water' | 'urban'; rings: MapPoint[][]; bounds?: Bounds; context?: 'neighboring' }
 export type BuildingFeature = { id: string; rings: MapPoint[][]; bounds?: Bounds; height: number; name?: string; context?: 'neighboring' }

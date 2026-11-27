@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
+const serviceMapSearchTerms = ['liikunta', 'uimahalli', 'maauimala', 'uimaranta', 'jäähalli', 'urheiluhalli', 'kuntosali', 'tenniskenttä']
 const serviceMapUnitsUrl = 'https://www.hel.fi/palvelukarttaws/rest/v4/unit/?arealcity=91&search=liikunta'
 const serviceMapBaseUrl = 'https://www.hel.fi/palvelukarttaws/rest/v4'
 const serviceMapWebUrl = 'https://palvelukartta.hel.fi/fi/unit'
@@ -99,8 +100,15 @@ function priceClassFor(priceText) {
 }
 
 const lipas = JSON.parse(await readFile(sourcePath, 'utf8'))
-const units = await getJson(serviceMapUnitsUrl)
-const candidateUnits = units.filter((unit) => lipas.sites.some((site) => site.id === lipasIdForUnit(unit)))
+const lipasIds = new Set(lipas.sites.map((site) => site.id))
+const unitById = new Map()
+for (const term of serviceMapSearchTerms) {
+  const results = await getJson(`${serviceMapBaseUrl}/unit/?arealcity=91&search=${encodeURIComponent(term)}`)
+  for (const unit of results) {
+    if (!unitById.has(unit.id)) unitById.set(unit.id, unit)
+  }
+}
+const candidateUnits = [...unitById.values()].filter((unit) => lipasIds.has(lipasIdForUnit(unit)))
 const sportsUnits = []
 
 for (let index = 0; index < candidateUnits.length; index += concurrency) {

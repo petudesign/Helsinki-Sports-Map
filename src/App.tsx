@@ -141,8 +141,11 @@ function App() {
     if (!normalizedSearch) return true
     const values = searchIndex.get(id)
     // Finnish inflects the stem ("Itäkeskus" → "Itäkeskuksen"), so long words also match with one or two letters trimmed.
-    const variants = (word: string) => [word, word.length >= 6 ? word.slice(0, -1) : '', word.length >= 8 ? word.slice(0, -2) : ''].filter(Boolean)
-    return values ? normalizedSearch.split(/\s+/).every((word) => variants(word).some((variant) => values.some((value) => value.includes(variant)))) : false
+    // The word as typed may match inside a compound ("halli" → "uimahalli"). A trimmed stem must start a word and
+    // leave at most an inflection ending, so "kamppi" no longer reaches "kamppailulajit" through "kampp".
+    const stems = (word: string) => [word.length >= 6 ? word.slice(0, -1) : '', word.length >= 8 ? word.slice(0, -2) : ''].filter(Boolean)
+    const stemStartsWord = (value: string, stem: string) => value.split(/[^\p{L}\p{N}]+/u).some((part) => part.startsWith(stem) && part.length <= stem.length + 4)
+    return values ? normalizedSearch.split(/\s+/).every((word) => values.some((value) => value.includes(word)) || stems(word).some((stem) => values.some((value) => stemStartsWord(value, stem)))) : false
   }, [normalizedSearch, searchIndex])
   const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
     if (!matchesFilter(feature, filter)) return false

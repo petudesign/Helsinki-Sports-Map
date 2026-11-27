@@ -3,12 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#f2f2f0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f2f0" />
     <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="icon" type="image/png" href="/logo-64.png" />
     <link rel="apple-touch-icon" href="/logo-192.png" />
     <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
-    <meta name="description" content="Find sports places in Helsinki: courts, pools, fields and gyms on one map, with prices, opening hours and routes where the data has them." />
+    <link rel="preconnect" href="https://api.hel.fi" crossorigin />
+    <link rel="canonical" href="https://helsinki-sports-map.vercel.app/" />
+    <link rel="alternate" hreflang="fi" href="https://helsinki-sports-map.vercel.app/?lang=fi" />
+    <link rel="alternate" hreflang="en" href="https://helsinki-sports-map.vercel.app/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://helsinki-sports-map.vercel.app/" />
+    <meta name="description" content="Find 1,300+ sports places in Helsinki: football pitches, outdoor gyms, swimming halls, courts, and trails on one map with HSL public transport routes and fare zones. / Löydä yli 1 300 liikuntapaikkaa Helsingissä yhdeltä kartalta." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Helsinki Sports Map" />
+    <meta property="og:title" content="Helsinki Sports Map — Find sports venues, courts, pools & gyms in Helsinki" />
+    <meta property="og:description" content="Explore 1,300+ sports places in Helsinki with sport & price filters, accessibility info, and walking, cycling, and HSL transit routes." />
+    <meta property="og:url" content="https://helsinki-sports-map.vercel.app/" />
+    <meta property="og:image" content="https://helsinki-sports-map.vercel.app/helsinkisportsmaplogo.png" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:locale:alternate" content="fi_FI" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Helsinki Sports Map" />
+    <meta name="twitter:description" content="Explore 1,300+ sports venues in Helsinki — football pitches, outdoor gyms, swimming halls, courts, and HSL transit routes." />
+    <meta name="twitter:image" content="https://helsinki-sports-map.vercel.app/helsinkisportsmaplogo.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Helsinki Sports Map",
+        "alternateName": "Helsingin liikuntakartta",
+        "url": "https://helsinki-sports-map.vercel.app/",
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["fi", "en"],
+        "isAccessibleForFree": true,
+        "description": "Interactive map of over 1,300 sports facilities in Helsinki, Finland — including football pitches, outdoor gyms, swimming pools, tennis and padel courts, running tracks, and trails — with walking, cycling, driving, and HSL public transport directions.",
+        "areaServed": {
+          "@type": "City",
+          "name": "Helsinki",
+          "addressCountry": "FI"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        }
+      }
+    </script>
     <title>Helsinki Sports Map</title>
   </head>
   <body>

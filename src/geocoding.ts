@@ -1,4 +1,5 @@
 import type { GeoPoint } from './data/types'
+import districtsData from './data/districts.json'
 import { requestJson } from './http'
 
 export type PlaceKind = 'area' | 'place' | 'station'
@@ -161,8 +162,7 @@ async function searchNominatim(query: string, signal?: AbortSignal): Promise<Add
 }
 
 type District = { name: string; sv?: string; point: GeoPoint }
-let districts: Promise<District[]> | undefined
-const loadDistricts = () => (districts ??= import('./data/districts.json').then((module) => module.default as District[]).catch(() => { districts = undefined; return [] }))
+const loadDistricts = async (): Promise<District[]> => (typeof districtsData !== 'undefined' ? (districtsData as District[]) : [])
 
 // 0 = the name is the query, 1 = starts with it, 2 = a later word starts with it, -1 = no match.
 // Pelias also matches on street and area, which brings in shops that merely sit in Kamppi.

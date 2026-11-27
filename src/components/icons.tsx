@@ -1,4 +1,4 @@
-import { type RemixiconComponentType, RiApps2Line, RiBasketballLine, RiBoxingLine, RiBus2Line, RiCommunityLine, RiFootballLine, RiFootprintLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiPingPongLine, RiRoadMapLine, RiRunLine, RiShipLine, RiStore2Line, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine, RiWeightLine } from '@remixicon/react'
+import { type RemixiconComponentType, RiApps2Line, RiBasketballLine, RiBoxingLine, RiBus2Line, RiCommunityLine, RiFootballLine, RiFootprintLine, RiHeartPulseLine, RiLeafLine, RiMapPin2Line, RiMedal2Line, RiPingPongLine, RiRoadMapLine, RiRunLine, RiShipLine, RiStore2Line, RiSubwayLine, RiTrainLine, RiWalkLine, RiWaterFlashLine, RiWaterPercentLine } from '@remixicon/react'
 import type { AddressSuggestion } from '../geocoding'
 import type { SportFeature } from '../data/types'
 import { matchesFilter, type SportFilter } from '../filters'
@@ -8,7 +8,7 @@ const sportIcons: Record<SportFilter, RemixiconComponentType> = {
   football: RiFootballLine,
   basketball: RiBasketballLine,
   outdoor: RiLeafLine,
-  gym: RiWeightLine,
+  gym: RiHeartPulseLine,
   athletics: RiRunLine,
   swimming: RiWaterFlashLine,
   outdoor_swimming: RiWaterPercentLine,
@@ -24,7 +24,7 @@ const tilePriority: SportFilter[] = ['swimming', 'outdoor_swimming', 'ice_hockey
 export function PlaceTile({ feature }: { feature: SportFeature }) {
   const id = tilePriority.find((option) => matchesFilter(feature, option))
   const Icon = id ? sportIcons[id] : RiMapPin2Line
-  return <span className="place-tile" aria-hidden="true"><Icon size={18} /></span>
+  return <span className="place-tile" aria-hidden="true"><Icon size={15} /></span>
 }
 
 export function SportFilterIcon({ id }: { id: SportFilter }) {

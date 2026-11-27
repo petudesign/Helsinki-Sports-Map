@@ -1,0 +1,30 @@
+# Helsinki Sports Map (Helsingin liikuntakartta)
+
+> Free, independent interactive map of 1,300+ public and private sports facilities in Helsinki, Finland — in Finnish and English, with sport filters, accessibility filters, and HSL public transport routing.
+
+- Website: https://helsinki-sports-map.vercel.app/
+- Languages: Finnish (`?lang=fi`), English (`?lang=en`)
+- Coverage: Helsinki, Finland
+
+## What it helps users do
+- Find sports venues by sport, name, district, or proximity ("Near me" / "Lähelläni").
+- Filter by free vs. paid venues, step-free entrance, accessible toilet, accessible parking, and family-friendly locations.
+- Plan routes by walking, cycling, car, or HSL public transport (including required HSL fare zones such as AB/ABC and step-by-step transit legs).
+
+## Indexable sport directories (static HTML + JSON-LD)
+- Jalkapallokentät Helsingissä: https://helsinki-sports-map.vercel.app/fi/jalkapallokentat/
+- Ulkokuntosalit ja kuntosalit Helsingissä: https://helsinki-sports-map.vercel.app/fi/ulkokuntosalit/
+- Uimahallit Helsingissä: https://helsinki-sports-map.vercel.app/fi/uimahallit/
+- Uimarannat ja maauimalat Helsingissä: https://helsinki-sports-map.vercel.app/fi/uimarannat/
+- Koripallokentät Helsingissä: https://helsinki-sports-map.vercel.app/fi/koripallokentat/
+- Tenniskentät Helsingissä: https://helsinki-sports-map.vercel.app/fi/tenniskentat/
+- Padelkentät Helsingissä: https://helsinki-sports-map.vercel.app/fi/padelkentat/
+- Skeittipuistot Helsingissä: https://helsinki-sports-map.vercel.app/fi/skeittipuistot/
+- Football pitches in Helsinki (EN): https://helsinki-sports-map.vercel.app/en/football-helsinki/
+- Gyms & outdoor gyms in Helsinki (EN): https://helsinki-sports-map.vercel.app/en/gyms-helsinki/
+- Swimming pools in Helsinki (EN): https://helsinki-sports-map.vercel.app/en/swimming-helsinki/
+
+## Data sources & caveats
+- Facility registry: LIPAS (University of Jyväskylä, CC BY 4.0) and City of Helsinki Service Map.
+- Map & routing: OpenStreetMap, OpenFreeMap, Digitransit (HSL), and HSL fare zones (CC BY 4.0).
+- Independent project (not an official City of Helsinki website). Prices and opening hours are not yet complete for all venues; users are linked directly to official venue pages to verify before visiting.

@@ -24,7 +24,8 @@ export function useSheetDrag(sheetRef: RefObject<HTMLElement | null>, snap: Shee
     const height = sheet.getBoundingClientRect().height
     const style = getComputedStyle(sheet)
     const read = (name: string) => parseFloat(style.getPropertyValue(name)) || 0
-    return { height, peek: height - read('--sheet-peek-px'), half: height - window.innerHeight * 0.56, full: 0 }
+    const peekHeight = read('--sheet-peek') || read('--sheet-peek-px')
+    return { height, peek: Math.max(0, height - peekHeight), half: Math.max(0, height - window.innerHeight * 0.56), full: 0 }
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {

@@ -1,7 +1,7 @@
 import { accessProfileForUrl, createLipasFeatures, findLipasVenue } from './lipas'
 import type { GeoPoint, MapDataset, MapPoint, SportFeature, SportsVenue, StudyAreaGeoJson } from './types'
 import { venueProfile } from './venueLinks'
-import { serviceMapForUnit, serviceMapForUrl } from './serviceMap'
+import { serviceMapForUnit, serviceMapForVenue } from './serviceMap'
 import { transitDirectionsUrl } from '../routing'
 import { boundsOf } from './geometry'
 import { nameKey } from './text'
@@ -27,13 +27,20 @@ function centerOfGeoRing(ring: GeoPoint[]): GeoPoint {
 }
 
 function mergeVenueSources(lipasVenues: SportsVenue[], osmVenues: SportsVenue[]) {
+  // Key LIPAS venues by unique id so separate clusters sharing a park/school name never overwrite each other.
   const venues = new Map<string, SportsVenue>()
-  lipasVenues.forEach((venue) => venues.set(nameKey(venue.name), venue))
+  const byName = new Map<string, string>()
+  lipasVenues.forEach((venue) => {
+    venues.set(venue.id, venue)
+    const key = nameKey(venue.name)
+    if (key && !byName.has(key)) byName.set(key, venue.id)
+  })
   osmVenues.forEach((venue) => {
     const key = nameKey(venue.name)
-    const existing = venues.get(key)
-    if (!existing || !key) { venues.set(`${key}:${venue.id}`, venue); return }
-    venues.set(key, {
+    const existingId = key ? byName.get(key) : undefined
+    const existing = existingId ? venues.get(existingId) : undefined
+    if (!existing || !existingId) { venues.set(`${key}:${venue.id}`, venue); return }
+    venues.set(existingId, {
       ...existing,
       sports: [...new Set([...existing.sports, ...venue.sports])],
       officialUrl: existing.officialUrl ?? venue.officialUrl,
@@ -83,7 +90,8 @@ export function createArea(geojson: StudyAreaGeoJson): MapDataset {
   const featuresById = new Map(lipas.features.map((feature) => [feature.id, feature]))
   const lipasVenues: SportsVenue[] = lipas.venues.map(({ id, venue }) => {
     const feature = featuresById.get(id)
-    const serviceMap = serviceMapForUrl(venue.website) ?? serviceMapForUnit(venue.id)
+    const memberIds = [venue.id, ...(venue.facilities ?? []).map((facility) => facility.id)]
+    const serviceMap = serviceMapForVenue(memberIds, venue.name, venue.website)
     return {
       id,
       name: venue.name,

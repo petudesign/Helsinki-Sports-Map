@@ -247,6 +247,7 @@ export type ParsedSearch = {
   words: string[]
   compiledRaw: CompiledWord[]
   area?: { name: string; point: GeoPoint }
+  halfwayAreas?: [{ name: string; point: GeoPoint }, { name: string; point: GeoPoint }]
   contentWords: string[]
   compiledContent: CompiledWord[]
   wantsGym: boolean
@@ -254,15 +255,29 @@ export type ParsedSearch = {
   wantsOutdoor: boolean
 }
 
+const halfwayFillerWords = new Set(['ja', 'and', 'tai', 'or', 'välillä', 'valilla', 'välissä', 'valissa', 'puoliväli', 'puolivali', 'puolivälissä', 'puolivalissa', 'between', 'halfway', 'vs'])
+
 export function parseSearchQuery(rawQuery: string): ParsedSearch {
   const raw = rawQuery.trim().toLocaleLowerCase('fi-FI')
   if (!raw) {
     return { raw: '', words: [], compiledRaw: [], contentWords: [], compiledContent: [], wantsGym: false, wantsPool: false, wantsOutdoor: false }
   }
-  const words = raw.split(/\s+/).filter(Boolean)
+  const words = raw.split(/[\s,+/&–—↔→-]+/).filter(Boolean)
   const areaMatch = findQueryDistrict(words)
-  const area = areaMatch ? { name: areaMatch.district.name, point: areaMatch.district.point } : undefined
-  const contentWords = areaMatch ? areaMatch.remainingWords : words
+  const secondAreaMatch = areaMatch ? findQueryDistrict(areaMatch.remainingWords) : undefined
+  const isTwoDistinctAreas = Boolean(areaMatch && secondAreaMatch && areaMatch.district.name !== secondAreaMatch.district.name)
+  const halfwayAreas: ParsedSearch['halfwayAreas'] = isTwoDistinctAreas && areaMatch && secondAreaMatch
+    ? [
+      { name: areaMatch.district.name, point: areaMatch.district.point },
+      { name: secondAreaMatch.district.name, point: secondAreaMatch.district.point },
+    ]
+    : undefined
+  const area = !halfwayAreas && areaMatch ? { name: areaMatch.district.name, point: areaMatch.district.point } : undefined
+  const contentWords = halfwayAreas && secondAreaMatch
+    ? secondAreaMatch.remainingWords.filter((word) => !halfwayFillerWords.has(word))
+    : areaMatch
+      ? areaMatch.remainingWords
+      : words
   const wantsOutdoor = contentWords.some((word) => word.includes('outdoor') || word.includes('ulko'))
   const wantsGym = !wantsOutdoor && contentWords.some((word) => ['gym', 'gyms', 'kuntosali', 'kuntokeskus', 'sali'].includes(word))
   const wantsPool = !wantsOutdoor && contentWords.some((word) => ['pool', 'pools', 'swimming', 'swim', 'uimahalli'].includes(word))
@@ -271,6 +286,7 @@ export function parseSearchQuery(rawQuery: string): ParsedSearch {
     words,
     compiledRaw: words.map(compileWord),
     area,
+    halfwayAreas,
     contentWords,
     compiledContent: contentWords.map(compileWord),
     wantsGym,
@@ -285,6 +301,23 @@ const AREA_FALLBACK_RADIUS_METRES = 2500
 export function evaluateSearchMatch(entry: SearchEntry | undefined, parsed: ParsedSearch, maxAreaRadius = AREA_RADIUS_METRES): { matched: boolean; score: number; areaDistance?: number } {
   if (!parsed.raw) return { matched: true, score: 1 }
   if (!entry) return { matched: false, score: 0 }
+
+  // Case 0: Two districts in search (e.g. "Kallio ja Lauttasaari", "padel Kamppi Töölö") — meet halfway!
+  if (parsed.halfwayAreas) {
+    if (!entry.center) return { matched: false, score: 0 }
+    const words = parsed.compiledContent
+    if (words.length > 0 && !words.every((word) => matchesPacked(entry.allFolded, entry.allTokens, entry.allTokenList, word))) {
+      return { matched: false, score: 0 }
+    }
+    const [a, b] = parsed.halfwayAreas
+    const span = distanceMetres(a.point, b.point)
+    const distA = distanceMetres(a.point, entry.center)
+    const distB = distanceMetres(b.point, entry.center)
+    const maxAllowed = Math.max(2500, span * 0.9)
+    if (Math.max(distA, distB) > maxAllowed) return { matched: false, score: 0 }
+    const fairness = Math.max(distA, distB) + 0.35 * Math.abs(distA - distB)
+    return { matched: true, score: Math.max(1, 10000 - fairness), areaDistance: fairness }
+  }
 
   // Case 1: District-only search (e.g. "sörnäinen", "kamppi") — include name/address matches AND nearby venues within 1.2 km.
   if (parsed.area && parsed.compiledContent.length === 0) {

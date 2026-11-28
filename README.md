@@ -28,7 +28,7 @@ The long-term goal is to make the underlying system reusable beyond Helsinki as 
 - **Interactive vector map**: MapLibre GL JS with 2D and tilted views, native pinch zoom, touch panning, clustered GeoJSON markers, and a draggable mobile sheet
 - **Smart search**: Search by sport, venue name, Helsinki district (178 districts), place, or street address
 - **Practical filters**: Filter by sport, price (free / paid), accessibility (step-free entrance, accessible toilet, accessible parking), children & families, and saved favorites
-- **Meet-halfway search**: Enter two starting points (A & B) to rank and map sports facilities fairly between both people
+- **Meet-halfway search**: Type two Helsinki districts into the search bar (e.g. `"Kallio ja Lauttasaari"` or `"padel Kamppi Töölö"`) to rank and map sports facilities fairly between both areas
 - **Saved favorites**: Star your regular venues locally in the browser (no account required) and filter by saved places
 - **Routing & HSL public transport**: Walking, cycling, driving, and HSL public transport routes with travel time, distance, step-by-step transit legs, and HSL fare zone (A–E) overlay and ticket guidance
 - **Flexible starting points**: Use your current location (optional) or pick any Helsinki address, place, or district

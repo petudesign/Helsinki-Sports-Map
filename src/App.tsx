@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBikeLine, RiBus2Line, RiCarLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFullscreenExitLine, RiGroupLine, RiMapPin2Line, RiNavigationLine, RiPencilLine, RiSearchLine, RiShareForwardLine, RiStarFill, RiStarLine, RiWalkLine } from '@remixicon/react'
+import { RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBikeLine, RiBus2Line, RiCarLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFullscreenExitLine, RiMapPin2Line, RiNavigationLine, RiPencilLine, RiSearchLine, RiShareForwardLine, RiStarFill, RiStarLine, RiWalkLine } from '@remixicon/react'
 import type { GeoPoint, MapDataset, SportFeature } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
@@ -7,7 +7,6 @@ import { distanceMetres } from './data/geometry'
 import { nameKey } from './data/text'
 import { loadFavorites, saveFavorites } from './favorites'
 import { computeHalfwayMetrics, type HalfwayPair } from './meetHalfway'
-import { MeetHalfwayPanel } from './components/MeetHalfwayPanel'
 import type { MapControls } from './components/SportsMap'
 // MapLibre is ~1 MB: load it in its own chunk, starting immediately, so the panel can paint first.
 const sportsMapModule = import('./components/SportsMap')
@@ -99,9 +98,6 @@ function App() {
       return next
     })
   }, [])
-  const [halfwayOpen, setHalfwayOpen] = useState(false)
-  const [halfwayEditing, setHalfwayEditing] = useState(true)
-  const [halfwayPair, setHalfwayPair] = useState<HalfwayPair>()
   const [selected, setSelected] = useState<SportFeature>()
   const [routePlannerOpen, setRoutePlannerOpen] = useState(false)
   const [editingRoute, setEditingRoute] = useState(true)
@@ -233,6 +229,10 @@ function App() {
     return !searchMatches || searchMatches.has(feature.id)
   }) ?? [], [mapArea, favoritesOnly, favorites, filter, priceFilter, accessibilityFilter, familyFilter, searchMatches, venuesById])
   const effectiveOrigin = nearOrigin ?? (parsedSearch.area ? { coordinates: parsedSearch.area.point, label: parsedSearch.area.name } : undefined)
+  const halfwayPair = useMemo<HalfwayPair | undefined>(() => parsedSearch.halfwayAreas ? {
+    a: { coordinates: parsedSearch.halfwayAreas[0].point, label: parsedSearch.halfwayAreas[0].name },
+    b: { coordinates: parsedSearch.halfwayAreas[1].point, label: parsedSearch.halfwayAreas[1].name },
+  } : undefined, [parsedSearch.halfwayAreas])
   const distances = useMemo(() => effectiveOrigin ? new Map(visibleSports.flatMap((feature) => feature.center ? [[feature.id, distanceMetres(effectiveOrigin.coordinates, feature.center)] as const] : [])) : undefined, [visibleSports, effectiveOrigin])
   const halfwayMetrics = useMemo(() => halfwayPair ? new Map(visibleSports.flatMap((feature) => feature.center ? [[feature.id, computeHalfwayMetrics(halfwayPair.a.coordinates, halfwayPair.b.coordinates, feature.center)] as const] : [])) : undefined, [visibleSports, halfwayPair])
   const sortedSports = useMemo(() => [...visibleSports].sort((a, b) => {
@@ -278,7 +278,7 @@ function App() {
     if (header.parentElement) observer.observe(header.parentElement)
     if (topbar) observer.observe(topbar)
     return () => observer.disconnect()
-  }, [consentVisible, sidebarView, selected?.id, mapArea, routePlannerOpen, halfwayOpen, halfwayEditing, travelMode, Boolean(routes.transit?.transit)])
+  }, [consentVisible, sidebarView, selected?.id, mapArea, routePlannerOpen, travelMode, Boolean(routes.transit?.transit)])
   const announcement = sidebarView === 'detail' && selected ? `${locale === 'fi' ? 'Avattu' : 'Opened'}: ${featureDisplayName(selected, locale)}` : formatPlaceCount(locale, visibleSports.length)
   useEffect(() => { setListLimit(60) }, [visibleSports])
   // Focus follows the panel: opening a place moves focus to its heading, going back returns it to the row.
@@ -526,7 +526,7 @@ function App() {
       <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
     </>}
   </section> : null
-  return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''} ${halfwayOpen ? 'halfway-open' : ''}`}>
+  return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
     <p className="sr-only" role="status">{announcement}</p>
 
     <div className="side">
@@ -571,15 +571,7 @@ function App() {
           {suggestionStatus === 'empty' && <p className="inline-status" role="status">{locale === 'fi' ? 'Ehdotuksia ei löytynyt. Voit silti hakea reitin kirjoittamallasi osoitteella.' : 'No suggestions. You can still find a route with what you typed.'}</p>}
           {suggestionStatus === 'error' && <p className="inline-status" role="status">{locale === 'fi' ? 'Osoite-ehdotuksia ei saatu. Voit silti hakea reitin kirjoittamallasi osoitteella.' : 'Address suggestions aren’t available. You can still find a route with what you typed.'} <button type="button" className="link-btn" onClick={() => setSuggestionRetry((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></p>}
           {addressError && <p className="inline-status is-error" role="status">{locale === 'fi' ? 'Lähtöpaikkaa ei löytynyt. Tarkista osoite tai käytä nykyistä sijaintia.' : 'Starting point not found. Check the address or use your current location.'}</p>}
-        </div>) : halfwayOpen ? <MeetHalfwayPanel
-          locale={locale}
-          activePair={halfwayPair}
-          editing={halfwayEditing}
-          initialOrigin={nearOrigin}
-          onEdit={() => setHalfwayEditing(true)}
-          onApply={(pair) => { setHalfwayPair(pair); setHalfwayEditing(false); selectFeature(undefined) }}
-          onClose={() => { setHalfwayOpen(false); setHalfwayPair(undefined); setHalfwayEditing(true) }}
-        /> : <div className="search-row">
+        </div>) : <div className="search-row">
           <label className="search-field">
             <RiSearchLine className="search-icon" aria-hidden="true" size={18} />
             <input ref={searchInputRef} type="search" autoCorrect="off" spellCheck={false} enterKeyHint="search" value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); selectFeature(undefined); setRoutes({}) }} placeholder={text(locale, 'searchPlaceholder')} aria-label={text(locale, 'searchPlaceholder')} />
@@ -611,19 +603,12 @@ function App() {
             const next = event.key === 'Home' ? 0 : event.key === 'End' ? chips.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + chips.length) % chips.length
             event.preventDefault(); chips.forEach((chip, i) => { chip.tabIndex = i === next ? 0 : -1 }); chips[next]?.focus()
           }}>
-            {filterOptions.map((option) => <button key={option.id} type="button" className="chip" tabIndex={filter === option.id ? 0 : -1} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id === filter && option.id !== 'all' ? 'all' : option.id)}><SportFilterIcon id={option.id} />{sportChipLabel(option.id)}</button>)}
-            <button type="button" className={`chip chip-favorites ${favoritesOnly ? 'is-active' : ''}`} tabIndex={-1} aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly((value) => !value)}>
-              {favoritesOnly || favorites.size > 0 ? <RiStarFill aria-hidden="true" size={15} /> : <RiStarLine aria-hidden="true" size={15} />}
+            {(favorites.size > 0 || favoritesOnly) && <button type="button" className={`chip chip-favorites ${favoritesOnly ? 'is-active' : ''}`} tabIndex={-1} aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly((value) => !value)}>
+              <RiStarFill aria-hidden="true" size={15} />
               <span>{locale === 'fi' ? 'Suosikit' : 'Saved'}</span>
               {favorites.size > 0 && <span className="chip-count" aria-hidden="true">{favorites.size}</span>}
-            </button>
-            <button type="button" className={`chip chip-halfway ${halfwayOpen ? 'is-active' : ''}`} tabIndex={-1} aria-pressed={halfwayOpen} onClick={() => {
-              if (halfwayOpen) { setHalfwayOpen(false); setHalfwayPair(undefined); setHalfwayEditing(true) }
-              else { setHalfwayOpen(true); setHalfwayEditing(true); selectFeature(undefined) }
-            }}>
-              <RiGroupLine aria-hidden="true" size={16} />
-              <span>{locale === 'fi' ? 'Puoliväli' : 'Meet halfway'}</span>
-            </button>
+            </button>}
+            {filterOptions.map((option) => <button key={option.id} type="button" className="chip" tabIndex={filter === option.id ? 0 : -1} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id === filter && option.id !== 'all' ? 'all' : option.id)}><SportFilterIcon id={option.id} />{sportChipLabel(option.id)}</button>)}
             <button type="button" className="chip" tabIndex={-1} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine aria-hidden="true" size={16} />{text(locale, 'trending')}</button>
           </div>
           {/* Mouse affordance only: keyboard users move with the arrow keys, touch users swipe. */}

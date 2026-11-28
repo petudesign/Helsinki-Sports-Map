@@ -471,27 +471,37 @@ function App() {
 
   const sportChipLabel = (id: SportFilter) => id === 'all' ? text(locale, 'all') : sportText(locale, id)
   const clearAllFilters = () => { setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }
-  const transitGuidanceBlock = transitRoute ? <section className="transit-guidance" aria-label={text(locale, 'gettingThere')}>
-    <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</span></div>
-    <div className="transit-route-summary">
-      {transitRoute.legs.map((leg, index) => <span className="transit-route-chip" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}><TransitLegIcon mode={leg.mode} /><strong>{transitCompactLabel(locale, leg)}</strong><time>{formatRouteDuration(locale, leg.durationSeconds)}</time></span>)}
-    </div>
-    <p>{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
-    <details className="disclosure" open={phoneTransitInSheet}>
-      <summary>{text(locale, 'transitSteps')}</summary>
-      <ol className="transit-legs">
-        {transitRoute.legs.map((leg, index) => <li className="transit-leg" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
-          <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
-          <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
-          <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
-        </li>)}
-      </ol>
-    </details>
-    <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
-    {phoneTransitInSheet && <div className="transit-guidance-legend">
-      <div className="transit-route-key"><span><i className="transit-route-key-line transit-route-key-walk" />{text(locale, 'walkMode')}</span><span><i className="transit-route-key-line transit-route-key-transit" />{text(locale, 'transitMode')}</span></div>
-      <small>{text(locale, 'hslZoneMapSource')}</small>
-    </div>}
+  const transitLegsList = transitRoute ? <ol className="transit-legs">
+    {transitRoute.legs.map((leg, index) => <li className="transit-leg" data-mode={leg.mode.toUpperCase() === 'WALK' ? 'walk' : 'transit'} key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
+      <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
+      <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
+      <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
+    </li>)}
+  </ol> : null
+  const transitGuidanceBlock = transitRoute ? <section className={`transit-guidance ${phoneTransitInSheet ? 'is-sheet' : ''}`} aria-label={text(locale, 'gettingThere')}>
+    {phoneTransitInSheet ? <>
+      <h3 className="transit-steps-heading">{text(locale, 'transitSteps')}</h3>
+      {transitLegsList}
+      <div className="transit-ticket-footer">
+        <p>{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
+        <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
+      </div>
+      <div className="transit-guidance-legend">
+        <div className="transit-route-key"><span><i className="transit-route-key-line transit-route-key-walk" />{text(locale, 'walkMode')}</span><span><i className="transit-route-key-line transit-route-key-transit" />{text(locale, 'transitMode')}</span></div>
+        <small>{text(locale, 'hslZoneMapSource')}</small>
+      </div>
+    </> : <>
+      <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</span></div>
+      <div className="transit-route-summary">
+        {transitRoute.legs.map((leg, index) => <span className="transit-route-chip" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}><TransitLegIcon mode={leg.mode} /><strong>{transitCompactLabel(locale, leg)}</strong><time>{formatRouteDuration(locale, leg.durationSeconds)}</time></span>)}
+      </div>
+      <p>{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
+      <details className="disclosure">
+        <summary>{text(locale, 'transitSteps')}</summary>
+        {transitLegsList}
+      </details>
+      <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
+    </>}
   </section> : null
   const transitPeekLegs = transitRoute ? transitRoute.legs.map((leg) => `${transitCompactLabel(locale, leg)} ${formatRouteDuration(locale, leg.durationSeconds)}`).join(' → ') : ''
   return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>

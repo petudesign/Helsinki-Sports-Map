@@ -74,6 +74,7 @@ function App() {
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>('peek')
   const sheetRef = useRef<HTMLElement>(null)
   const sheetHeaderRef = useRef<HTMLElement>(null)
+  const topbarRef = useRef<HTMLElement>(null)
   const [isPhone, setIsPhone] = useState(() => window.matchMedia('(max-width: 720px)').matches)
   useEffect(() => { const query = window.matchMedia('(max-width: 720px)'); const update = () => setIsPhone(query.matches); query.addEventListener('change', update); return () => query.removeEventListener('change', update) }, [])
   const sheetExpanded = sheetSnap !== 'peek'
@@ -240,14 +241,21 @@ function App() {
     ], [nearOrigin, parsedSearch.area, sortedSports, visibleSports])
   const sheetDrag = useSheetDrag(sheetRef, sheetSnap, setSheetSnap, isPhone)
   // The peek shows the sheet header (and the consent card while it is open); its height is measured, not guessed.
+  // The topbar bottom is measured too so an expanded mobile sheet never slides under the floating route card.
   useLayoutEffect(() => {
-    const header = sheetHeaderRef.current, app = sheetRef.current?.closest<HTMLElement>('.app')
+    const header = sheetHeaderRef.current, topbar = topbarRef.current, app = sheetRef.current?.closest<HTMLElement>('.app')
     if (!header || !app) return
-    const update = () => app.style.setProperty('--sheet-peek-px', `${header.offsetTop + header.offsetHeight}px`)
+    const update = () => {
+      app.style.setProperty('--sheet-peek-px', `${header.offsetTop + header.offsetHeight}px`)
+      if (topbar) app.style.setProperty('--topbar-bottom-px', `${Math.ceil(topbar.offsetTop + topbar.offsetHeight + 8)}px`)
+    }
     update()
-    const observer = new ResizeObserver(update); observer.observe(header); if (header.parentElement) observer.observe(header.parentElement)
+    const observer = new ResizeObserver(update)
+    observer.observe(header)
+    if (header.parentElement) observer.observe(header.parentElement)
+    if (topbar) observer.observe(topbar)
     return () => observer.disconnect()
-  }, [consentVisible, sidebarView, selected?.id, mapArea])
+  }, [consentVisible, sidebarView, selected?.id, mapArea, routePlannerOpen, travelMode, Boolean(routes.transit?.transit)])
   const announcement = sidebarView === 'detail' && selected ? `${locale === 'fi' ? 'Avattu' : 'Opened'}: ${featureDisplayName(selected, locale)}` : formatPlaceCount(locale, visibleSports.length)
   useEffect(() => { setListLimit(60) }, [visibleSports])
   // Focus follows the panel: opening a place moves focus to its heading, going back returns it to the row.
@@ -290,6 +298,7 @@ function App() {
   const transitRoute = routes.transit?.transit
   const transitTicketZones = hslTicketZones(transitRoute?.zones ?? [])
   const canPlanRoute = routePlannerOpen && Object.keys(routes).length > 0
+  const phoneTransitInSheet = isPhone && canPlanRoute && travelMode === 'transit' && Boolean(transitRoute)
   const [addressError, setAddressError] = useState(false)
   const routeRequestRef = useRef(0)
   useEffect(() => {
@@ -462,11 +471,34 @@ function App() {
 
   const sportChipLabel = (id: SportFilter) => id === 'all' ? text(locale, 'all') : sportText(locale, id)
   const clearAllFilters = () => { setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }
+  const transitGuidanceBlock = transitRoute ? <section className="transit-guidance" aria-label={text(locale, 'gettingThere')}>
+    <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</span></div>
+    <div className="transit-route-summary">
+      {transitRoute.legs.map((leg, index) => <span className="transit-route-chip" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}><TransitLegIcon mode={leg.mode} /><strong>{transitCompactLabel(locale, leg)}</strong><time>{formatRouteDuration(locale, leg.durationSeconds)}</time></span>)}
+    </div>
+    <p>{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
+    <details className="disclosure" open={phoneTransitInSheet}>
+      <summary>{text(locale, 'transitSteps')}</summary>
+      <ol className="transit-legs">
+        {transitRoute.legs.map((leg, index) => <li className="transit-leg" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
+          <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
+          <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
+          <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
+        </li>)}
+      </ol>
+    </details>
+    <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
+    {phoneTransitInSheet && <div className="transit-guidance-legend">
+      <div className="transit-route-key"><span><i className="transit-route-key-line transit-route-key-walk" />{text(locale, 'walkMode')}</span><span><i className="transit-route-key-line transit-route-key-transit" />{text(locale, 'transitMode')}</span></div>
+      <small>{text(locale, 'hslZoneMapSource')}</small>
+    </div>}
+  </section> : null
+  const transitPeekLegs = transitRoute ? transitRoute.legs.map((leg) => `${transitCompactLabel(locale, leg)} ${formatRouteDuration(locale, leg.durationSeconds)}`).join(' → ') : ''
   return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
     <p className="sr-only" role="status">{announcement}</p>
 
     <div className="side">
-      <header className="topbar">
+      <header ref={topbarRef} className="topbar">
         <a className="brand" href="/"><img src="/logo-32.png" srcSet="/logo-32.png 1x, /logo-64.png 2x" alt="" width="32" height="32" /><h1>{text(locale, 'appName')}</h1></a>
         <Segmented className="lang-switch" label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: <>EN<span className="sr-only"> English</span></>, lang: 'en' }, { value: 'fi', label: <>FI<span className="sr-only"> Suomi</span></>, lang: 'fi' }]} />
         {routePlannerOpen && selected ? (canPlanRoute && !editingRoute ? (() => {
@@ -556,26 +588,9 @@ function App() {
         })()}
         {canPlanRoute && route && <div className="route-summary" aria-live="polite">
           <span className="route-summary-mode">{(() => { const ModeIcon = travelMode === 'walk' ? RiWalkLine : travelMode === 'bike' ? RiBikeLine : travelMode === 'transit' ? RiBus2Line : RiCarLine; return <ModeIcon aria-hidden="true" size={16} /> })()}{text(locale, travelMode)}</span>
-          <span className="route-summary-metrics"><strong>{formatDistance(locale, route.distanceMetres)}</strong></span>
+          <span className="route-summary-metrics">{phoneTransitInSheet && <button type="button" className="transit-zone-ticket transit-zone-trigger" onClick={() => setSheetSnap(sheetExpanded ? 'peek' : 'half')} aria-expanded={sheetExpanded} aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</button>}<strong>{formatDistance(locale, route.distanceMetres)}</strong></span>
         </div>}
-        {travelMode === 'transit' && transitRoute && <section className="transit-guidance" aria-label={text(locale, 'gettingThere')}>
-          <div className="transit-guidance-heading"><div><strong>{text(locale, 'hslZones')}</strong><small>{text(locale, 'hslZonesUsed')}</small></div><span className="transit-zone-ticket" aria-label={`${text(locale, 'hslZones')}: ${transitTicketZones}`}>{transitTicketZones}</span></div>
-          <div className="transit-route-summary">
-            {transitRoute.legs.map((leg, index) => <span className="transit-route-chip" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}><TransitLegIcon mode={leg.mode} /><strong>{transitCompactLabel(locale, leg)}</strong><time>{formatRouteDuration(locale, leg.durationSeconds)}</time></span>)}
-          </div>
-          <p>{text(locale, 'hslTicketReminder', { zones: transitTicketZones })}</p>
-          <details className="disclosure">
-            <summary>{text(locale, 'transitSteps')}</summary>
-            <ol className="transit-legs">
-              {transitRoute.legs.map((leg, index) => <li className="transit-leg" key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
-                <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
-                <div className="transit-leg-copy"><strong>{transitLegTitle(locale, leg, index, transitRoute.legs.length)}</strong>{transitLegDetail(locale, leg) && <span>{transitLegDetail(locale, leg)}</span>}</div>
-                <time>{formatRouteDuration(locale, leg.durationSeconds)}</time>
-              </li>)}
-            </ol>
-          </details>
-          <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
-        </section>}
+        {!isPhone && travelMode === 'transit' && transitRoute && transitGuidanceBlock}
         {canPlanRoute && !transitRoute && transitStatus === 'unavailable' && <p className="inline-status transit-notice" role="status">{text(locale, 'transitUnavailable')} {selected?.center && <a className="text-link" href={transitDirectionsUrl(selected.center, resolvedOrigin ?? originCoordinates)} target="_blank" rel="noreferrer">{text(locale, 'openTransitDirections')} ↗</a>}</p>}
         {canPlanRoute && !transitRoute && transitStatus === 'no-route' && <p className="inline-status transit-notice" role="status">{text(locale, 'transitNoRoute')}</p>}
       </header>
@@ -600,9 +615,10 @@ function App() {
           <span className="sheet-handle" aria-hidden="true" />
           {sidebarView === 'detail' && selected && <button type="button" className="icon-btn" onClick={closeDetail} aria-label={locale === 'fi' ? 'Takaisin listaan' : 'Back to the list'}><RiArrowLeftLine aria-hidden="true" size={20} /></button>}
           <div className="sheet-title">
-            <h2 ref={detailHeadingRef} tabIndex={-1}>{sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
-            {sidebarView === 'detail' && selected && (venueTypeLabel(selectedVenue, locale) || distances?.get(selected.id) !== undefined) && <span>{[venueTypeLabel(selectedVenue, locale), distances?.get(selected.id) !== undefined ? formatDistance(locale, distances.get(selected.id)!) : undefined].filter(Boolean).join(' · ')}</span>}
-            {sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{effectiveOrigin ? (locale === 'fi' ? ` · lähimmät (${effectiveOrigin.label})` : ` · nearest to ${effectiveOrigin.label}`) : ''}</span>}
+            <h2 ref={detailHeadingRef} tabIndex={-1}>{phoneTransitInSheet && route ? `${text(locale, 'hslZones')} ${transitTicketZones} · ${formatRouteDuration(locale, route.durationSeconds)}` : sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
+            {phoneTransitInSheet && transitPeekLegs && <span className="sheet-transit-legs">{transitPeekLegs}</span>}
+            {!phoneTransitInSheet && sidebarView === 'detail' && selected && (venueTypeLabel(selectedVenue, locale) || distances?.get(selected.id) !== undefined) && <span>{[venueTypeLabel(selectedVenue, locale), distances?.get(selected.id) !== undefined ? formatDistance(locale, distances.get(selected.id)!) : undefined].filter(Boolean).join(' · ')}</span>}
+            {!phoneTransitInSheet && sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{effectiveOrigin ? (locale === 'fi' ? ` · lähimmät (${effectiveOrigin.label})` : ` · nearest to ${effectiveOrigin.label}`) : ''}</span>}
           </div>
           {sidebarView === 'detail' && selected && !routePlannerOpen && <>
             <button className={`icon-btn share-btn ${copiedShare ? 'is-copied' : ''}`} type="button" onClick={shareSelectedPlace} aria-label={copiedShare ? (locale === 'fi' ? 'Linkki kopioitu' : 'Link copied') : (locale === 'fi' ? 'Jaa paikka' : 'Share place')} title={copiedShare ? (locale === 'fi' ? 'Linkki kopioitu' : 'Link copied') : (locale === 'fi' ? 'Jaa paikka' : 'Share place')}>{copiedShare ? <RiCheckLine aria-hidden="true" size={18} /> : <RiShareForwardLine aria-hidden="true" size={18} />}</button>
@@ -611,6 +627,7 @@ function App() {
           <button type="button" className="icon-btn sheet-toggle" onClick={() => setSheetSnap(sheetExpanded ? 'peek' : sidebarView === 'detail' ? 'half' : 'full')} aria-expanded={sheetExpanded} aria-label={sheetExpanded ? (locale === 'fi' ? 'Pienennä paneeli' : 'Collapse panel') : (locale === 'fi' ? 'Avaa paneeli' : 'Expand panel')}><RiArrowUpSLine aria-hidden="true" size={20} /></button>
         </header>
         <div key={sidebarView === 'detail' && selected ? selected.id : 'facility-list'} className="sheet-body" inert={isPhone && !sheetExpanded}>
+          {phoneTransitInSheet && transitGuidanceBlock && <div className="sheet-transit-section">{transitGuidanceBlock}</div>}
           {sidebarView === 'detail' && selected ? <FacilityDetails feature={selected} venue={selectedVenue} trend={selectedTrend} trendingEnabled={trendingEnabled} locale={locale} directionsOpen={routePlannerOpen} onDirections={() => { if (routePlannerOpen) { setEditingRoute(true); window.requestAnimationFrame(() => document.getElementById('starting-point')?.focus()); return } setRoutePlannerOpen(true); setEditingRoute(true); setSheetSnap('peek'); if (nearOrigin && !startingPoint) { setStartingPoint(nearOrigin.label); setOriginCoordinates(nearOrigin.coordinates) } }} /> : <>
             <p className="sr-only">{text(locale, 'facilityListHint')}</p>
             {nearOrigin && <div className="note"><span>{locale === 'fi' ? 'Etäisyys kohteesta ' : 'Distance from '}<strong>{nearOrigin.label}</strong></span><button type="button" className="btn btn-ghost btn-sm" onClick={clearNear}>{locale === 'fi' ? 'Poista' : 'Clear'}</button></div>}

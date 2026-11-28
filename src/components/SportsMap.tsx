@@ -404,11 +404,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       const mobile = window.matchMedia('(max-width: 720px)').matches
       map.resize()
       const mapHeight = map.getContainer().clientHeight
-      const mobileTopPadding = Math.min(60, Math.max(24, Math.round(mapHeight * 0.14)))
-      const mobileBottomPadding = Math.min(150, Math.max(40, mapHeight - mobileTopPadding - 32))
+      const topbarHeight = document.querySelector<HTMLElement>('.topbar')?.getBoundingClientRect().height ?? 0
+      const mobileTopPadding = Math.min(200, Math.max(96, topbarHeight ? Math.round(topbarHeight + 24) : Math.round(mapHeight * 0.24)))
+      const mobileBottomPadding = Math.min(120, Math.max(84, Math.round(mapHeight * 0.14)))
       map.fitBounds(bounds, {
         padding: mobile
-          ? { top: mobileTopPadding, left: 28, right: 65, bottom: mobileBottomPadding }
+          ? { top: mobileTopPadding, left: 28, right: 28, bottom: mobileBottomPadding }
           : { top: 80, left: PANEL_INSET + 40, right: 80, bottom: 65 },
         maxZoom: 15, duration: duration(), easing,
       })

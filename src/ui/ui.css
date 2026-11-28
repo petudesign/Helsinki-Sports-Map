@@ -405,6 +405,11 @@ a { color: inherit; }
 .transit-guidance-heading strong { font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--text-1); }
 .transit-guidance-heading small { color: var(--text-3); font-size: var(--text-sm); }
 .transit-zone-ticket { padding: 4px 10px; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 0 0 1px rgb(7 85 160 / 0.18); font-size: var(--text-sm); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.transit-zone-trigger { border: 0; padding: 2px 8px; line-height: 1.4; transition: transform var(--duration-press) var(--ease-out), background-color var(--duration-fast) var(--ease-out); }
+.transit-zone-trigger:active { transform: scale(0.95); }
+.sheet-transit-section { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
+.transit-guidance-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--text-3); font-size: var(--text-xs); }
+.transit-guidance-legend .transit-zone-key, .transit-guidance-legend .transit-route-key { gap: var(--space-2); }
 .transit-route-summary { display: flex; flex-wrap: wrap; gap: 6px; }
 .transit-route-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
 .transit-route-chip svg { color: var(--text-3); }
@@ -530,8 +535,8 @@ a { color: inherit; }
     gap: var(--space-2); padding: 0; border: 0;
   }
   .route-planner-open .topbar {
-    padding: var(--space-3); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-3);
-    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-3);
+    gap: var(--space-2);
   }
   .route-planner-open .topbar:not(:has(.address-suggestions)) { max-height: calc(100dvh - var(--sheet-peek) - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain; }
   .brand { width: var(--control-lg); height: var(--control-lg); justify-content: center; border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); }
@@ -560,7 +565,7 @@ a { color: inherit; }
 
   /* The sheet is always full height and moves with transform only: peek / half / full. */
   .sheet {
-    --sheet-full: calc(100dvh - env(safe-area-inset-top, 0px) - 112px);
+    --sheet-full: calc(100dvh - max(var(--topbar-bottom-px, 112px), calc(env(safe-area-inset-top, 0px) + 112px)));
     position: absolute; z-index: 15; left: 0; right: 0; bottom: 0;
     height: var(--sheet-full);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0; background: var(--surface); box-shadow: var(--shadow-3);
@@ -570,8 +575,8 @@ a { color: inherit; }
     will-change: transform;
   }
   .sheet[data-snap="peek"] { --sheet-y: calc(var(--sheet-full) - var(--sheet-peek-px, 64px) - env(safe-area-inset-bottom, 0px)); }
-  .sheet[data-snap="half"] { --sheet-y: calc(var(--sheet-full) - 56dvh); }
-  .sheet[data-snap="half"] .sheet-body { padding-bottom: calc(var(--sheet-full) - 56dvh + env(safe-area-inset-bottom, 0px)); }
+  .sheet[data-snap="half"] { --sheet-y: max(0px, calc(var(--sheet-full) - 56dvh)); }
+  .sheet[data-snap="half"] .sheet-body { padding-bottom: calc(max(0px, var(--sheet-full) - 56dvh) + env(safe-area-inset-bottom, 0px)); }
   .sheet[data-snap="full"] { --sheet-y: 0px; }
   .sheet[data-dragging] { transition: none; }
   .sheet-header { touch-action: none; cursor: grab; }
@@ -593,7 +598,8 @@ a { color: inherit; }
   .map-status { top: calc(env(safe-area-inset-top, 0px) + 112px); left: var(--space-2); right: calc(var(--control-md) + 2 * var(--space-2)); margin: 0; flex-wrap: wrap; }
   .trending-rail { top: auto; bottom: calc(var(--sheet-peek) + var(--space-2)); left: var(--space-2); right: var(--space-2); }
   .trending-rail-heading { display: none; }
-  .transit-map-legend { left: var(--space-2); bottom: calc(var(--sheet-peek) + var(--space-8)); }
+  .transit-map-legend { display: none; }
+  .sheet-transit-legs { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .facility-location-row { flex-wrap: wrap; }
 }
 

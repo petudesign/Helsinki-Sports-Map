@@ -1,10 +1,13 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBikeLine, RiBus2Line, RiCarLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFullscreenExitLine, RiMapPin2Line, RiNavigationLine, RiPencilLine, RiSearchLine, RiShareForwardLine, RiWalkLine } from '@remixicon/react'
+import { RiArrowLeftLine, RiArrowLeftSLine, RiArrowRightSLine, RiArrowUpSLine, RiBikeLine, RiBus2Line, RiCarLine, RiCheckLine, RiCloseLine, RiEqualizer2Line, RiFireLine, RiFlagLine, RiFocus3Line, RiFullscreenExitLine, RiGroupLine, RiMapPin2Line, RiNavigationLine, RiPencilLine, RiSearchLine, RiShareForwardLine, RiStarFill, RiStarLine, RiWalkLine } from '@remixicon/react'
 import type { GeoPoint, MapDataset, SportFeature } from './data/types'
 import { previewTrendingSignal, type TrendingSignal } from './data/trending'
 import { activeCity } from './config/city'
 import { distanceMetres } from './data/geometry'
 import { nameKey } from './data/text'
+import { loadFavorites, saveFavorites } from './favorites'
+import { computeHalfwayMetrics, type HalfwayPair } from './meetHalfway'
+import { MeetHalfwayPanel } from './components/MeetHalfwayPanel'
 import type { MapControls } from './components/SportsMap'
 // MapLibre is ~1 MB: load it in its own chunk, starting immediately, so the panel can paint first.
 const sportsMapModule = import('./components/SportsMap')
@@ -85,6 +88,20 @@ function App() {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all')
   const [accessibilityFilter, setAccessibilityFilter] = useState<AccessibilityFilter>('all')
   const [familyFilter, setFamilyFilter] = useState<FamilyFilter>('all')
+  const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites())
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      saveFavorites(next)
+      return next
+    })
+  }, [])
+  const [halfwayOpen, setHalfwayOpen] = useState(false)
+  const [halfwayEditing, setHalfwayEditing] = useState(true)
+  const [halfwayPair, setHalfwayPair] = useState<HalfwayPair>()
   const [selected, setSelected] = useState<SportFeature>()
   const [routePlannerOpen, setRoutePlannerOpen] = useState(false)
   const [editingRoute, setEditingRoute] = useState(true)
@@ -208,15 +225,18 @@ function App() {
     return parsedSearch.area && tight.size < 3 ? collect(AREA_FALLBACK_RADIUS_METRES) : tight
   }, [hasSearch, mapArea, searchIndex, parsedSearch])
   const visibleSports = useMemo(() => mapArea?.sports.filter((feature) => {
+    if (favoritesOnly && !favorites.has(feature.id)) return false
     if (!matchesFilter(feature, filter)) return false
     if (!matchesPrice(feature, priceFilter)) return false
     if (!matchesAccessibility(venuesById.get(feature.id), accessibilityFilter)) return false
     if (!matchesFamily(venuesById.get(feature.id), familyFilter)) return false
     return !searchMatches || searchMatches.has(feature.id)
-  }) ?? [], [mapArea, filter, priceFilter, accessibilityFilter, familyFilter, searchMatches, venuesById])
+  }) ?? [], [mapArea, favoritesOnly, favorites, filter, priceFilter, accessibilityFilter, familyFilter, searchMatches, venuesById])
   const effectiveOrigin = nearOrigin ?? (parsedSearch.area ? { coordinates: parsedSearch.area.point, label: parsedSearch.area.name } : undefined)
   const distances = useMemo(() => effectiveOrigin ? new Map(visibleSports.flatMap((feature) => feature.center ? [[feature.id, distanceMetres(effectiveOrigin.coordinates, feature.center)] as const] : [])) : undefined, [visibleSports, effectiveOrigin])
+  const halfwayMetrics = useMemo(() => halfwayPair ? new Map(visibleSports.flatMap((feature) => feature.center ? [[feature.id, computeHalfwayMetrics(halfwayPair.a.coordinates, halfwayPair.b.coordinates, feature.center)] as const] : [])) : undefined, [visibleSports, halfwayPair])
   const sortedSports = useMemo(() => [...visibleSports].sort((a, b) => {
+    if (halfwayPair && halfwayMetrics) return (halfwayMetrics.get(a.id)?.fairnessScore ?? Infinity) - (halfwayMetrics.get(b.id)?.fairnessScore ?? Infinity)
     if (nearOrigin && distances) return (distances.get(a.id) ?? Infinity) - (distances.get(b.id) ?? Infinity)
     if (parsedSearch.area && distances) {
       const distA = distances.get(a.id) ?? Infinity
@@ -228,17 +248,20 @@ function App() {
       if (diff !== 0) return diff
     }
     return featureDisplayName(a, locale).localeCompare(featureDisplayName(b, locale), locale)
-  }), [visibleSports, locale, nearOrigin, parsedSearch.area, distances, searchMatches])
+  }), [visibleSports, locale, halfwayPair, halfwayMetrics, nearOrigin, parsedSearch.area, distances, searchMatches])
   const hiddenUnknownPrice = useMemo(() => priceFilter === 'all' ? 0 : (mapArea?.sports ?? []).filter((feature) => (feature.priceClass ?? 'unknown') === 'unknown'
+    && (!favoritesOnly || favorites.has(feature.id))
     && matchesFilter(feature, filter) && matchesAccessibility(venuesById.get(feature.id), accessibilityFilter) && matchesFamily(venuesById.get(feature.id), familyFilter)
-    && (!searchMatches || searchMatches.has(feature.id))).length, [mapArea, priceFilter, filter, accessibilityFilter, familyFilter, searchMatches, venuesById])
-  const mapFitKey = [filter, priceFilter, accessibilityFilter, familyFilter, normalizedSearch, effectiveOrigin?.label ?? '', visibleSports.length].join('|')
-  const mapFitTargets = useMemo<GeoPoint[]>(() => nearOrigin
-    ? [nearOrigin.coordinates, ...sortedSports.slice(0, 8).flatMap((feature) => feature.center ? [feature.center] : [])]
-    : [
-      ...(parsedSearch.area ? [parsedSearch.area.point] : []),
-      ...visibleSports.flatMap((feature) => feature.center ? [feature.center] : []),
-    ], [nearOrigin, parsedSearch.area, sortedSports, visibleSports])
+    && (!searchMatches || searchMatches.has(feature.id))).length, [mapArea, priceFilter, favoritesOnly, favorites, filter, accessibilityFilter, familyFilter, searchMatches, venuesById])
+  const mapFitKey = [filter, priceFilter, accessibilityFilter, familyFilter, favoritesOnly ? 'fav' : '', normalizedSearch, effectiveOrigin?.label ?? '', halfwayPair ? `${halfwayPair.a.label}|${halfwayPair.b.label}` : '', visibleSports.length].join('|')
+  const mapFitTargets = useMemo<GeoPoint[]>(() => halfwayPair
+    ? [halfwayPair.a.coordinates, halfwayPair.b.coordinates, ...sortedSports.slice(0, 6).flatMap((feature) => feature.center ? [feature.center] : [])]
+    : nearOrigin
+      ? [nearOrigin.coordinates, ...sortedSports.slice(0, 8).flatMap((feature) => feature.center ? [feature.center] : [])]
+      : [
+        ...(parsedSearch.area ? [parsedSearch.area.point] : []),
+        ...visibleSports.flatMap((feature) => feature.center ? [feature.center] : []),
+      ], [halfwayPair, nearOrigin, parsedSearch.area, sortedSports, visibleSports])
   const sheetDrag = useSheetDrag(sheetRef, sheetSnap, setSheetSnap, isPhone)
   // The peek shows the sheet header (and the consent card while it is open); its height is measured, not guessed.
   // The topbar bottom is measured too so an expanded mobile sheet never slides under the floating route card.
@@ -255,7 +278,7 @@ function App() {
     if (header.parentElement) observer.observe(header.parentElement)
     if (topbar) observer.observe(topbar)
     return () => observer.disconnect()
-  }, [consentVisible, sidebarView, selected?.id, mapArea, routePlannerOpen, travelMode, Boolean(routes.transit?.transit)])
+  }, [consentVisible, sidebarView, selected?.id, mapArea, routePlannerOpen, halfwayOpen, halfwayEditing, travelMode, Boolean(routes.transit?.transit)])
   const announcement = sidebarView === 'detail' && selected ? `${locale === 'fi' ? 'Avattu' : 'Opened'}: ${featureDisplayName(selected, locale)}` : formatPlaceCount(locale, visibleSports.length)
   useEffect(() => { setListLimit(60) }, [visibleSports])
   // Focus follows the panel: opening a place moves focus to its heading, going back returns it to the row.
@@ -470,7 +493,7 @@ function App() {
   if (loadError) return <main className="app-shell loading-shell"><div className="state-panel" role="alert"><img src="/logo-64.png" alt="" width="40" height="40" /><h1>{locale === 'fi' ? 'Liikuntapaikkoja ei voitu ladata' : 'Sports places couldn’t load'}</h1><p>{locale === 'fi' ? 'Yhteys katkesi tai palvelu ei vastannut. Tietojasi ei menetetty.' : 'The connection dropped or the service didn’t respond. Nothing you entered was lost.'}</p><button type="button" className="state-panel-action" onClick={() => setLoadAttempt((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Try again'}</button></div></main>
 
   const sportChipLabel = (id: SportFilter) => id === 'all' ? text(locale, 'all') : sportText(locale, id)
-  const clearAllFilters = () => { setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all') }
+  const clearAllFilters = () => { setFilter('all'); setPriceFilter('all'); setAccessibilityFilter('all'); setFamilyFilter('all'); setFavoritesOnly(false) }
   const transitLegsList = transitRoute ? <ol className="transit-legs">
     {transitRoute.legs.map((leg, index) => <li className="transit-leg" data-mode={leg.mode.toUpperCase() === 'WALK' ? 'walk' : 'transit'} key={`${leg.mode}-${leg.routeName ?? 'walk'}-${leg.from ?? index}`}>
       <span className="transit-leg-icon"><TransitLegIcon mode={leg.mode} /></span>
@@ -503,7 +526,7 @@ function App() {
       <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
     </>}
   </section> : null
-  return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
+  return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''} ${halfwayOpen ? 'halfway-open' : ''}`}>
     <p className="sr-only" role="status">{announcement}</p>
 
     <div className="side">
@@ -548,7 +571,15 @@ function App() {
           {suggestionStatus === 'empty' && <p className="inline-status" role="status">{locale === 'fi' ? 'Ehdotuksia ei löytynyt. Voit silti hakea reitin kirjoittamallasi osoitteella.' : 'No suggestions. You can still find a route with what you typed.'}</p>}
           {suggestionStatus === 'error' && <p className="inline-status" role="status">{locale === 'fi' ? 'Osoite-ehdotuksia ei saatu. Voit silti hakea reitin kirjoittamallasi osoitteella.' : 'Address suggestions aren’t available. You can still find a route with what you typed.'} <button type="button" className="link-btn" onClick={() => setSuggestionRetry((value) => value + 1)}>{locale === 'fi' ? 'Yritä uudelleen' : 'Retry'}</button></p>}
           {addressError && <p className="inline-status is-error" role="status">{locale === 'fi' ? 'Lähtöpaikkaa ei löytynyt. Tarkista osoite tai käytä nykyistä sijaintia.' : 'Starting point not found. Check the address or use your current location.'}</p>}
-        </div>) : <div className="search-row">
+        </div>) : halfwayOpen ? <MeetHalfwayPanel
+          locale={locale}
+          activePair={halfwayPair}
+          editing={halfwayEditing}
+          initialOrigin={nearOrigin}
+          onEdit={() => setHalfwayEditing(true)}
+          onApply={(pair) => { setHalfwayPair(pair); setHalfwayEditing(false); selectFeature(undefined) }}
+          onClose={() => { setHalfwayOpen(false); setHalfwayPair(undefined); setHalfwayEditing(true) }}
+        /> : <div className="search-row">
           <label className="search-field">
             <RiSearchLine className="search-icon" aria-hidden="true" size={18} />
             <input ref={searchInputRef} type="search" autoCorrect="off" spellCheck={false} enterKeyHint="search" value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); selectFeature(undefined); setRoutes({}) }} placeholder={text(locale, 'searchPlaceholder')} aria-label={text(locale, 'searchPlaceholder')} />
@@ -564,6 +595,7 @@ function App() {
               <fieldset className="filter-group"><legend>{text(locale, 'priceFilter')}</legend><Segmented label={text(locale, 'priceFilter')} value={priceFilter} onChange={setPriceFilter} options={[{ value: 'all', label: text(locale, 'allPrices') }, { value: 'free', label: text(locale, 'priceFree') }, { value: 'paid', label: text(locale, 'pricePaid') }]} /></fieldset>
               <fieldset className="filter-group"><legend>{text(locale, 'accessibilityFilter')}</legend><div className="chip-wrap">{(['stepFreeEntrance', 'accessibleToilet', 'accessibleParking'] as const).map((option) => <button key={option} type="button" className="chip" aria-pressed={accessibilityFilter === option} onClick={() => setAccessibilityFilter(accessibilityFilter === option ? 'all' : option)}>{text(locale, option)}</button>)}</div></fieldset>
               <fieldset className="filter-group"><legend>{text(locale, 'audienceFilter')}</legend><div className="chip-wrap"><button type="button" className="chip" aria-pressed={familyFilter === 'family'} onClick={() => setFamilyFilter(familyFilter === 'family' ? 'all' : 'family')}>{text(locale, 'childrenFamilies')}</button></div></fieldset>
+              {isPhone && <fieldset className="filter-group"><legend>{text(locale, 'language')}</legend><Segmented label={text(locale, 'language')} value={locale} onChange={setLocale} options={[{ value: 'en', label: 'English', lang: 'en' }, { value: 'fi', label: 'Suomi', lang: 'fi' }]} /></fieldset>}
               <div className="filters-actions">
                 <button type="button" className="btn btn-ghost" onClick={clearAllFilters} disabled={!activeFilterCount && filter === 'all'}>{locale === 'fi' ? 'Tyhjennä' : 'Clear all'}</button>
                 <button type="button" className="btn btn-primary" onClick={() => { if (filterDrawerRef.current) filterDrawerRef.current.open = false }}>{locale === 'fi' ? `Näytä ${formatPlaceCount(locale, visibleSports.length)}` : `Show ${formatPlaceCount(locale, visibleSports.length)}`}</button>
@@ -580,6 +612,18 @@ function App() {
             event.preventDefault(); chips.forEach((chip, i) => { chip.tabIndex = i === next ? 0 : -1 }); chips[next]?.focus()
           }}>
             {filterOptions.map((option) => <button key={option.id} type="button" className="chip" tabIndex={filter === option.id ? 0 : -1} aria-pressed={filter === option.id} onClick={() => selectFilter(option.id === filter && option.id !== 'all' ? 'all' : option.id)}><SportFilterIcon id={option.id} />{sportChipLabel(option.id)}</button>)}
+            <button type="button" className={`chip chip-favorites ${favoritesOnly ? 'is-active' : ''}`} tabIndex={-1} aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly((value) => !value)}>
+              {favoritesOnly || favorites.size > 0 ? <RiStarFill aria-hidden="true" size={15} /> : <RiStarLine aria-hidden="true" size={15} />}
+              <span>{locale === 'fi' ? 'Suosikit' : 'Saved'}</span>
+              {favorites.size > 0 && <span className="chip-count" aria-hidden="true">{favorites.size}</span>}
+            </button>
+            <button type="button" className={`chip chip-halfway ${halfwayOpen ? 'is-active' : ''}`} tabIndex={-1} aria-pressed={halfwayOpen} onClick={() => {
+              if (halfwayOpen) { setHalfwayOpen(false); setHalfwayPair(undefined); setHalfwayEditing(true) }
+              else { setHalfwayOpen(true); setHalfwayEditing(true); selectFeature(undefined) }
+            }}>
+              <RiGroupLine aria-hidden="true" size={16} />
+              <span>{locale === 'fi' ? 'Puoliväli' : 'Meet halfway'}</span>
+            </button>
             <button type="button" className="chip" tabIndex={-1} aria-pressed={trendingEnabled} onClick={() => setTrendingEnabled((value) => !value)}><RiFireLine aria-hidden="true" size={16} />{text(locale, 'trending')}</button>
           </div>
           {/* Mouse affordance only: keyboard users move with the arrow keys, touch users swipe. */}
@@ -626,9 +670,10 @@ function App() {
           <div className="sheet-title">
             <h2 ref={detailHeadingRef} tabIndex={-1}>{phoneTransitInSheet && route ? <span className="sheet-transit-heading"><strong>{formatRouteDuration(locale, route.durationSeconds)}</strong><span className="sheet-transit-meta">{text(locale, 'hslZones')} {transitTicketZones}</span></span> : sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
             {!phoneTransitInSheet && sidebarView === 'detail' && selected && (venueTypeLabel(selectedVenue, locale) || distances?.get(selected.id) !== undefined) && <span>{[venueTypeLabel(selectedVenue, locale), distances?.get(selected.id) !== undefined ? formatDistance(locale, distances.get(selected.id)!) : undefined].filter(Boolean).join(' · ')}</span>}
-            {!phoneTransitInSheet && sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{effectiveOrigin ? (locale === 'fi' ? ` · lähimmät (${effectiveOrigin.label})` : ` · nearest to ${effectiveOrigin.label}`) : ''}</span>}
+            {!phoneTransitInSheet && sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{halfwayPair ? (locale === 'fi' ? ` · puolivälissä (${halfwayPair.a.label} ↔ ${halfwayPair.b.label})` : ` · halfway (${halfwayPair.a.label} ↔ ${halfwayPair.b.label})`) : effectiveOrigin ? (locale === 'fi' ? ` · lähimmät (${effectiveOrigin.label})` : ` · nearest to ${effectiveOrigin.label}`) : ''}</span>}
           </div>
           {sidebarView === 'detail' && selected && !routePlannerOpen && <>
+            <button className={`icon-btn favorite-btn ${favorites.has(selected.id) ? 'is-saved' : ''}`} type="button" aria-pressed={favorites.has(selected.id)} onClick={() => toggleFavorite(selected.id)} aria-label={favorites.has(selected.id) ? (locale === 'fi' ? 'Poista suosikeista' : 'Remove from saved') : (locale === 'fi' ? 'Tallenna suosikkeihin' : 'Save place')} title={favorites.has(selected.id) ? (locale === 'fi' ? 'Poista suosikeista' : 'Remove from saved') : (locale === 'fi' ? 'Tallenna suosikkeihin' : 'Save place')}>{favorites.has(selected.id) ? <RiStarFill aria-hidden="true" size={18} /> : <RiStarLine aria-hidden="true" size={18} />}</button>
             <button className={`icon-btn share-btn ${copiedShare ? 'is-copied' : ''}`} type="button" onClick={shareSelectedPlace} aria-label={copiedShare ? (locale === 'fi' ? 'Linkki kopioitu' : 'Link copied') : (locale === 'fi' ? 'Jaa paikka' : 'Share place')} title={copiedShare ? (locale === 'fi' ? 'Linkki kopioitu' : 'Link copied') : (locale === 'fi' ? 'Jaa paikka' : 'Share place')}>{copiedShare ? <RiCheckLine aria-hidden="true" size={18} /> : <RiShareForwardLine aria-hidden="true" size={18} />}</button>
             <button ref={reportButtonRef} className="icon-btn" type="button" onClick={() => setReportDialogOpen(true)} aria-label={locale === 'fi' ? 'Ilmoita virheellisestä tiedosta' : 'Report incorrect information'} title={locale === 'fi' ? 'Ilmoita virheestä' : 'Report a mistake'}><RiFlagLine aria-hidden="true" size={18} /></button>
           </>}
@@ -644,11 +689,19 @@ function App() {
             {mapArea && visibleSports.length === 0 && (() => {
               const query = searchQuery.trim()
               const activeFilters = [
+                favoritesOnly && { label: locale === 'fi' ? 'Suosikit' : 'Saved', clear: () => setFavoritesOnly(false) },
                 filter !== 'all' && { label: sportText(locale, filter), clear: () => setFilter('all') },
                 priceFilter !== 'all' && { label: text(locale, priceFilter === 'free' ? 'priceFree' : 'pricePaid'), clear: () => setPriceFilter('all') },
                 accessibilityFilter !== 'all' && { label: text(locale, accessibilityFilter), clear: () => setAccessibilityFilter('all') },
                 familyFilter !== 'all' && { label: text(locale, 'childrenFamilies'), clear: () => setFamilyFilter('all') },
               ].filter((item): item is { label: string; clear: () => void } => Boolean(item))
+              if (favoritesOnly && favorites.size === 0) {
+                return <div className="empty-state" role="status">
+                  <h3>{locale === 'fi' ? 'Ei tallennettuja suosikkeja vielä' : 'No saved places yet'}</h3>
+                  <p>{locale === 'fi' ? 'Avaa mikä tahansa liikuntapaikka ja napauta tähteä tallentaaksesi sen suosikkeihin.' : 'Open any sports facility and tap the star to save it here.'}</p>
+                  <button type="button" className="btn btn-secondary" onClick={() => setFavoritesOnly(false)}>{locale === 'fi' ? 'Näytä kaikki paikat' : 'Show all places'}</button>
+                </div>
+              }
               return <div className="empty-state" role="status">
                 <h3>{query ? (locale === 'fi' ? `Haulla ”${query}” ei löytynyt paikkoja` : `No places match “${query}”`) : (locale === 'fi' ? 'Näillä rajauksilla ei löytynyt paikkoja' : 'No places match these filters')}</h3>
                 {activeFilters.length > 0 && <><p>{locale === 'fi' ? 'Rajaukset, jotka voivat piilottaa paikkoja:' : 'Filters that may be hiding places:'}</p><div className="chip-wrap">{activeFilters.map((item) => <button key={item.label} type="button" className="chip" onClick={item.clear} aria-label={`${locale === 'fi' ? 'Poista rajaus' : 'Remove filter'} ${item.label}`}>{item.label}<RiCloseLine aria-hidden="true" size={14} /></button>)}</div></>}
@@ -663,15 +716,17 @@ function App() {
               const type = venueTypeLabel(venue, locale)
               const kind = [type, activities].filter(Boolean).join(' · ')
               const distance = distances?.get(feature.id)
+              const hw = halfwayMetrics?.get(feature.id)
+              const isFav = favorites.has(feature.id)
               const price = feature.priceClass && feature.priceClass !== 'unknown' ? text(locale, priceLabelKey(feature.priceClass)) : undefined
               return <li key={feature.id}><button type="button" data-feature-id={feature.id} className="place-row" aria-current={selected?.id === feature.id ? 'true' : undefined} onMouseEnter={() => prefetchPhoto(venue?.serviceMap?.pictureUrl)} onPointerDown={() => prefetchPhoto(venue?.serviceMap?.pictureUrl)} onClick={() => selectFeature(feature, true)}>
                 <PlaceTile feature={feature} />
                 <span className="place-row-main">
-                  <strong>{featureDisplayName(feature, locale, venue?.lipas?.name)}</strong>
+                  <strong className="place-row-name"><span>{featureDisplayName(feature, locale, venue?.lipas?.name)}</span>{isFav && <RiStarFill className="place-row-star" aria-hidden="true" size={13} />}</strong>
                   <span className="place-row-meta">{kind || text(locale, 'missingSports')}</span>
                   {venue?.lipas?.address && <span className="place-row-address"><RiMapPin2Line aria-hidden="true" size={12} /><span>{venue.lipas.address}</span></span>}
                 </span>
-                {(distance !== undefined || price) && <span className="place-row-aside">{distance !== undefined && <span className="place-row-distance">{formatDistance(locale, distance)}</span>}{price && <span className={`badge badge-${feature.priceClass}`}>{price}</span>}</span>}
+                {(hw || distance !== undefined || price) && <span className="place-row-aside">{hw ? <span className="place-row-halfway"><span><i className="halfway-mini-dot is-start" aria-hidden="true" />{formatDistance(locale, hw.distanceA)}</span><span><i className="halfway-mini-dot is-halfway-b" aria-hidden="true" />{formatDistance(locale, hw.distanceB)}</span></span> : distance !== undefined && <span className="place-row-distance">{formatDistance(locale, distance)}</span>}{price && <span className={`badge badge-${feature.priceClass}`}>{price}</span>}</span>}
               </button></li>
             })}</ul>
             {listLimit < sortedSports.length && <button className="btn btn-secondary load-more" onClick={() => { showMoreFromRef.current = listLimit; setListLimit((value) => value + 60) }}>{locale === 'fi' ? `Näytä lisää (${formatPlaceCount(locale, sortedSports.length - listLimit)} jäljellä)` : `Show more (${formatPlaceCount(locale, sortedSports.length - listLimit)} left)`}</button>}
@@ -686,7 +741,7 @@ function App() {
     </div>
 
     <section className="map-stage" aria-label={locale === 'fi' ? 'Kartta ja kohteet' : 'Map and facilities'}>
-      {mapArea && <ErrorBoundary fallback={<div className="map-status is-error" role="alert"><span><strong>{locale === 'fi' ? 'Kartta ei latautunut.' : 'The map didn’t load.'}</strong> {locale === 'fi' ? 'Paikat löytyvät silti listasta.' : 'You can still browse places in the list.'}</span><button type="button" onClick={reloadPage}>{locale === 'fi' ? 'Lataa sivu uudelleen' : 'Reload page'}</button></div>}><Suspense fallback={null}><SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} fitKey={mapFitKey} fitTargets={mapFitTargets} /></Suspense></ErrorBoundary>}
+      {mapArea && <ErrorBoundary fallback={<div className="map-status is-error" role="alert"><span><strong>{locale === 'fi' ? 'Kartta ei latautunut.' : 'The map didn’t load.'}</strong> {locale === 'fi' ? 'Paikat löytyvät silti listasta.' : 'You can still browse places in the list.'}</span><button type="button" onClick={reloadPage}>{locale === 'fi' ? 'Lataa sivu uudelleen' : 'Reload page'}</button></div>}><Suspense fallback={null}><SportsMap ref={mapRef} area={mapArea} features={visibleSports} selected={selected} onSelect={selectFeature} route={route} mode={mode} locale={locale} origin={nearOrigin?.coordinates} halfway={halfwayPair} fitKey={mapFitKey} fitTargets={mapFitTargets} /></Suspense></ErrorBoundary>}
       <div className="map-controls">
         <Segmented className="segmented-vertical" orientation="vertical" label={extraText(locale, 'mapProjection')} value={mode} onChange={setMode} options={[{ value: '2d', label: '2D' }, { value: 'iso', label: locale === 'fi' ? 'Vino' : 'Tilt' }]} />
         <button type="button" className="icon-btn map-reset" onClick={() => { selectFeature(undefined); mapRef.current?.reset() }} aria-label={locale === 'fi' ? 'Palauta koko kaupungin näkymä' : 'Reset to the whole city'} title={locale === 'fi' ? 'Palauta näkymä' : 'Reset view'}><RiFullscreenExitLine aria-hidden="true" size={18} /></button>

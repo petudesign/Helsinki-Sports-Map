@@ -7,6 +7,7 @@ import { activeCity } from '../config/city'
 import boundary from '../data/helsinki-boundary.json'
 import type { GeoPoint, MapDataset, SportFeature } from '../data/types'
 import type { RouteResult } from '../routing'
+import type { HalfwayPair } from '../meetHalfway'
 import type { Locale } from '../i18n'
 import { stressFlag } from '../dev/stress'
 import { mapTheme as t } from '../design-system/mapTheme'
@@ -26,6 +27,8 @@ type Props = {
   locale: Locale
   /** "Near me" / "near address" origin, drawn as a position dot. */
   origin?: GeoPoint
+  /** Meet-halfway starting points A and B. */
+  halfway?: HalfwayPair
   /** When this key changes, the camera fits fitTargets (search, filter or origin changed). */
   fitKey?: string
   fitTargets?: GeoPoint[]
@@ -46,7 +49,7 @@ const openStreetMapFallbackStyle = {
   },
   layers: [{ id: 'openstreetmap-raster', type: 'raster', source: 'openstreetmap' }],
 } as const
-const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected', 'origin'])
+const appSourceIds = new Set(['helsinki', 'outside-helsinki', 'pitches', 'transit-zones', 'facilities', 'route', 'route-points', 'selected', 'origin', 'halfway'])
 const isMobile = () => window.matchMedia('(max-width: 720px)').matches
 const duration = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420
 // Camera moves are on-screen movement, so ease-in-out (the --ease-in-out curve, cubic approximation).
@@ -59,7 +62,7 @@ const DEFAULT_VIEW_EAST = 220
 const defaultCameraOffset = (): [number, number] => isMobile() ? [0, 0] : [PANEL_INSET / 2 - DEFAULT_VIEW_EAST, 0]
 const routeColors = { walk: '#2f7a55', bike: '#d07a2f', transit: '#4386a6', car: '#665846' } as const
 const routePointColors = { start: '#245b7a', end: '#c75543', board: '#2d6e8a', alight: '#d07a2f', transfer: '#7656a8' } as const
-export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale, origin, fitKey, fitTargets }: Props) {
+export const SportsMap = memo(function SportsMap({ ref, area, features, selected, onSelect, route, mode, locale, origin, halfway, fitKey, fitTargets }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LibreMap | null>(null)
   const latest = useRef({ features, selected, onSelect, locale })
@@ -253,6 +256,12 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
       // "You are here / near here": ink, not accent, so it never reads as a place.
       map.addLayer({ id: 'origin-halo', type: 'circle', source: 'origin', paint: { 'circle-radius': 16, 'circle-color': t.ink, 'circle-opacity': 0.1 } })
       map.addLayer({ id: 'origin-dot', type: 'circle', source: 'origin', paint: { 'circle-radius': 6, 'circle-color': t.ink, 'circle-stroke-color': t.halo, 'circle-stroke-width': 3 } })
+      map.addSource('halfway', { type: 'geojson', data: empty })
+      map.addLayer({ id: 'halfway-line', type: 'line', source: 'halfway', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': '#5b6770', 'line-width': 2, 'line-dasharray': [2.5, 2.5], 'line-opacity': 0.65 } })
+      map.addLayer({ id: 'halfway-points', type: 'circle', source: 'halfway', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-radius': 8.5, 'circle-color': ['match', ['get', 'role'], 'a', '#245b7a', '#7656a8'], 'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 3 } })
+      if (!usingOsmFallback) {
+        map.addLayer({ id: 'halfway-labels', type: 'symbol', source: 'halfway', filter: ['==', ['geometry-type'], 'Point'], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-anchor': 'top', 'text-offset': [0, 1.25], 'text-max-width': 14, 'text-allow-overlap': true }, paint: { 'text-color': '#283b3e', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 } })
+      }
       map.addSource('selected', { type: 'geojson', data: empty })
       // Selection is shown by size and a ring, not by a second colour.
       map.addLayer({ id: 'selected-halo', type: 'circle', source: 'selected', paint: { 'circle-radius': 26, 'circle-color': t.accentHalo, 'circle-stroke-color': t.accent, 'circle-stroke-opacity': 0.32, 'circle-stroke-width': 1.5 } })
@@ -374,6 +383,21 @@ export const SportsMap = memo(function SportsMap({ ref, area, features, selected
   useEffect(() => {
     if (ready) (mapRef.current?.getSource('origin') as GeoJSONSource | undefined)?.setData(origin ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: origin } }] } : empty)
   }, [origin, ready])
+
+  useEffect(() => {
+    if (!ready) return
+    const source = mapRef.current?.getSource('halfway') as GeoJSONSource | undefined
+    if (!source) return
+    if (!halfway) { source.setData(empty); return }
+    source.setData({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [halfway.a.coordinates, halfway.b.coordinates] } },
+        { type: 'Feature', properties: { role: 'a', label: `A · ${halfway.a.label}` }, geometry: { type: 'Point', coordinates: halfway.a.coordinates } },
+        { type: 'Feature', properties: { role: 'b', label: `B · ${halfway.b.label}` }, geometry: { type: 'Point', coordinates: halfway.b.coordinates } },
+      ],
+    })
+  }, [halfway, ready])
 
   const latestFitTargets = useRef(fitTargets)
   latestFitTargets.current = fitTargets

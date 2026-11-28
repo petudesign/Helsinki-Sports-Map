@@ -357,6 +357,21 @@ a { color: inherit; }
 .directions-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: var(--radius-full); box-shadow: 0 0 0 2px var(--surface); }
 .directions-dot.is-start { background: #245b7a; }
 .directions-dot.is-end { background: #c75543; }
+.directions-dot.is-halfway-b { background: #7656a8; }
+.halfway-compact-sep { flex: 0 0 auto; color: var(--text-3); font-size: var(--text-xs); }
+.halfway-field-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: var(--radius-full); vertical-align: middle; }
+.halfway-field-dot.is-start { background: #245b7a; }
+.halfway-field-dot.is-halfway-b { background: #7656a8; }
+.favorite-btn.is-saved { color: #d97706; }
+.chip-favorites:not([aria-pressed="true"]) svg { color: #d97706; }
+.place-row-name { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.place-row-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-row-star { flex: 0 0 auto; color: #d97706; }
+.place-row-halfway { display: grid; justify-items: end; gap: 2px; font-size: var(--text-xs); color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.place-row-halfway > span { display: inline-flex; align-items: center; gap: 4px; }
+.halfway-mini-dot { display: inline-block; width: 6px; height: 6px; border-radius: var(--radius-full); }
+.halfway-mini-dot.is-start { background: #245b7a; }
+.halfway-mini-dot.is-halfway-b { background: #7656a8; }
 .directions-compact-line { position: relative; flex: 1 1 16px; min-width: 16px; display: flex; align-items: center; justify-content: space-evenly; }
 .directions-compact-line::before { content: ''; position: absolute; left: 0; right: 4px; top: 50%; border-top: 1.5px dashed var(--border-strong); transform: translateY(-50%); }
 .directions-compact-line::after { content: ''; position: absolute; right: 0; top: 50%; width: 5px; height: 5px; border-top: 1.5px solid var(--text-3); border-right: 1.5px solid var(--text-3); transform: translateY(-50%) rotate(45deg); }
@@ -546,11 +561,11 @@ a { color: inherit; }
     grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "brand search" "chips chips";
     gap: var(--space-2); padding: 0; border: 0;
   }
-  .route-planner-open .topbar {
+  .route-planner-open .topbar, .halfway-open .topbar {
     padding: var(--space-2) var(--space-3); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-3);
     gap: var(--space-2);
   }
-  .route-planner-open .topbar:not(:has(.address-suggestions)) { max-height: calc(100dvh - var(--sheet-peek) - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain; }
+  .route-planner-open .topbar:not(:has(.address-suggestions)), .halfway-open .topbar:not(:has(.address-suggestions)) { max-height: calc(100dvh - var(--sheet-peek) - env(safe-area-inset-top, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain; }
   .brand { width: var(--control-lg); height: var(--control-lg); justify-content: center; border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); }
   .brand h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .brand img { width: 28px; height: 28px; }
@@ -564,7 +579,7 @@ a { color: inherit; }
   .search-row { padding-right: calc(var(--control-lg) + var(--space-2)); }
   .near-status { position: absolute; top: calc(100% + var(--space-2)); left: 0; right: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-2); }
   .directions-panel { grid-column: 1 / -1; padding: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .route-planner-open .brand, .route-planner-open .lang-switch { display: none; }
+  .route-planner-open .brand, .route-planner-open .lang-switch, .halfway-open .brand, .halfway-open .lang-switch { display: none; }
   .chip-row { margin: 0 calc(-1 * var(--space-2)); padding-left: var(--space-2); }
   .chip-row .chip { min-height: var(--control-md); box-shadow: var(--shadow-2); }
   .chip-scroller { padding-right: var(--space-6); }

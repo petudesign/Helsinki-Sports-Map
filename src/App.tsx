@@ -503,7 +503,6 @@ function App() {
       <a className="text-link" href={locale === 'fi' ? 'https://www.hsl.fi/liput-ja-hinnat/hsl-alue-ja-vyohykkeet' : 'https://www.hsl.fi/en/tickets-and-fares/hsl-area-and-zones'} target="_blank" rel="noreferrer">{text(locale, 'hslTicketInfo')} ↗</a>
     </>}
   </section> : null
-  const transitPeekLegs = transitRoute ? transitRoute.legs.map((leg) => `${transitCompactLabel(locale, leg)} ${formatRouteDuration(locale, leg.durationSeconds)}`).join(' → ') : ''
   return <main className={`app ${selected ? 'has-selection' : ''} ${routePlannerOpen ? 'route-planner-open' : ''}`}>
     <p className="sr-only" role="status">{announcement}</p>
 
@@ -625,8 +624,7 @@ function App() {
           <span className="sheet-handle" aria-hidden="true" />
           {sidebarView === 'detail' && selected && <button type="button" className="icon-btn" onClick={closeDetail} aria-label={locale === 'fi' ? 'Takaisin listaan' : 'Back to the list'}><RiArrowLeftLine aria-hidden="true" size={20} /></button>}
           <div className="sheet-title">
-            <h2 ref={detailHeadingRef} tabIndex={-1}>{phoneTransitInSheet && route ? `${text(locale, 'hslZones')} ${transitTicketZones} · ${formatRouteDuration(locale, route.durationSeconds)}` : sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
-            {phoneTransitInSheet && transitPeekLegs && <span className="sheet-transit-legs">{transitPeekLegs}</span>}
+            <h2 ref={detailHeadingRef} tabIndex={-1}>{phoneTransitInSheet && route ? <span className="sheet-transit-heading"><strong>{formatRouteDuration(locale, route.durationSeconds)}</strong><span className="sheet-transit-meta">{text(locale, 'hslZones')} {transitTicketZones}</span></span> : sidebarView === 'detail' && selected ? featureDisplayName(selected, locale, selectedVenue?.lipas?.name) : (locale === 'fi' ? 'Paikat' : 'Places')}</h2>
             {!phoneTransitInSheet && sidebarView === 'detail' && selected && (venueTypeLabel(selectedVenue, locale) || distances?.get(selected.id) !== undefined) && <span>{[venueTypeLabel(selectedVenue, locale), distances?.get(selected.id) !== undefined ? formatDistance(locale, distances.get(selected.id)!) : undefined].filter(Boolean).join(' · ')}</span>}
             {!phoneTransitInSheet && sidebarView === 'list' && <span>{!mapArea ? (locale === 'fi' ? 'Ladataan paikkoja…' : 'Loading places…') : formatPlaceCount(locale, visibleSports.length)}{effectiveOrigin ? (locale === 'fi' ? ` · lähimmät (${effectiveOrigin.label})` : ` · nearest to ${effectiveOrigin.label}`) : ''}</span>}
           </div>

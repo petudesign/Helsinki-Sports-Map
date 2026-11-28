@@ -407,11 +407,14 @@ a { color: inherit; }
 .transit-zone-ticket { padding: 4px 10px; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-text); box-shadow: inset 0 0 0 1px rgb(7 85 160 / 0.18); font-size: var(--text-sm); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 .transit-zone-trigger { border: 0; padding: 2px 8px; line-height: 1.4; transition: transform var(--duration-press) var(--ease-out), background-color var(--duration-fast) var(--ease-out); }
 .transit-zone-trigger:active { transform: scale(0.95); }
-.sheet-transit-section { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border); }
-.transit-guidance.is-sheet { padding: 0; border-radius: 0; background: transparent; box-shadow: none; gap: var(--space-3); }
+.sheet-transit-section { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-5); border-bottom: 1px solid var(--border); }
+.sheet-title .sheet-transit-heading { display: inline-flex; align-items: baseline; gap: var(--space-2); margin-top: 0; color: var(--text-1); font-size: var(--text-lg); }
+.sheet-title .sheet-transit-heading strong { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.sheet-title .sheet-transit-meta { display: inline; margin-top: 0; color: var(--text-2); font-size: var(--text-sm); font-weight: var(--weight-regular); }
+.transit-guidance.is-sheet { padding: 0; border-radius: 0; background: transparent; box-shadow: none; gap: var(--space-4); }
 .transit-steps-heading { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-2); }
 .transit-ticket-footer { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); }
-.transit-guidance-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--text-3); font-size: var(--text-xs); }
+.transit-guidance-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); color: var(--text-3); font-size: var(--text-xs); }
 .transit-guidance-legend .transit-zone-key, .transit-guidance-legend .transit-route-key { gap: var(--space-2); }
 .transit-route-summary { display: flex; flex-wrap: wrap; gap: 6px; }
 .transit-route-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
